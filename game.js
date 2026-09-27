@@ -36,16 +36,15 @@ const YAW_RATE = 2.1; // rad/s tope
 const YAW_EASE = 7; // 1/s, el giro entra y sale suave
 const PITCH_RATE = 1.7; // rad/s de cabeceo
 const LEVEL_EASE = 1.3; // 1/s: suelta el stick cerca del nivel y se endereza
-const CRUISE = 235; // crucero constante
+const CRUISE = 235; // crucero constante — la nave NUNCA se detiene
 const TURBO_SPEED = 470;
-const BRAKE_SPEED = 110;
 const SPEED_EASE = 3; // 1/s hacia la velocidad objetivo
 const BOOST_MAX = 100;
 const BOOST_DRAIN = 42; // por segundo de turbo
 const BOOST_REGEN = 17; // por segundo de recarga
-const ROLL_MS = 420;
-const ROLL_COOLDOWN_MS = 1000;
-const ROLL_KICK = 430; // esquive lateral
+const DODGE_COOLDOWN_MS = 900;
+const DODGE_KICK = 920; // esquive lateral: un empujón GRANDE
+const DODGE_INVULN_MS = 500;
 const FIRE_MS = 160;
 const BOLT_SPEED = 980;
 const BOLT_LIFE = 1.3;
@@ -65,7 +64,7 @@ const SCORE_KEY = 'space-explorer:scores';
 // Las tres piezas del hipersalto
 const PARTS = ['MOTOR', 'NÚCLEO NAV', 'REACTOR'];
 
-const HINT_MAIN = 'STICK DIRIGE · B1 DISPARA · B2 TURBO · B3 MISIL · B4/B6 TONEL · B5 FRENA';
+const HINT_MAIN = 'STICK DIRIGE · B1 DISPARA · B2 TURBO · B3 MISIL · B4/B6 ESQUIVE';
 
 // --------------------------------------------------------------------------
 // Arcade cabinet button → keyboard key mapping.
@@ -630,16 +629,33 @@ class Game extends Phaser.Scene {
     this.yaw += this.yawVel * dt;
     this.pitchVel += (pit * PITCH_RATE - this.pitchVel) * Math.min(1, YAW_EASE * dt);
     this.pitch += this.pitchVel * dt;
-    // suéltalo cerca del nivel y la nave se endereza; a medio loop, no interfiere
-    if (!pit && Math.abs(this.pitch) < 1.1) this.pitch -= this.pitch * Math.min(1, LEVEL_EASE * dt);
     while (this.pitch > Math.PI) this.pitch -= Math.PI * 2;
     while (this.pitch < -Math.PI) this.pitch += Math.PI * 2;
 
-    // la nave siempre avanza; B2 es turbo con reserva, B5 frena
+    if (!pit) {
+      // pasada la vertical y con el stick suelto, la nave sale del arco como
+      // un piloto: misma dirección de vuelo re-expresada derecha (Immelmann),
+      // con el medio tonel visual que el alabeo deshace solo. Así nunca queda
+      // invertida y la izquierda siempre es la izquierda.
+      if (Math.abs(this.pitch) > Math.PI / 2) {
+        const s = Math.sign(this.pitch);
+        this.pitch = s * (Math.PI - Math.abs(this.pitch));
+        this.pitchVel = -this.pitchVel;
+        this.yaw += Math.PI;
+        this.roll += s * Math.PI;
+        // la cámara salta a la expresión equivalente de la MISMA mirada
+        this.camYaw += Math.PI;
+        this.camPitch = Math.sign(this.camPitch || s) * (Math.PI - Math.abs(this.camPitch));
+      }
+      // y sin input, siempre puede enderezarse
+      this.pitch -= this.pitch * Math.min(1, LEVEL_EASE * dt);
+    }
+
+    // la nave siempre avanza; B2 es turbo con reserva
     const boosting = held.P1_2 && this.boost > 0;
     if (boosting) this.boost = Math.max(0, this.boost - BOOST_DRAIN * dt);
     else this.boost = Math.min(BOOST_MAX, this.boost + BOOST_REGEN * dt);
-    const want = boosting ? TURBO_SPEED : held.P1_5 ? BRAKE_SPEED : CRUISE;
+    const want = boosting ? TURBO_SPEED : CRUISE;
     this.speed += (want - this.speed) * Math.min(1, SPEED_EASE * dt);
 
     const f = this.forward();
@@ -662,24 +678,18 @@ class Game extends Phaser.Scene {
     // alabeo con el giro
     this.roll += (this.yawVel * 0.34 - this.roll) * Math.min(1, 8 * dt);
 
-    // tonel volado direccional: B4 izquierda, B6 derecha — esquive lateral
-    const rollDir = pressed.P1_4 ? -1 : pressed.P1_6 ? 1 : 0;
-    if (rollDir && time >= this.rollReadyAt) {
-      this.rollReadyAt = time + ROLL_COOLDOWN_MS;
-      this.invulnUntil = Math.max(this.invulnUntil, time + ROLL_MS + 150);
+    // esquive: B4 izquierda, B6 derecha — un empujón GRANDE, sin pirueta;
+    // la nave solo banca fuerte y el alabeo se recupera solo
+    const dodgeDir = pressed.P1_4 ? -1 : pressed.P1_6 ? 1 : 0;
+    if (dodgeDir && time >= this.rollReadyAt) {
+      this.rollReadyAt = time + DODGE_COOLDOWN_MS;
+      this.invulnUntil = Math.max(this.invulnUntil, time + DODGE_INVULN_MS);
       const rx = Math.cos(this.yaw);
       const rz = -Math.sin(this.yaw);
-      this.strafeV.x = rx * rollDir * ROLL_KICK;
-      this.strafeV.z = rz * rollDir * ROLL_KICK;
-      this.spin = 0;
+      this.strafeV.x = rx * dodgeDir * DODGE_KICK;
+      this.strafeV.z = rz * dodgeDir * DODGE_KICK;
+      this.roll += dodgeDir * 1.1;
       Sfx.roll();
-      this.tweens.add({
-        targets: this,
-        spin: rollDir * Math.PI * 2,
-        duration: ROLL_MS,
-        ease: 'Cubic.easeOut',
-        onComplete: () => (this.spin = 0),
-      });
     }
 
     // B1: cañón — sale de la nariz, hereda tu velocidad
