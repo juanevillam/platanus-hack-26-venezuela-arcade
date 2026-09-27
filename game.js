@@ -27,14 +27,20 @@ const RUST_HI = 0xc97b5a; // peligro, variante clara (disparos, ojos)
 const INK_CSS = '#eef2f7';
 const DIM_CSS = '#8a9099';
 
-// --- Vuelo: giro con inercia, cámara con horizonte estable ---
+// MODO PRUEBA: vidas infinitas mientras se ajusta el juego — apagar al enviar
+const GOD = true;
+
+// --- Vuelo: la nave SIEMPRE avanza; el stick dirige, el turbo se recarga ---
 const YAW_RATE = 2.1; // rad/s tope
 const YAW_EASE = 7; // 1/s, el giro entra y sale suave
 const CLIMB = 220; // subida/bajada, unidades/s
-const THRUST = 340;
-const MAX_FWD = 310;
-const MAX_REV = 130;
-const DRAG = 1.3; // 1/s, frena solo
+const CRUISE = 235; // crucero constante
+const TURBO_SPEED = 470;
+const BRAKE_SPEED = 110;
+const SPEED_EASE = 3; // 1/s hacia la velocidad objetivo
+const BOOST_MAX = 100;
+const BOOST_DRAIN = 42; // por segundo de turbo
+const BOOST_REGEN = 17; // por segundo de recarga
 const ROLL_MS = 420;
 const ROLL_COOLDOWN_MS = 1000;
 const ROLL_KICK = 430; // esquive lateral
@@ -57,7 +63,7 @@ const SCORE_KEY = 'space-explorer:scores';
 // Las tres piezas del hipersalto
 const PARTS = ['MOTOR', 'NÚCLEO NAV', 'REACTOR'];
 
-const HINT_MAIN = 'B1 DISPARA · B2 AVANZA · B5 RETROCEDE · B4/B6 TONEL · B3 MISIL';
+const HINT_MAIN = 'STICK DIRIGE · B1 DISPARA · B2 TURBO · B3 MISIL · B4/B6 TONEL · B5 FRENA';
 
 // --------------------------------------------------------------------------
 // Arcade cabinet button → keyboard key mapping.
@@ -420,7 +426,8 @@ class Game extends Phaser.Scene {
     this.pos = { x: 0, y: 0, z: -1600 };
     this.yaw = 0;
     this.yawVel = 0;
-    this.speed = 0;
+    this.speed = CRUISE;
+    this.boost = BOOST_MAX;
     this.vy = 0;
     this.roll = 0;
     this.spin = 0;
@@ -480,7 +487,7 @@ class Game extends Phaser.Scene {
           fireAt: 0,
         });
       }
-      for (let j = 0; j < 4; j++) {
+      for (let j = 0; j < 2; j++) {
         this.ents.push({
           k: 'mine',
           x: px + rnd(-380, 380),
@@ -493,19 +500,19 @@ class Game extends Phaser.Scene {
         });
       }
     }
-    // asteroides, chatarra y serpientes del vacío por todo el sector
-    for (let i = 0; i < 30; i++) {
+    // asteroides, chatarra y serpientes del vacío — pocos y grandes: que se lean
+    for (let i = 0; i < 14; i++) {
       const p = this.randIn(SECTOR_R * 0.95);
       this.ents.push({
-        k: 'rock', x: p[0], y: p[1] * 0.5, z: p[2], r: 34, hp: 2, t: rnd(0, 9),
-        spin: rnd(-1, 1), vx: rnd(-26, 26), vy: rnd(-16, 16), vz: rnd(-26, 26), yaw: 0,
+        k: 'rock', x: p[0], y: p[1] * 0.5, z: p[2], r: 42, hp: 2, t: rnd(0, 9),
+        spin: rnd(-0.5, 0.5), vx: rnd(-16, 16), vy: rnd(-10, 10), vz: rnd(-16, 16), yaw: 0,
       });
     }
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 16; i++) {
       const p = this.randIn(SECTOR_R * 0.9);
       this.ents.push({ k: 'scrap', x: p[0], y: p[1] * 0.5, z: p[2], r: 16, t: rnd(0, 6), yaw: 0 });
     }
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 2; i++) {
       const p = this.randIn(SECTOR_R * 0.8);
       this.ents.push({ k: 'eel', x: p[0], y: p[1] * 0.4, z: p[2], r: 22, hp: 2, t: rnd(0, 9), yaw: rnd(0, 6.3) });
     }
@@ -520,12 +527,23 @@ class Game extends Phaser.Scene {
   // Estrellas: puntos fijos del mundo, envueltos en una caja alrededor tuyo
   buildStars() {
     this.stars = [];
-    for (let i = 0; i < 210; i++) {
+    for (let i = 0; i < 240; i++) {
       this.stars.push({
         x: (Math.random() - 0.5) * 1700,
         y: (Math.random() - 0.5) * 1700,
         z: (Math.random() - 0.5) * 1700,
-        s: Math.random() < 0.15 ? 3 : Math.random() < 0.5 ? 2 : 1,
+        s: Math.random() < 0.12 ? 3 : Math.random() < 0.45 ? 2 : 1,
+        tw: Math.random() < 0.25 ? 1 + Math.random() * 2 : 0, // parpadeo
+        ph: Math.random() * 6.3,
+      });
+    }
+    // el polvo: motas cercanas que convierten la velocidad en estelas
+    this.dust = [];
+    for (let i = 0; i < 34; i++) {
+      this.dust.push({
+        x: (Math.random() - 0.5) * 560,
+        y: (Math.random() - 0.5) * 560,
+        z: (Math.random() - 0.5) * 560,
       });
     }
   }
@@ -608,10 +626,12 @@ class Game extends Phaser.Scene {
     this.yaw += this.yawVel * dt;
     this.vy += (climb * CLIMB - this.vy) * Math.min(1, 6 * dt);
 
-    // acelerador y reversa; sin nada, la deriva te frena sola
-    if (held.P1_2) this.speed = Math.min(MAX_FWD, this.speed + THRUST * dt);
-    else if (held.P1_5) this.speed = Math.max(-MAX_REV, this.speed - THRUST * dt);
-    else this.speed -= this.speed * Math.min(1, DRAG * dt);
+    // la nave siempre avanza; B2 es turbo con reserva, B5 frena
+    const boosting = held.P1_2 && this.boost > 0;
+    if (boosting) this.boost = Math.max(0, this.boost - BOOST_DRAIN * dt);
+    else this.boost = Math.min(BOOST_MAX, this.boost + BOOST_REGEN * dt);
+    const want = boosting ? TURBO_SPEED : held.P1_5 ? BRAKE_SPEED : CRUISE;
+    this.speed += (want - this.speed) * Math.min(1, SPEED_EASE * dt);
 
     const fx = Math.sin(this.yaw);
     const fz = Math.cos(this.yaw);
@@ -707,9 +727,10 @@ class Game extends Phaser.Scene {
   hitPlayer(time) {
     if (time < this.invulnUntil || this.phase === 'out') return;
     this.invulnUntil = time + 1300;
-    this.hull--;
     this.shake = 9;
     Sfx.hurt();
+    if (GOD) return; // modo prueba: duele, pero no mata
+    this.hull--;
     if (this.hull <= 0) {
       this.phase = 'out';
       this.booms.push({ wx: this.pos.x, wy: this.pos.y, wz: this.pos.z, t: 0, big: true });
@@ -1006,6 +1027,9 @@ class Game extends Phaser.Scene {
       const wz = e.z + (-mx * syw + mz * cyw) * scale;
       pts.push([wx, wy, wz]);
     }
+    // dos pasadas: un halo ancho y tenue bajo la línea viva — luz, no alambre
+    g.lineStyle(4.5, color, baseAlpha * 0.18);
+    for (const [a, b] of edges) this.worldLine(g, cm, pts[a], pts[b]);
     g.lineStyle(1.5, color, baseAlpha);
     for (const [a, b] of edges) this.worldLine(g, cm, pts[a], pts[b]);
   }
@@ -1016,8 +1040,9 @@ class Game extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(0x070709);
     const cm = this.cam();
 
-    this.drawPlanet(g);
-    this.drawStars(g, cm);
+    this.drawSky(g);
+    this.drawStars(g, cm, time);
+    this.drawDust(g, cm);
 
     this.label.setVisible(false);
     for (const e of this.ents) this.drawEnt(g, cm, e, time);
@@ -1079,43 +1104,68 @@ class Game extends Phaser.Scene {
     }
   }
 
-  // El planeta: cuelga en una dirección fija del cielo, con su anillo
-  drawPlanet(g) {
-    const PLANET_YAW = 2.4; // dónde vive en el cielo
-    let d = PLANET_YAW - this.camYaw;
+  // Un punto del CIELO (infinitamente lejos): solo gira con la cámara
+  skyPoint(yawDir, elev) {
+    let d = yawDir - this.camYaw;
     while (d > Math.PI) d -= Math.PI * 2;
     while (d < -Math.PI) d += Math.PI * 2;
-    if (Math.abs(d) > 1.5) return;
-    const sx = CX + d * FOCAL;
-    const sy = CY - 128;
-    const R = 130;
-    g.lineStyle(1.5, INK, 0.4);
-    g.strokeCircle(sx, sy, R);
-    // latitudes: la mitad frontal de tres paralelos
-    for (const phi of [-0.55, 0, 0.5]) {
-      const yl = sy + R * Math.sin(phi) * 0.9;
-      const hw = R * Math.cos(phi);
-      g.beginPath();
-      for (let i = 0; i <= 16; i++) {
-        const u = (i / 16) * Math.PI;
-        const px = sx + hw * -Math.cos(u);
-        const py = yl + R * 0.16 * Math.sin(u);
-        if (i === 0) g.moveTo(px, py);
-        else g.lineTo(px, py);
-      }
-      g.strokePath();
-    }
-    // el anillo
-    g.save();
-    g.translateCanvas(sx, sy);
-    g.rotateCanvas(-0.16);
-    g.lineStyle(1.5, INK, 0.3);
-    g.strokeEllipse(0, 0, R * 3.2, R * 0.62);
-    g.strokeEllipse(0, 0, R * 2.7, R * 0.5);
-    g.restore();
+    if (Math.abs(d) > 1.7) return null;
+    return [CX + d * FOCAL, CY + elev];
   }
 
-  drawStars(g, cm) {
+  // El cielo: nebulosas tenues y un gigante gaseoso con bandas, más su luna
+  drawSky(g) {
+    // nebulosas: manchas apenas visibles que dan fondo al negro
+    const nebs = [
+      [0.9, -60, 300, 0x33506a, 0.05],
+      [4.1, 90, 260, 0x33506a, 0.04],
+      [5.3, -140, 220, 0x5e4038, 0.04],
+    ];
+    for (const [yw, ey, r, col, al] of nebs) {
+      const p = this.skyPoint(yw, ey);
+      if (!p) continue;
+      g.fillStyle(col, al);
+      g.fillCircle(p[0], p[1], r);
+      g.fillStyle(col, al * 0.7);
+      g.fillCircle(p[0] + r * 0.4, p[1] - r * 0.25, r * 0.6);
+    }
+
+    const p = this.skyPoint(2.4, -132);
+    if (!p) return;
+    const [sx, sy] = p;
+    const R = 150;
+    // atmósfera
+    g.lineStyle(6, 0x6a89a0, 0.14);
+    g.strokeCircle(sx, sy, R + 4);
+    g.lineStyle(2, 0x8fb0c4, 0.3);
+    g.strokeCircle(sx, sy, R + 1);
+    // la esfera, en franjas: cada una respeta el contorno
+    const BANDS_P = [0x2a4658, 0x22384a, 0x35566a, 0x1c2e3c, 0x2f4d5f, 0x22384a, 0x2a4658, 0x1a2a36];
+    const N = 22;
+    for (let i = 0; i < N; i++) {
+      const y0 = -R + (2 * R * i) / N;
+      const y1 = y0 + (2 * R) / N;
+      const ym = (y0 + y1) / 2;
+      const hw = Math.sqrt(Math.max(0, R * R - ym * ym));
+      if (hw < 2) continue;
+      g.fillStyle(BANDS_P[Math.floor((i / N) * BANDS_P.length)], 1);
+      g.fillRect(sx - hw, sy + y0, hw * 2, y1 - y0 + 1);
+      // el terminador: la noche entra por la derecha
+      const tx = sx + hw * 0.3;
+      g.fillStyle(0x05060a, 0.72);
+      g.fillRect(tx, sy + y0, sx + hw - tx, y1 - y0 + 1);
+    }
+    // la luna: pequeña, con su propia noche
+    const mp = this.skyPoint(2.04, -210);
+    if (mp) {
+      g.fillStyle(0x474d55, 1);
+      g.fillCircle(mp[0], mp[1], 20);
+      g.fillStyle(0x05060a, 0.7);
+      g.fillCircle(mp[0] + 7, mp[1], 17);
+    }
+  }
+
+  drawStars(g, cm, time) {
     const L = 1700;
     for (const m of this.stars) {
       const wx = this.pos.x + Phaser.Math.Wrap(m.x - this.pos.x, -L / 2, L / 2);
@@ -1124,10 +1174,45 @@ class Game extends Phaser.Scene {
       const p = this.project(cm, wx, wy, wz);
       if (!p) continue;
       const dist = Math.hypot(wx - this.pos.x, wy - this.pos.y, wz - this.pos.z);
-      const a = this.fogAlpha(dist) * 0.55;
+      let a = this.fogAlpha(dist) * 0.55;
+      if (m.tw) a *= 0.6 + 0.4 * Math.sin(time * 0.001 * m.tw + m.ph);
       if (a <= 0.02) continue;
       g.fillStyle(INK, a);
       g.fillRect(p[0], p[1], m.s, m.s);
+      if (m.s === 3) {
+        // las grandes destellan en cruz
+        g.lineStyle(1, INK, a * 0.5);
+        g.beginPath();
+        g.moveTo(p[0] - 4, p[1] + 1);
+        g.lineTo(p[0] + 6, p[1] + 1);
+        g.moveTo(p[0] + 1, p[1] - 4);
+        g.lineTo(p[0] + 1, p[1] + 6);
+        g.strokePath();
+      }
+    }
+  }
+
+  // El polvo convierte tu velocidad en estelas: se SIENTE volar
+  drawDust(g, cm) {
+    const L = 560;
+    const fx = Math.sin(this.yaw);
+    const fz = Math.cos(this.yaw);
+    const trail = 0.012 + (this.speed / TURBO_SPEED) * 0.05;
+    for (const m of this.dust) {
+      const wx = this.pos.x + Phaser.Math.Wrap(m.x - this.pos.x, -L / 2, L / 2);
+      const wy = this.pos.y + Phaser.Math.Wrap(m.y - this.pos.y, -L / 2, L / 2);
+      const wz = this.pos.z + Phaser.Math.Wrap(m.z - this.pos.z, -L / 2, L / 2);
+      const p1 = this.project(cm, wx, wy, wz);
+      const p2 = this.project(cm, wx + fx * this.speed * trail, wy + this.vy * trail, wz + fz * this.speed * trail);
+      if (!p1 || !p2) continue;
+      const dist = Math.hypot(wx - this.pos.x, wy - this.pos.y, wz - this.pos.z);
+      const a = Phaser.Math.Clamp(1 - dist / 420, 0, 1) * 0.4 * (this.speed / TURBO_SPEED + 0.3);
+      if (a <= 0.02) continue;
+      g.lineStyle(1, INK, a);
+      g.beginPath();
+      g.moveTo(p1[0], p1[1]);
+      g.lineTo(p2[0], p2[1]);
+      g.strokePath();
     }
   }
 
@@ -1146,8 +1231,9 @@ class Game extends Phaser.Scene {
       return;
     }
 
-    const hostile = e.k !== 'scrap' && e.k !== 'part';
-    const color = hostile ? RUST : e.k === 'part' ? INK_HI : INK;
+    // el óxido es solo para lo que te ataca; una roca es paisaje que golpea
+    const color = e.k === 'part' ? INK_HI : e.k === 'rock' ? INK : e.k === 'scrap' ? INK : RUST;
+    if (e.k === 'rock') a *= 0.5;
 
     if (e.k === 'eel') {
       // la serpiente del vacío: una línea sinuosa con cabeza de brasa
@@ -1199,7 +1285,7 @@ class Game extends Phaser.Scene {
     const pitch = Phaser.Math.Clamp(this.vy / CLIMB, -1, 1) * 0.3;
     this.drawWorldModel(g, cm, SHIP_MODEL, e, 1, INK, 1, this.roll + this.spin, pitch);
     // estela del motor
-    const level = Math.abs(this.speed) / MAX_FWD;
+    const level = Math.abs(this.speed) / TURBO_SPEED;
     if (level > 0.05) {
       const fx = Math.sin(this.yaw);
       const fz = Math.cos(this.yaw);
@@ -1270,10 +1356,16 @@ class Game extends Phaser.Scene {
     this.velText.setText('VEL ' + String(Math.abs(Math.round(this.speed))).padStart(3, '0'));
     this.scoreText.setText(String(this.score).padStart(6, '0'));
     this.hullText.setText(
-      'CASCO ' + '▸'.repeat(this.hull) + '·'.repeat(HULL_MAX - this.hull) +
+      'CASCO ' + (GOD ? '∞' : '▸'.repeat(this.hull) + '·'.repeat(HULL_MAX - this.hull)) +
       '   MISILES ' + '▴'.repeat(this.ammo) + '·'.repeat(MISSILE_MAX - this.ammo)
     );
     this.partText.setText(PARTS.map((p, i) => (i < this.partsGot ? p[0] : '·')).join(' '));
+    // la reserva de turbo, junto a la velocidad
+    const g = this.gfx;
+    g.lineStyle(1, INK, 0.5);
+    g.strokeRect(12, 34, 90, 6);
+    g.fillStyle(INK_HI, 0.7);
+    g.fillRect(13, 35, 88 * (this.boost / BOOST_MAX), 4);
   }
 }
 
