@@ -30,10 +30,12 @@ const DIM_CSS = '#8a9099';
 // MODO PRUEBA: vidas infinitas mientras se ajusta el juego — apagar al enviar
 const GOD = true;
 
-// --- Vuelo: la nave SIEMPRE avanza; el stick dirige, el turbo se recarga ---
+// --- Vuelo: la nave SIEMPRE avanza; el stick dirige, el turbo se recarga.
+// Arriba/abajo es CABECEO real: mantenlo y la nave hace la vuelta completa. ---
 const YAW_RATE = 2.1; // rad/s tope
 const YAW_EASE = 7; // 1/s, el giro entra y sale suave
-const CLIMB = 220; // subida/bajada, unidades/s
+const PITCH_RATE = 1.7; // rad/s de cabeceo
+const LEVEL_EASE = 1.3; // 1/s: suelta el stick cerca del nivel y se endereza
 const CRUISE = 235; // crucero constante
 const TURBO_SPEED = 470;
 const BRAKE_SPEED = 110;
@@ -426,9 +428,11 @@ class Game extends Phaser.Scene {
     this.pos = { x: 0, y: 0, z: -1600 };
     this.yaw = 0;
     this.yawVel = 0;
+    this.pitch = 0;
+    this.pitchVel = 0;
     this.speed = CRUISE;
     this.boost = BOOST_MAX;
-    this.vy = 0;
+    this.strafeV = { x: 0, z: 0 };
     this.roll = 0;
     this.spin = 0;
     this.rollReadyAt = 0;
@@ -438,15 +442,16 @@ class Game extends Phaser.Scene {
     this.ammo = 3;
     this.scrapRun = 0;
 
-    // cámara: sigue el rumbo con un pelo de retraso; el horizonte no se mueve
+    // cámara: sigue rumbo y cabeceo con un pelo de retraso; nunca alabea
     this.camYaw = 0;
+    this.camPitch = 0;
 
     this.phase = 'play'; // play → charge → out
     this.charge = 0;
     this.score = 0;
     this.partsGot = 0;
     this.elapsed = 0;
-    this.droneAt = 13; // el sector tarda en notarte
+    this.droneAt = 6; // el sector te nota pronto: la caza es el juego
     this.shake = 0;
 
     this.ents = [];
@@ -474,29 +479,18 @@ class Game extends Phaser.Scene {
       const pz = Math.cos(ang) * rr;
       const py = rnd(-500, 500);
       this.ents.push({ k: 'part', x: px, y: py, z: pz, r: 26, idx: i, t: 0, yaw: 0 });
-      for (let j = 0; j < 2 + i; j++) {
+      // un centinela custodia la primera pieza, dos las siguientes — pocos, grandes
+      for (let j = 0; j < 1 + Math.min(i, 1); j++) {
         this.ents.push({
           k: 'sentry',
-          x: px + rnd(-300, 300),
-          y: py + rnd(-220, 220),
-          z: pz + rnd(-300, 300),
-          r: 30,
-          hp: 2,
+          x: px + rnd(-280, 280),
+          y: py + rnd(-200, 200),
+          z: pz + rnd(-280, 280),
+          r: 44,
+          hp: 3,
           t: rnd(0, 6),
           yaw: rnd(0, 6.3),
           fireAt: 0,
-        });
-      }
-      for (let j = 0; j < 2; j++) {
-        this.ents.push({
-          k: 'mine',
-          x: px + rnd(-380, 380),
-          y: py + rnd(-260, 260),
-          z: pz + rnd(-380, 380),
-          r: 20,
-          hp: 1,
-          t: rnd(0, 6),
-          yaw: 0,
         });
       }
     }
@@ -572,7 +566,7 @@ class Game extends Phaser.Scene {
     this.elapsed += dt;
 
     if (this.phase === 'play') {
-      this.spawnDrones(dt, 1 + this.partsGot, 13);
+      this.spawnDrones(dt, 2 + this.partsGot, 8);
     } else if (this.phase === 'charge') {
       this.charge = Math.min(CHARGE_TIME, this.charge + dt);
       this.spawnDrones(dt, 4, 6);
@@ -617,14 +611,29 @@ class Game extends Phaser.Scene {
   }
 
   // --- la nave: tuya, libre ---
+  // La dirección de la nariz, en 3D: yaw en el plano, pitch hacia el cielo
+  forward() {
+    const cp = Math.cos(this.pitch);
+    return {
+      x: Math.sin(this.yaw) * cp,
+      y: -Math.sin(this.pitch),
+      z: Math.cos(this.yaw) * cp,
+    };
+  }
+
   updatePlayer(time, dt) {
     const turn = (held.P1_R ? 1 : 0) - (held.P1_L ? 1 : 0);
-    const climb = (held.P1_D ? 1 : 0) - (held.P1_U ? 1 : 0);
+    const pit = (held.P1_U ? 1 : 0) - (held.P1_D ? 1 : 0); // arriba = nariz arriba
 
-    // el giro entra y sale con inercia: sin golpes de cámara
+    // giro y cabeceo con inercia: sin golpes de cámara
     this.yawVel += (turn * YAW_RATE - this.yawVel) * Math.min(1, YAW_EASE * dt);
     this.yaw += this.yawVel * dt;
-    this.vy += (climb * CLIMB - this.vy) * Math.min(1, 6 * dt);
+    this.pitchVel += (pit * PITCH_RATE - this.pitchVel) * Math.min(1, YAW_EASE * dt);
+    this.pitch += this.pitchVel * dt;
+    // suéltalo cerca del nivel y la nave se endereza; a medio loop, no interfiere
+    if (!pit && Math.abs(this.pitch) < 1.1) this.pitch -= this.pitch * Math.min(1, LEVEL_EASE * dt);
+    while (this.pitch > Math.PI) this.pitch -= Math.PI * 2;
+    while (this.pitch < -Math.PI) this.pitch += Math.PI * 2;
 
     // la nave siempre avanza; B2 es turbo con reserva, B5 frena
     const boosting = held.P1_2 && this.boost > 0;
@@ -633,11 +642,14 @@ class Game extends Phaser.Scene {
     const want = boosting ? TURBO_SPEED : held.P1_5 ? BRAKE_SPEED : CRUISE;
     this.speed += (want - this.speed) * Math.min(1, SPEED_EASE * dt);
 
-    const fx = Math.sin(this.yaw);
-    const fz = Math.cos(this.yaw);
-    this.pos.x += fx * this.speed * dt;
-    this.pos.z += fz * this.speed * dt;
-    this.pos.y += this.vy * dt;
+    const f = this.forward();
+    this.pos.x += (f.x * this.speed + this.strafeV.x) * dt;
+    this.pos.y += f.y * this.speed * dt;
+    this.pos.z += (f.z * this.speed + this.strafeV.z) * dt;
+    // el empujón del tonel se apaga solo, suave
+    const sd = Math.min(1, 6 * dt);
+    this.strafeV.x -= this.strafeV.x * sd;
+    this.strafeV.z -= this.strafeV.z * sd;
 
     // el borde del sector te devuelve, suave
     const rr = Math.hypot(this.pos.x, this.pos.y * 1.6, this.pos.z);
@@ -650,12 +662,15 @@ class Game extends Phaser.Scene {
     // alabeo con el giro
     this.roll += (this.yawVel * 0.34 - this.roll) * Math.min(1, 8 * dt);
 
-    // tonel volado direccional: B4 izquierda, B6 derecha
+    // tonel volado direccional: B4 izquierda, B6 derecha — esquive lateral
     const rollDir = pressed.P1_4 ? -1 : pressed.P1_6 ? 1 : 0;
     if (rollDir && time >= this.rollReadyAt) {
       this.rollReadyAt = time + ROLL_COOLDOWN_MS;
       this.invulnUntil = Math.max(this.invulnUntil, time + ROLL_MS + 150);
-      this.strafe = { x: fz * rollDir * ROLL_KICK, z: -fx * rollDir * ROLL_KICK, t: 0.3 };
+      const rx = Math.cos(this.yaw);
+      const rz = -Math.sin(this.yaw);
+      this.strafeV.x = rx * rollDir * ROLL_KICK;
+      this.strafeV.z = rz * rollDir * ROLL_KICK;
       this.spin = 0;
       Sfx.roll();
       this.tweens.add({
@@ -666,23 +681,19 @@ class Game extends Phaser.Scene {
         onComplete: () => (this.spin = 0),
       });
     }
-    if (this.strafe && this.strafe.t > 0) {
-      this.strafe.t -= dt;
-      this.pos.x += this.strafe.x * dt;
-      this.pos.z += this.strafe.z * dt;
-    }
 
     // B1: cañón — sale de la nariz, hereda tu velocidad
     if (held.P1_1 && time >= this.fireReadyAt) {
       this.fireReadyAt = time + FIRE_MS;
       Sfx.fire();
+      const sp = BOLT_SPEED + this.speed;
       this.bolts.push({
-        x: this.pos.x + fx * 24,
-        y: this.pos.y - 2,
-        z: this.pos.z + fz * 24,
-        vx: fx * BOLT_SPEED + fx * this.speed,
-        vy: this.vy * 0.3,
-        vz: fz * BOLT_SPEED + fz * this.speed,
+        x: this.pos.x + f.x * 24,
+        y: this.pos.y + f.y * 24 - 2,
+        z: this.pos.z + f.z * 24,
+        vx: f.x * sp,
+        vy: f.y * sp,
+        vz: f.z * sp,
         life: BOLT_LIFE,
       });
     }
@@ -691,21 +702,21 @@ class Game extends Phaser.Scene {
     if (pressed.P1_3 && this.ammo > 0) {
       this.ammo--;
       Sfx.missile();
-      const target = this.bestTarget(fx, fz);
+      const target = this.bestTarget(f);
       this.missiles.push({
-        x: this.pos.x + fx * 26,
-        y: this.pos.y + 4,
-        z: this.pos.z + fz * 26,
-        vx: fx * MISSILE_SPEED,
-        vy: 0,
-        vz: fz * MISSILE_SPEED,
+        x: this.pos.x + f.x * 26,
+        y: this.pos.y + f.y * 26 + 4,
+        z: this.pos.z + f.z * 26,
+        vx: f.x * MISSILE_SPEED,
+        vy: f.y * MISSILE_SPEED,
+        vz: f.z * MISSILE_SPEED,
         target,
         life: 4.5,
       });
     }
   }
 
-  bestTarget(fx, fz) {
+  bestTarget(f) {
     let best = null;
     let bestDot = 0.75; // solo lo que ya tienes bastante de frente
     for (const e of this.ents) {
@@ -715,7 +726,7 @@ class Game extends Phaser.Scene {
       const dz = e.z - this.pos.z;
       const d = Math.hypot(dx, dy, dz);
       if (d > 1700) continue;
-      const dot = (dx * fx + dz * fz) / Math.max(d, 1);
+      const dot = (dx * f.x + dy * f.y + dz * f.z) / Math.max(d, 1);
       if (dot > bestDot) {
         bestDot = dot;
         best = e;
@@ -887,11 +898,10 @@ class Game extends Phaser.Scene {
   shootAtPlayer(e, sp) {
     // apunta a donde VAS a estar, no a donde estás
     const t = Math.hypot(this.pos.x - e.x, this.pos.y - e.y, this.pos.z - e.z) / sp;
-    const fx = Math.sin(this.yaw);
-    const fz = Math.cos(this.yaw);
-    const tx = this.pos.x + fx * this.speed * t * 0.7;
-    const ty = this.pos.y + this.vy * t * 0.7;
-    const tz = this.pos.z + fz * this.speed * t * 0.7;
+    const f = this.forward();
+    const tx = this.pos.x + f.x * this.speed * t * 0.7;
+    const ty = this.pos.y + f.y * this.speed * t * 0.7;
+    const tz = this.pos.z + f.z * this.speed * t * 0.7;
     const dx = tx - e.x;
     const dy = ty - e.y;
     const dz = tz - e.z;
@@ -951,32 +961,58 @@ class Game extends Phaser.Scene {
     while (d > Math.PI) d -= Math.PI * 2;
     while (d < -Math.PI) d += Math.PI * 2;
     this.camYaw += d * Math.min(1, 9 * dt);
+    let dp = this.pitch - this.camPitch;
+    while (dp > Math.PI) dp -= Math.PI * 2;
+    while (dp < -Math.PI) dp += Math.PI * 2;
+    this.camPitch += dp * Math.min(1, 8 * dt);
     if (this.shake > 0) this.shake = Math.max(0, this.shake - 34 * dt);
   }
 
-  // --- proyección mundo → pantalla (horizonte estable, sin cabeceo) ---
+  // --- proyección mundo → pantalla: la cámara sigue rumbo Y cabeceo,
+  // pero nunca alabea — el horizonte no rota ---
   cam() {
-    const fx = Math.sin(this.camYaw);
-    const fz = Math.cos(this.camYaw);
+    const sinY = Math.sin(this.camYaw);
+    const cosY = Math.cos(this.camYaw);
+    const sinP = Math.sin(this.camPitch);
+    const cosP = Math.cos(this.camPitch);
+    // detrás de la nariz, y desplazada hacia el "arriba" de la cámara
+    const fx = sinY * cosP;
+    const fy = -sinP;
+    const fz = cosY * cosP;
+    const ux = -sinY * sinP;
+    const uy = -cosP;
+    const uz = -cosY * sinP;
     return {
-      x: this.pos.x - fx * CAM_BACK,
-      y: this.pos.y - CAM_UP,
-      z: this.pos.z - fz * CAM_BACK,
-      cos: fz,
-      sin: fx,
+      x: this.pos.x - fx * CAM_BACK + ux * CAM_UP,
+      y: this.pos.y - fy * CAM_BACK + uy * CAM_UP,
+      z: this.pos.z - fz * CAM_BACK + uz * CAM_UP,
+      sinY,
+      cosY,
+      sinP,
+      cosP,
     };
+  }
+
+  czOf(cm, wx, wy, wz) {
+    const dx = wx - cm.x;
+    const dy = wy - cm.y;
+    const dz = wz - cm.z;
+    const cz1 = dx * cm.sinY + dz * cm.cosY;
+    return cz1 * cm.cosP - dy * cm.sinP;
   }
 
   project(cm, wx, wy, wz) {
     const dx = wx - cm.x;
     const dy = wy - cm.y;
     const dz = wz - cm.z;
-    const cz = dx * cm.sin + dz * cm.cos;
+    const cx = dx * cm.cosY - dz * cm.sinY;
+    const cz1 = dx * cm.sinY + dz * cm.cosY;
+    const cz = cz1 * cm.cosP - dy * cm.sinP;
     if (cz < NEAR) return null;
-    const cx = dx * cm.cos - dz * cm.sin;
+    const cy = dy * cm.cosP + cz1 * cm.sinP;
     const shx = this.shake ? (Math.random() - 0.5) * this.shake : 0;
     const shy = this.shake ? (Math.random() - 0.5) * this.shake : 0;
-    return [CX + (cx * FOCAL) / cz + shx, CY + (dy * FOCAL) / cz + shy, cz];
+    return [CX + (cx * FOCAL) / cz + shx, CY + (cy * FOCAL) / cz + shy, cz];
   }
 
   worldLine(g, cm, a, b) {
@@ -985,8 +1021,8 @@ class Game extends Phaser.Scene {
     if (!pa && !pb) return;
     if (!pa || !pb) {
       const [va, vb] = pa ? [a, b] : [b, a];
-      const cza = (va[0] - cm.x) * cm.sin + (va[2] - cm.z) * cm.cos;
-      const czb = (vb[0] - cm.x) * cm.sin + (vb[2] - cm.z) * cm.cos;
+      const cza = this.czOf(cm, va[0], va[1], va[2]);
+      const czb = this.czOf(cm, vb[0], vb[1], vb[2]);
       const t = (cza - NEAR - 0.01) / (cza - czb);
       const mx = va[0] + (vb[0] - va[0]) * t;
       const my = va[1] + (vb[1] - va[1]) * t;
@@ -1110,7 +1146,8 @@ class Game extends Phaser.Scene {
     while (d > Math.PI) d -= Math.PI * 2;
     while (d < -Math.PI) d += Math.PI * 2;
     if (Math.abs(d) > 1.7) return null;
-    return [CX + d * FOCAL, CY + elev];
+    // cabecear también mueve el cielo
+    return [CX + d * FOCAL, CY + elev + this.camPitch * FOCAL];
   }
 
   // El cielo: nebulosas tenues y un gigante gaseoso con bandas, más su luna
@@ -1195,15 +1232,14 @@ class Game extends Phaser.Scene {
   // El polvo convierte tu velocidad en estelas: se SIENTE volar
   drawDust(g, cm) {
     const L = 560;
-    const fx = Math.sin(this.yaw);
-    const fz = Math.cos(this.yaw);
+    const f = this.forward();
     const trail = 0.012 + (this.speed / TURBO_SPEED) * 0.05;
     for (const m of this.dust) {
       const wx = this.pos.x + Phaser.Math.Wrap(m.x - this.pos.x, -L / 2, L / 2);
       const wy = this.pos.y + Phaser.Math.Wrap(m.y - this.pos.y, -L / 2, L / 2);
       const wz = this.pos.z + Phaser.Math.Wrap(m.z - this.pos.z, -L / 2, L / 2);
       const p1 = this.project(cm, wx, wy, wz);
-      const p2 = this.project(cm, wx + fx * this.speed * trail, wy + this.vy * trail, wz + fz * this.speed * trail);
+      const p2 = this.project(cm, wx + f.x * this.speed * trail, wy + f.y * this.speed * trail, wz + f.z * this.speed * trail);
       if (!p1 || !p2) continue;
       const dist = Math.hypot(wx - this.pos.x, wy - this.pos.y, wz - this.pos.z);
       const a = Phaser.Math.Clamp(1 - dist / 420, 0, 1) * 0.4 * (this.speed / TURBO_SPEED + 0.3);
@@ -1233,7 +1269,7 @@ class Game extends Phaser.Scene {
 
     // el óxido es solo para lo que te ataca; una roca es paisaje que golpea
     const color = e.k === 'part' ? INK_HI : e.k === 'rock' ? INK : e.k === 'scrap' ? INK : RUST;
-    if (e.k === 'rock') a *= 0.5;
+    if (e.k === 'rock') a *= 0.62;
 
     if (e.k === 'eel') {
       // la serpiente del vacío: una línea sinuosa con cabeza de brasa
@@ -1256,7 +1292,7 @@ class Game extends Phaser.Scene {
     const model =
       e.k === 'sentry' ? SENTRY_MODEL : e.k === 'drone' ? DRONE_MODEL : e.k === 'mine' ? MINE_MODEL
       : e.k === 'rock' ? ROCK_MODEL : e.k === 'part' ? PART_MODEL : SCRAP_MODEL;
-    const scale = e.k === 'rock' ? e.r / 16 : e.k === 'part' ? 1.4 : 1;
+    const scale = e.k === 'rock' ? e.r / 16 : e.k === 'part' ? 1.4 : e.k === 'sentry' ? 1.6 : 1;
     const rot = e.k === 'rock' ? e.t * e.spin : e.k === 'part' || e.k === 'scrap' ? e.t * 1.1 : 0;
     this.drawWorldModel(g, cm, model, e, scale, color, a, rot);
 
@@ -1265,9 +1301,13 @@ class Game extends Phaser.Scene {
       g.fillCircle(p[0], p[1], Math.max(1.5, 300 / p[2]));
     }
     if (e.k === 'sentry') {
-      g.fillStyle(RUST_HI, a * (0.5 + 0.5 * Math.sin(e.t * 3)));
-      const eye = this.project(cm, e.x, e.y - 26, e.z);
-      if (eye) g.fillCircle(eye[0], eye[1], Math.max(2, 500 / p[2]));
+      // el ojo late y su anillo de vigilancia respira: se ve venir de lejos
+      const pulse = 0.5 + 0.5 * Math.sin(e.t * 3);
+      g.fillStyle(RUST_HI, a * (0.6 + 0.4 * pulse));
+      const eye = this.project(cm, e.x, e.y - 20, e.z);
+      if (eye) g.fillCircle(eye[0], eye[1], Math.max(3, 1100 / p[2]));
+      g.lineStyle(1.5, RUST, a * (0.25 + 0.3 * pulse));
+      g.strokeCircle(p[0], p[1], (70 + pulse * 10) * (FOCAL / p[2]));
     }
     if (e.k === 'part') {
       g.lineStyle(1.5, INK_HI, a * (0.4 + 0.3 * Math.sin(e.t * 4)));
@@ -1282,27 +1322,24 @@ class Game extends Phaser.Scene {
     if (this.phase === 'out') return;
     if (time < this.invulnUntil && Math.floor(time / 60) % 2 === 0) return;
     const e = { x: this.pos.x, y: this.pos.y, z: this.pos.z, yaw: this.yaw };
-    const pitch = Phaser.Math.Clamp(this.vy / CLIMB, -1, 1) * 0.3;
-    this.drawWorldModel(g, cm, SHIP_MODEL, e, 1, INK, 1, this.roll + this.spin, pitch);
+    this.drawWorldModel(g, cm, SHIP_MODEL, e, 1, INK, 1, this.roll + this.spin, this.pitch);
+    const f = this.forward();
     // estela del motor
     const level = Math.abs(this.speed) / TURBO_SPEED;
     if (level > 0.05) {
-      const fx = Math.sin(this.yaw);
-      const fz = Math.cos(this.yaw);
       g.lineStyle(2, INK_HI, 0.3 + 0.5 * level * (0.6 + 0.4 * Math.sin(time * 0.04)));
+      const tail = 20 + 26 * level;
       this.worldLine(
         g,
         cm,
-        [this.pos.x - fx * 14, this.pos.y + 1, this.pos.z - fz * 14],
-        [this.pos.x - fx * (20 + 26 * level), this.pos.y + 1, this.pos.z - fz * (20 + 26 * level)]
+        [this.pos.x - f.x * 14, this.pos.y - f.y * 14 + 1, this.pos.z - f.z * 14],
+        [this.pos.x - f.x * tail, this.pos.y - f.y * tail + 1, this.pos.z - f.z * tail]
       );
     }
     // retícula: a donde apunta la nariz — y avisa si un misil tiene blanco
-    const fx = Math.sin(this.yaw);
-    const fz = Math.cos(this.yaw);
-    const rp = this.project(cm, this.pos.x + fx * 620, this.pos.y - 2, this.pos.z + fz * 620);
+    const rp = this.project(cm, this.pos.x + f.x * 620, this.pos.y + f.y * 620, this.pos.z + f.z * 620);
     if (rp) {
-      const locked = this.ammo > 0 && this.bestTarget(fx, fz);
+      const locked = this.ammo > 0 && this.bestTarget(f);
       g.lineStyle(1.5, locked ? RUST_HI : INK, 0.6);
       g.strokeCircle(rp[0], rp[1], locked ? 10 : 7);
       g.fillStyle(locked ? RUST_HI : INK, 0.6);
@@ -1338,7 +1375,7 @@ class Game extends Phaser.Scene {
       const dx = part.x - cm.x;
       const dy = part.y - cm.y;
       const dz = part.z - cm.z;
-      const cx = dx * cm.cos - dz * cm.sin;
+      const cx = dx * cm.cosY - dz * cm.sinY;
       ang = Math.atan2(dy < 0 ? -1 : 1, cx < 0 ? -1.4 : 1.4);
     }
     const ex = CX + Math.cos(ang) * (CX - 60);
