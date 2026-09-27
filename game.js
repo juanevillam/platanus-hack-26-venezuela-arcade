@@ -321,6 +321,55 @@ const ROCK_MODEL = [
   ],
 ];
 
+// Interceptor: aguja que embiste
+const INTER_MODEL = [
+  [
+    [0, 0, 18], [-7, 0, -10], [7, 0, -10], [0, -4, -10], [0, 0, -14],
+  ],
+  [
+    [0, 1], [0, 2], [0, 3], [1, 4], [2, 4], [3, 4],
+  ],
+];
+
+// La nave capital: casco alargado con quilla y puente
+const BOSS_MODEL = [
+  [
+    [0, 0, 130], // 0 proa
+    [38, 10, 44], [38, 10, -92], [-38, 10, -92], [-38, 10, 44], // 1-4 cubierta
+    [0, -22, 24], [0, -22, -76], // 5-6 puente
+    [0, 26, -30], // 7 quilla
+    [0, 0, -104], // 8 popa
+  ],
+  [
+    [0, 1], [0, 4], [1, 2], [4, 3], [2, 8], [3, 8],
+    [0, 5], [5, 6], [6, 8], [1, 5], [4, 5], [2, 6], [3, 6],
+    [0, 7], [7, 8], [1, 7], [4, 7],
+  ],
+];
+// Torretas montadas en el casco (coordenadas locales)
+const BOSS_TURRETS = [
+  [46, -4, 30],
+  [-46, -4, 30],
+  [0, -30, -40],
+];
+
+// Mejoras: escudo (anillo), reparación (cruz), cañón doble (dos rayas)
+const POW_MODELS = {
+  shield: [
+    [[0, -10, 0], [9, 0, 0], [0, 10, 0], [-9, 0, 0], [0, 0, 0]],
+    [[0, 1], [1, 2], [2, 3], [3, 0]],
+  ],
+  hull: [
+    [[0, -9, 0], [0, 9, 0], [-9, 0, 0], [9, 0, 0]],
+    [[0, 1], [2, 3]],
+  ],
+  twin: [
+    [[-5, -9, 0], [-5, 9, 0], [5, -9, 0], [5, 9, 0]],
+    [[0, 1], [2, 3]],
+  ],
+};
+const POW_NAMES = { shield: 'ESCUDO ARRIBA', hull: 'CASCO REPARADO', twin: 'CAÑÓN DOBLE' };
+
 // Chatarra: esquirla
 const SCRAP_MODEL = [
   [
@@ -458,6 +507,16 @@ class Game extends Phaser.Scene {
     this.missiles = [];
     this.shots = [];
     this.booms = [];
+    this.shards = []; // fragmentos de explosión
+
+    // arcade extra
+    this.paused = false;
+    this.mult = 1; // multiplicador de combo
+    this.multT = 0;
+    this.shield = false;
+    this.twinUntil = 0;
+    this.muzzleT = 0;
+    this.boss = null;
 
     this.populate();
     this.buildStars();
@@ -564,11 +623,24 @@ class Game extends Phaser.Scene {
     const dt = Math.min(delta, 50) / 1000;
     this.elapsed += dt;
 
+    // pausa: START congela el sector
+    if (pressed.START1 && this.phase !== 'out') {
+      this.paused = !this.paused;
+      this.tweens.killTweensOf(this.notice);
+      this.notice.setText(this.paused ? 'PAUSA — START CONTINÚA' : '').setAlpha(this.paused ? 1 : 0);
+    }
+    if (this.paused) return;
+
+    // el combo se enfría
+    this.multT -= dt;
+    if (this.multT <= 0) this.mult = 1;
+    this.muzzleT -= dt;
+
     if (this.phase === 'play') {
       this.spawnDrones(dt, 2 + this.partsGot, 8);
     } else if (this.phase === 'charge') {
       this.charge = Math.min(CHARGE_TIME, this.charge + dt);
-      this.spawnDrones(dt, 4, 6);
+      this.spawnDrones(dt, 3, 7);
       if (this.charge >= CHARGE_TIME && !this.jumping) {
         this.jumping = true;
         Sfx.jump();
@@ -589,15 +661,17 @@ class Game extends Phaser.Scene {
     this.updateHud();
   }
 
-  // Después de un rato, salen a cazarte — y más, con cada pieza a bordo
+  // Después de un rato, salen a cazarte — y más, con cada pieza a bordo.
+  // Con la primera pieza aparecen también interceptores, que embisten.
   spawnDrones(dt, max, every) {
     this.droneAt -= dt;
-    const alive = this.ents.filter((e) => e.k === 'drone').length;
+    const alive = this.ents.filter((e) => e.k === 'drone' || e.k === 'inter').length;
     if (this.droneAt > 0 || alive >= max) return;
     this.droneAt = every;
     const ang = Math.random() * Math.PI * 2;
+    const inter = this.partsGot >= 1 && Math.random() < 0.45;
     this.ents.push({
-      k: 'drone',
+      k: inter ? 'inter' : 'drone',
       x: this.pos.x + Math.sin(ang) * 1200,
       y: this.pos.y + (Math.random() - 0.5) * 500,
       z: this.pos.z + Math.cos(ang) * 1200,
@@ -606,7 +680,113 @@ class Game extends Phaser.Scene {
       t: 0,
       yaw: 0,
       fireAt: 1.5,
+      vx: 0,
+      vy: 0,
+      vz: 0,
     });
+  }
+
+  // La nave capital llega a defender el hipersalto: tres torretas, luego el núcleo
+  spawnBoss() {
+    const ang = Math.random() * Math.PI * 2;
+    this.boss = {
+      k: 'boss',
+      x: this.pos.x + Math.sin(ang) * 1500,
+      y: this.pos.y - 100,
+      z: this.pos.z + Math.cos(ang) * 1500,
+      r: 120,
+      t: 0,
+      yaw: 0,
+      core: 6,
+      turrets: BOSS_TURRETS.map(([ox, oy, oz]) => ({ ox, oy, oz, hp: 2, fireAt: 1 + Math.random() * 2 })),
+    };
+    this.ents.push(this.boss);
+  }
+
+  // Punto mundial de una torreta del jefe, girada con el casco
+  bossTurretPos(b, tu) {
+    const c = Math.cos(b.yaw);
+    const s = Math.sin(b.yaw);
+    return [b.x + tu.ox * c + tu.oz * s, b.y + tu.oy, b.z - tu.ox * s + tu.oz * c];
+  }
+
+  // Daño al jefe: primero caen las torretas, después se abre el núcleo
+  bossHit(b, n, wx, wy, wz) {
+    const alive = b.turrets.filter((t) => t.hp > 0);
+    if (alive.length) {
+      let best = alive[0];
+      let bd = 1e9;
+      for (const tu of alive) {
+        const [tx, ty, tz] = this.bossTurretPos(b, tu);
+        const d = Math.hypot(wx - tx, wy - ty, wz - tz);
+        if (d < bd) {
+          bd = d;
+          best = tu;
+        }
+      }
+      best.hp -= n;
+      b.flashT = 0.08;
+      if (best.hp <= 0) {
+        const [tx, ty, tz] = this.bossTurretPos(b, best);
+        this.booms.push({ wx: tx, wy: ty, wz: tz, t: 0 });
+        this.addScore(60);
+        this.dropPow(tx, ty, tz, 0.7);
+        Sfx.boom();
+        if (!b.turrets.some((t) => t.hp > 0)) this.say('NÚCLEO EXPUESTO.');
+      }
+      return;
+    }
+    b.core -= n;
+    b.flashT = 0.08;
+    if (b.core <= 0 && !b.dead) {
+      b.dead = true;
+      this.boss = null;
+      for (let i = 0; i < 4; i++) {
+        this.booms.push({ wx: b.x + (Math.random() - 0.5) * 160, wy: b.y + (Math.random() - 0.5) * 60, wz: b.z + (Math.random() - 0.5) * 160, t: -i * 0.08, big: true });
+      }
+      this.spray(b.x, b.y, b.z, 14);
+      this.addScore(400);
+      Sfx.boom();
+      // la capital custodiaba el salto: cae y el hipersalto termina de cargar
+      this.charge = CHARGE_TIME;
+      this.say('NAVE CAPITAL DESTRUIDA.');
+    }
+  }
+
+  addScore(pts) {
+    this.score += pts * this.mult;
+    if (this.multT > 0) this.mult = Math.min(5, this.mult + 1);
+    else this.mult = 2;
+    this.multT = 4;
+  }
+
+  dropPow(x, y, z, chance) {
+    if (Math.random() > chance) return;
+    const subs = ['shield', 'hull', 'twin'];
+    this.ents.push({
+      k: 'pow',
+      sub: subs[Math.floor(Math.random() * subs.length)],
+      x, y, z,
+      r: 20,
+      t: 0,
+      yaw: 0,
+      life: 14,
+    });
+  }
+
+  spray(x, y, z, n) {
+    for (let i = 0; i < n; i++) {
+      const a1 = Math.random() * Math.PI * 2;
+      const a2 = (Math.random() - 0.5) * Math.PI;
+      const sp = 120 + Math.random() * 240;
+      this.shards.push({
+        x, y, z,
+        vx: Math.sin(a1) * Math.cos(a2) * sp,
+        vy: Math.sin(a2) * sp,
+        vz: Math.cos(a1) * Math.cos(a2) * sp,
+        life: 0.5 + Math.random() * 0.3,
+      });
+    }
   }
 
   // --- la nave: tuya, libre ---
@@ -692,20 +872,26 @@ class Game extends Phaser.Scene {
       Sfx.roll();
     }
 
-    // B1: cañón — sale de la nariz, hereda tu velocidad
+    // B1: cañón — sale de la nariz, hereda tu velocidad (doble con la mejora)
     if (held.P1_1 && time >= this.fireReadyAt) {
       this.fireReadyAt = time + FIRE_MS;
+      this.muzzleT = 0.05;
       Sfx.fire();
       const sp = BOLT_SPEED + this.speed;
-      this.bolts.push({
-        x: this.pos.x + f.x * 24,
-        y: this.pos.y + f.y * 24 - 2,
-        z: this.pos.z + f.z * 24,
-        vx: f.x * sp,
-        vy: f.y * sp,
-        vz: f.z * sp,
-        life: BOLT_LIFE,
-      });
+      const twin = time < this.twinUntil;
+      const rx = Math.cos(this.yaw);
+      const rz = -Math.sin(this.yaw);
+      for (const off of twin ? [-9, 9] : [0]) {
+        this.bolts.push({
+          x: this.pos.x + f.x * 24 + rx * off,
+          y: this.pos.y + f.y * 24 - 2,
+          z: this.pos.z + f.z * 24 + rz * off,
+          vx: f.x * sp,
+          vy: f.y * sp,
+          vz: f.z * sp,
+          life: BOLT_LIFE,
+        });
+      }
     }
 
     // B3: misil — busca el blanco más alineado con tu nariz
@@ -730,7 +916,7 @@ class Game extends Phaser.Scene {
     let best = null;
     let bestDot = 0.75; // solo lo que ya tienes bastante de frente
     for (const e of this.ents) {
-      if (e.k === 'scrap' || e.k === 'part' || e.dead) continue;
+      if (e.k === 'scrap' || e.k === 'part' || e.k === 'pow' || e.dead) continue;
       const dx = e.x - this.pos.x;
       const dy = e.y - this.pos.y;
       const dz = e.z - this.pos.z;
@@ -750,6 +936,11 @@ class Game extends Phaser.Scene {
     this.invulnUntil = time + 1300;
     this.shake = 9;
     Sfx.hurt();
+    if (this.shield) {
+      // el escudo se lleva el golpe
+      this.shield = false;
+      return;
+    }
     if (GOD) return; // modo prueba: duele, pero no mata
     this.hull--;
     if (this.hull <= 0) {
@@ -766,6 +957,7 @@ class Game extends Phaser.Scene {
 
     for (const e of this.ents) {
       e.t += dt;
+      if (e.flashT) e.flashT -= dt;
       const dx = P.x - e.x;
       const dy = P.y - e.y;
       const dz = P.z - e.z;
@@ -783,6 +975,37 @@ class Game extends Phaser.Scene {
           e.fireAt = 1.8;
           this.shootAtPlayer(e, 420);
         }
+      } else if (e.k === 'inter') {
+        // el interceptor toma carrerilla, embiste y pasa de largo
+        if (dist > 420 || e.t < 0.5) {
+          const k = Math.min(1, 2.2 * dt);
+          e.vx += ((dx / dist) * 430 - e.vx) * k;
+          e.vy += ((dy / dist) * 430 - e.vy) * k;
+          e.vz += ((dz / dist) * 430 - e.vz) * k;
+        }
+        e.x += e.vx * dt;
+        e.y += e.vy * dt;
+        e.z += e.vz * dt;
+        e.yaw = Math.atan2(e.vx, e.vz);
+      } else if (e.k === 'boss') {
+        // la capital avanza pesada hacia ti y abre fuego por torretas
+        e.yaw += Phaser.Math.Angle.Wrap(Math.atan2(dx, dz) - e.yaw) * Math.min(1, 0.5 * dt);
+        if (dist > 620) {
+          e.x += Math.sin(e.yaw) * 90 * dt;
+          e.z += Math.cos(e.yaw) * 90 * dt;
+        }
+        for (const tu of e.turrets) {
+          if (tu.hp <= 0) continue;
+          tu.fireAt -= dt;
+          if (tu.fireAt <= 0 && dist < 1400) {
+            tu.fireAt = 2.6;
+            const [tx, ty, tz] = this.bossTurretPos(e, tu);
+            this.shootAtPlayer({ x: tx, y: ty, z: tz, k: 'bossTurret' }, 430);
+          }
+        }
+      } else if (e.k === 'pow') {
+        e.life -= dt;
+        if (e.life <= 0) e.dead = true;
       } else if (e.k === 'sentry') {
         e.yaw += 0.5 * dt; // gira, vigilando
         e.y += Math.sin(e.t * 1.1) * 8 * dt;
@@ -830,6 +1053,13 @@ class Game extends Phaser.Scene {
           } else {
             Sfx.pickup();
           }
+        } else if (e.k === 'pow') {
+          e.dead = true;
+          Sfx.ammo();
+          this.say(POW_NAMES[e.sub]);
+          if (e.sub === 'shield') this.shield = true;
+          else if (e.sub === 'hull') this.hull = Math.min(HULL_MAX, this.hull + 1);
+          else this.twinUntil = time + 12000;
         } else if (e.k === 'part') {
           e.dead = true;
           this.partsGot++;
@@ -838,11 +1068,12 @@ class Game extends Phaser.Scene {
           if (this.partsGot >= PARTS.length) {
             this.phase = 'charge';
             this.say('PIEZAS COMPLETAS. CARGANDO EL HIPERSALTO — RESISTE.');
+            this.spawnBoss();
           } else {
             this.say(PARTS[e.idx] + ' A BORDO. ' + (PARTS.length - this.partsGot) + ' MÁS.');
           }
         } else {
-          if (e.k !== 'sentry') e.dead = true;
+          if (e.k !== 'sentry' && e.k !== 'boss') e.dead = true;
           this.boomAt(e);
           this.hitPlayer(time);
         }
@@ -865,15 +1096,24 @@ class Game extends Phaser.Scene {
     // tus disparos contra el sector
     for (const b of this.bolts) {
       for (const e of this.ents) {
-        if (e.dead || e.k === 'scrap' || e.k === 'part') continue;
+        if (e.dead || e.k === 'scrap' || e.k === 'part' || e.k === 'pow') continue;
         const d = Math.hypot(b.x - e.x, b.y - e.y, b.z - e.z);
         if (d < e.r + 10) {
           b.dead = true;
-          this.damage(e, 1);
+          this.damage(e, 1, b.x, b.y, b.z);
           break;
         }
       }
     }
+
+    // los fragmentos vuelan y se apagan
+    for (const s of this.shards) {
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.z += s.vz * dt;
+      s.life -= dt;
+    }
+    this.shards = this.shards.filter((s) => s.life > 0);
 
     for (const bm of this.booms) bm.t += dt;
     this.ents = this.ents.filter((e) => !e.dead);
@@ -881,15 +1121,22 @@ class Game extends Phaser.Scene {
     this.booms = this.booms.filter((b) => b.t < 0.5);
   }
 
-  damage(e, n) {
+  damage(e, n, wx, wy, wz) {
+    if (e.k === 'boss') {
+      this.bossHit(e, n, wx !== undefined ? wx : e.x, wy !== undefined ? wy : e.y, wz !== undefined ? wz : e.z);
+      return;
+    }
     e.hp -= n;
+    e.flashT = 0.08;
     if (e.hp > 0) {
       this.booms.push({ wx: e.x, wy: e.y, wz: e.z, t: 0.3 });
       return;
     }
     e.dead = true;
     this.boomAt(e);
-    this.score += e.k === 'sentry' ? 40 : e.k === 'rock' ? 15 : 25;
+    this.spray(e.x, e.y, e.z, 6);
+    this.addScore(e.k === 'sentry' ? 40 : e.k === 'rock' ? 15 : 25);
+    if (e.k === 'drone' || e.k === 'inter') this.dropPow(e.x, e.y, e.z, 0.25);
     if (this.phase === 'charge') this.charge = Math.min(CHARGE_TIME, this.charge + KILL_CHARGE);
     Sfx.boom();
     if (e.k === 'rock' && e.r > 20) {
@@ -955,7 +1202,7 @@ class Game extends Phaser.Scene {
         m.vz += ((dz / d) * MISSILE_SPEED - m.vz) * k;
         if (d < m.target.r + 16) {
           m.dead = true;
-          this.damage(m.target, 3);
+          this.damage(m.target, 3, m.x, m.y, m.z);
         }
       }
       m.x += m.vx * dt;
@@ -1129,13 +1376,24 @@ class Game extends Phaser.Scene {
       g.fillCircle(p[0], p[1], Math.max(2, 700 / p[2]));
     }
 
-    // explosiones: anillos que crecen
+    // explosiones: anillos que crecen y fragmentos que vuelan
     for (const bm of this.booms) {
+      if (bm.t < 0) continue;
       const p = this.project(cm, bm.wx, bm.wy, bm.wz);
       if (!p) continue;
       const r = (4 + bm.t * (bm.big ? 260 : 150)) * (FOCAL / p[2]);
       g.lineStyle(1.5, bm.big ? INK_HI : RUST, 1 - bm.t / 0.5);
       g.strokeCircle(p[0], p[1], r);
+    }
+    for (const s of this.shards) {
+      const p1 = this.project(cm, s.x, s.y, s.z);
+      const p2 = this.project(cm, s.x - s.vx * 0.05, s.y - s.vy * 0.05, s.z - s.vz * 0.05);
+      if (!p1 || !p2) continue;
+      g.lineStyle(1, INK, s.life * 1.6);
+      g.beginPath();
+      g.moveTo(p1[0], p1[1]);
+      g.lineTo(p2[0], p2[1]);
+      g.strokePath();
     }
 
     this.drawShip(g, cm, time);
@@ -1147,6 +1405,44 @@ class Game extends Phaser.Scene {
       g.strokeRect(CX - 110, 30, 220, 10);
       g.fillStyle(INK_HI, 0.9);
       g.fillRect(CX - 108, 32, 216 * (this.charge / CHARGE_TIME), 6);
+    }
+
+    this.drawRadar(g);
+  }
+
+  // El radar: el sector alrededor tuyo, con tu nariz siempre hacia arriba
+  drawRadar(g) {
+    const rx = W - 66;
+    const ry = H - 92;
+    const R = 44;
+    const RANGE = 1600;
+    g.lineStyle(1, INK, 0.35);
+    g.strokeCircle(rx, ry, R);
+    g.fillStyle(INK_HI, 0.9);
+    g.fillRect(rx - 1, ry - 1, 2, 2);
+    const c = Math.cos(this.yaw);
+    const s = Math.sin(this.yaw);
+    for (const e of this.ents) {
+      if (e.k === 'scrap' || e.k === 'rock') continue;
+      const dx = e.x - this.pos.x;
+      const dz = e.z - this.pos.z;
+      const lx = dx * c - dz * s;
+      const lz = dx * s + dz * c;
+      const d = Math.hypot(lx, lz);
+      if (d > RANGE) continue;
+      const k = (d / RANGE) * R;
+      const px = rx + (lx / (d || 1)) * k;
+      const py = ry - (lz / (d || 1)) * k;
+      if (e.k === 'part') {
+        g.fillStyle(INK_HI, 0.5 + 0.5 * Math.sin(e.t * 5));
+        g.fillRect(px - 1.5, py - 1.5, 3, 3);
+      } else if (e.k === 'pow') {
+        g.fillStyle(INK, 0.8);
+        g.fillRect(px - 1, py - 1, 2, 2);
+      } else {
+        g.fillStyle(RUST_HI, 0.9);
+        g.fillRect(px - 1.5, py - 1.5, e.k === 'boss' ? 5 : 3, e.k === 'boss' ? 5 : 3);
+      }
     }
   }
 
@@ -1278,8 +1574,35 @@ class Game extends Phaser.Scene {
     }
 
     // el óxido es solo para lo que te ataca; una roca es paisaje que golpea
-    const color = e.k === 'part' ? INK_HI : e.k === 'rock' ? INK : e.k === 'scrap' ? INK : RUST;
-    if (e.k === 'rock') a *= 0.62;
+    const flash = e.flashT > 0;
+    const color = flash
+      ? INK_HI
+      : e.k === 'part' || e.k === 'pow' ? INK_HI : e.k === 'rock' || e.k === 'scrap' ? INK : RUST;
+    if (e.k === 'rock' && !flash) a *= 0.62;
+
+    if (e.k === 'boss') {
+      a = Math.max(a, 0.5);
+      this.drawWorldModel(g, cm, BOSS_MODEL, e, 1, color, a);
+      for (const tu of e.turrets) {
+        if (tu.hp <= 0) continue;
+        const [tx, ty, tz] = this.bossTurretPos(e, tu);
+        this.drawWorldModel(g, cm, SENTRY_MODEL, { x: tx, y: ty, z: tz, yaw: e.yaw }, 0.7, color, a);
+        const eye = this.project(cm, tx, ty - 14, tz);
+        if (eye) {
+          g.fillStyle(RUST_HI, a);
+          g.fillCircle(eye[0], eye[1], Math.max(2, 700 / eye[2]));
+        }
+      }
+      if (!e.turrets.some((t) => t.hp > 0)) {
+        // el núcleo, expuesto y latiendo
+        const core = this.project(cm, e.x, e.y, e.z);
+        if (core) {
+          g.fillStyle(RUST_HI, 0.6 + 0.4 * Math.sin(e.t * 6));
+          g.fillCircle(core[0], core[1], Math.max(3, 2400 / core[2]));
+        }
+      }
+      return;
+    }
 
     if (e.k === 'eel') {
       // la serpiente del vacío: una línea sinuosa con cabeza de brasa
@@ -1300,10 +1623,10 @@ class Game extends Phaser.Scene {
     }
 
     const model =
-      e.k === 'sentry' ? SENTRY_MODEL : e.k === 'drone' ? DRONE_MODEL : e.k === 'mine' ? MINE_MODEL
-      : e.k === 'rock' ? ROCK_MODEL : e.k === 'part' ? PART_MODEL : SCRAP_MODEL;
+      e.k === 'sentry' ? SENTRY_MODEL : e.k === 'drone' ? DRONE_MODEL : e.k === 'inter' ? INTER_MODEL
+      : e.k === 'pow' ? POW_MODELS[e.sub] : e.k === 'rock' ? ROCK_MODEL : e.k === 'part' ? PART_MODEL : SCRAP_MODEL;
     const scale = e.k === 'rock' ? e.r / 16 : e.k === 'part' ? 1.4 : e.k === 'sentry' ? 1.6 : 1;
-    const rot = e.k === 'rock' ? e.t * e.spin : e.k === 'part' || e.k === 'scrap' ? e.t * 1.1 : 0;
+    const rot = e.k === 'rock' ? e.t * e.spin : e.k === 'part' || e.k === 'scrap' || e.k === 'pow' ? e.t * 1.1 : 0;
     this.drawWorldModel(g, cm, model, e, scale, color, a, rot);
 
     if (e.k === 'mine' && Math.floor(time / 500) % 2) {
@@ -1334,6 +1657,19 @@ class Game extends Phaser.Scene {
     const e = { x: this.pos.x, y: this.pos.y, z: this.pos.z, yaw: this.yaw };
     this.drawWorldModel(g, cm, SHIP_MODEL, e, 1, INK, 1, this.roll + this.spin, this.pitch);
     const f = this.forward();
+    // el escudo envuelve la nave; el fogonazo vive en la nariz
+    const sp0 = this.project(cm, this.pos.x, this.pos.y, this.pos.z);
+    if (this.shield && sp0) {
+      g.lineStyle(1.5, INK_HI, 0.4 + 0.2 * Math.sin(time * 0.008));
+      g.strokeCircle(sp0[0], sp0[1], 30 * (FOCAL / sp0[2]));
+    }
+    if (this.muzzleT > 0) {
+      const mp = this.project(cm, this.pos.x + f.x * 26, this.pos.y + f.y * 26 - 2, this.pos.z + f.z * 26);
+      if (mp) {
+        g.fillStyle(INK_HI, 0.9);
+        g.fillCircle(mp[0], mp[1], Math.max(2, 500 / mp[2]));
+      }
+    }
     // estela del motor
     const level = Math.abs(this.speed) / TURBO_SPEED;
     if (level > 0.05) {
@@ -1359,17 +1695,25 @@ class Game extends Phaser.Scene {
 
   // La marca de navegación: hacia la pieza que falta
   drawNav(g, cm) {
-    if (this.phase !== 'play') {
-      this.navText.setText(this.phase === 'charge' ? 'RESISTE' : '');
+    let target = null;
+    let label = '';
+    if (this.phase === 'play') {
+      target = this.ents.find((e) => e.k === 'part');
+      if (target) label = PARTS[target.idx];
+    } else if (this.phase === 'charge' && this.boss) {
+      target = this.boss;
+      label = 'NAVE CAPITAL';
+    } else if (this.phase === 'charge') {
+      this.navText.setText('RESISTE');
       return;
     }
-    const part = this.ents.find((e) => e.k === 'part');
-    if (!part) {
+    if (!target) {
       this.navText.setText('');
       return;
     }
+    const part = target;
     const dist = Math.hypot(part.x - this.pos.x, part.y - this.pos.y, part.z - this.pos.z);
-    this.navText.setText(PARTS[part.idx] + '  ' + Math.round(dist) + ' M');
+    this.navText.setText(label + '  ' + Math.round(dist) + ' M');
 
     const p = this.project(cm, part.x, part.y, part.z);
     const margin = 46;
@@ -1401,7 +1745,7 @@ class Game extends Phaser.Scene {
 
   updateHud() {
     this.velText.setText('VEL ' + String(Math.abs(Math.round(this.speed))).padStart(3, '0'));
-    this.scoreText.setText(String(this.score).padStart(6, '0'));
+    this.scoreText.setText(String(this.score).padStart(6, '0') + (this.mult > 1 ? '  x' + this.mult : ''));
     this.hullText.setText(
       'CASCO ' + (GOD ? '∞' : '▸'.repeat(this.hull) + '·'.repeat(HULL_MAX - this.hull)) +
       '   MISILES ' + '▴'.repeat(this.ammo) + '·'.repeat(MISSILE_MAX - this.ammo)
