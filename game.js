@@ -42,9 +42,6 @@ const SPEED_EASE = 3; // 1/s hacia la velocidad objetivo
 const BOOST_MAX = 100;
 const BOOST_DRAIN = 42; // por segundo de turbo
 const BOOST_REGEN = 17; // por segundo de recarga
-const DODGE_COOLDOWN_MS = 900;
-const DODGE_KICK = 920; // esquive lateral: un empujón GRANDE
-const DODGE_INVULN_MS = 500;
 const FIRE_MS = 160;
 const BOLT_SPEED = 980;
 const BOLT_LIFE = 1.3;
@@ -64,7 +61,7 @@ const SCORE_KEY = 'space-explorer:scores';
 // Las tres piezas del hipersalto
 const PARTS = ['MOTOR', 'NÚCLEO NAV', 'REACTOR'];
 
-const HINT_MAIN = 'STICK DIRIGE · B1 DISPARA · B2 TURBO · B3 MISIL · B4/B6 ESQUIVE';
+const HINT_MAIN = 'STICK DIRIGE · B1 DISPARA · B2 TURBO · B3 MISIL';
 
 // --------------------------------------------------------------------------
 // Arcade cabinet button → keyboard key mapping.
@@ -240,9 +237,6 @@ const Sfx = {
   part() {
     const t = this.ctx && this.ctx.currentTime;
     [440, 554, 659, 880].forEach((f, i) => this.tone(f, 0.5, 'triangle', 0.15, 0, t + i * 0.09));
-  },
-  roll() {
-    this.tone(280, 0.22, 'sine', 0.15, 900);
   },
   jump() {
     const t = this.ctx && this.ctx.currentTime;
@@ -480,10 +474,8 @@ class Game extends Phaser.Scene {
     this.pitchVel = 0;
     this.speed = CRUISE;
     this.boost = BOOST_MAX;
-    this.strafeV = { x: 0, z: 0 };
     this.roll = 0;
     this.spin = 0;
-    this.rollReadyAt = 0;
     this.fireReadyAt = 0;
     this.invulnUntil = 0;
     this.hull = HULL_MAX;
@@ -839,13 +831,9 @@ class Game extends Phaser.Scene {
     this.speed += (want - this.speed) * Math.min(1, SPEED_EASE * dt);
 
     const f = this.forward();
-    this.pos.x += (f.x * this.speed + this.strafeV.x) * dt;
+    this.pos.x += f.x * this.speed * dt;
     this.pos.y += f.y * this.speed * dt;
-    this.pos.z += (f.z * this.speed + this.strafeV.z) * dt;
-    // el empujón del tonel se apaga solo, suave
-    const sd = Math.min(1, 6 * dt);
-    this.strafeV.x -= this.strafeV.x * sd;
-    this.strafeV.z -= this.strafeV.z * sd;
+    this.pos.z += f.z * this.speed * dt;
 
     // el borde del sector te devuelve, suave
     const rr = Math.hypot(this.pos.x, this.pos.y * 1.6, this.pos.z);
@@ -857,20 +845,6 @@ class Game extends Phaser.Scene {
 
     // alabeo con el giro
     this.roll += (this.yawVel * 0.34 - this.roll) * Math.min(1, 8 * dt);
-
-    // esquive: B4 izquierda, B6 derecha — un empujón GRANDE, sin pirueta;
-    // la nave solo banca fuerte y el alabeo se recupera solo
-    const dodgeDir = pressed.P1_4 ? -1 : pressed.P1_6 ? 1 : 0;
-    if (dodgeDir && time >= this.rollReadyAt) {
-      this.rollReadyAt = time + DODGE_COOLDOWN_MS;
-      this.invulnUntil = Math.max(this.invulnUntil, time + DODGE_INVULN_MS);
-      const rx = Math.cos(this.yaw);
-      const rz = -Math.sin(this.yaw);
-      this.strafeV.x = rx * dodgeDir * DODGE_KICK;
-      this.strafeV.z = rz * dodgeDir * DODGE_KICK;
-      this.roll += dodgeDir * 1.1;
-      Sfx.roll();
-    }
 
     // B1: cañón — sale de la nariz, hereda tu velocidad (doble con la mejora)
     if (held.P1_1 && time >= this.fireReadyAt) {
