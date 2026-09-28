@@ -52,8 +52,12 @@ const DASH_COST = 22; // cada toque de B2: un dash, intocable un instante
 const DASH_KICK = 260;
 const DASH_INVULN_MS = 450;
 const RAM_SPEED = 430; // por encima, embistes a los cazadores y los destrozas
-const UTURN_MS = 620; // B4/B6: media vuelta cerrada
-const UTURN_COOLDOWN_MS = 900;
+// B4/B6: esquive lateral — un salto corto e intocable hacia ese lado,
+// para sacar la nave de una ráfaga del destructor sin perder el rumbo
+const BLINK_DIST = 240;
+const BLINK_COOLDOWN_MS = 800;
+const BLINK_SAFE_MS = 420;
+const TUTORIAL_CRUISE = 180; // nivel 0: más lento, para aprender a volar
 const MAGNET_R = 240; // lo recogible viene hacia ti
 const FIRE_MS = 160;
 const BOLT_SPEED = 980;
@@ -74,9 +78,9 @@ const DRONE_FIRE = 3.0; // segundos entre disparos de un cazador
 const SECTOR_R = 2400;
 // El suelo es un agujero negro: siempre debajo de ti. Bajar lo acerca; a
 // BH_PULL de distancia empieza a tirar, y a BH_KILL te tragó.
-const BH_Y = 2600;
+const BH_Y = 3600;
 const BH_PULL = 1800;
-const BH_KILL = 700;
+const BH_KILL = 900;
 const JUMP_TIME = 2; // segundos de túnel antes del flash
 const CHARGE_TIME = 12; // tras derribar al destructor, resiste mientras carga el salto
 const KILL_CHARGE = 1;
@@ -87,7 +91,7 @@ const SCORE_KEY = 'space-explorer:scores';
 // Las tres piezas del hipersalto
 const PARTS = ['MOTOR', 'NÚCLEO NAV', 'REACTOR'];
 
-const HINT_MAIN = 'STICK DIRIGE · B1 DISPARA · B2 NITRO · B3 MISIL · B4/B6 VUELTA';
+const HINT_MAIN = 'STICK DIRIGE · B1 DISPARA · B2 NITRO · B3 MISIL · B4/B6 ESQUIVE';
 
 // --------------------------------------------------------------------------
 // Arcade cabinet button → keyboard key mapping.
@@ -283,26 +287,34 @@ const Sfx = {
 // --------------------------------------------------------------------------
 // Modelos wireframe: [vértices, aristas]. +z es la nariz; -y es arriba.
 
-// La nave: fuselaje con cabina, alas delta y timón
+// La nave: caza esbelto — parabrisas marcado, alas en flecha con winglets,
+// timón alto y dos góndolas de motor bajo las alas
 const SHIP_MODEL = [
   [
-    [0, 0, 20], // 0 nariz
-    [0, -4, 6], // 1 cabina
-    [0, -8, -12], // 2 timón, punta
-    [0, 0, -12], // 3 cola
-    [-16, 1, -10], // 4 ala izq, punta
-    [16, 1, -10], // 5 ala der, punta
-    [-4, 0, 4], // 6 raíz ala izq
-    [4, 0, 4], // 7 raíz ala der
-    [0, 3, -4], // 8 panza
-    [-16, -2, -10], // 9 winglet izq
-    [16, -2, -10], // 10 winglet der
+    [0, 0, 26], // 0 nariz
+    [0, -3.5, 14], // 1 parabrisas
+    [0, -5.5, 2], // 2 techo de cabina
+    [0, -4, -8], // 3 lomo
+    [0, -11, -17], // 4 timón, punta
+    [0, 0, -16], // 5 cola
+    [-5, -1, 8], // 6 raíz ala izq
+    [5, -1, 8], // 7 raíz ala der
+    [-22, 1, -13], // 8 punta ala izq
+    [22, 1, -13], // 9 punta ala der
+    [-22, -4, -15], // 10 winglet izq
+    [22, -4, -15], // 11 winglet der
+    [0, 3, -6], // 12 panza
+    [-9, 1, -2], // 13 góndola izq, frente
+    [9, 1, -2], // 14 góndola der, frente
+    [-11, 1, -15], // 15 góndola izq, tobera
+    [11, 1, -15], // 16 góndola der, tobera
   ],
   [
-    [0, 1], [1, 2], [2, 3], [0, 6], [0, 7],
-    [6, 4], [7, 5], [4, 3], [5, 3],
-    [0, 8], [8, 3], [4, 9], [5, 10],
-    [6, 8], [7, 8],
+    [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [3, 5],
+    [0, 6], [0, 7], [6, 8], [7, 9], [8, 5], [9, 5],
+    [8, 10], [9, 11],
+    [0, 12], [12, 5], [6, 12], [7, 12],
+    [6, 13], [13, 15], [7, 14], [14, 16],
   ],
 ];
 
@@ -316,23 +328,30 @@ const SENTRY_MODEL = [
   ],
 ];
 
-// Dron cazador: caza con cabina, alas y aletas en las puntas
+// Dron cazador: alas quebradas en codo con garras hacia adelante — una
+// silueta agresiva que no se confunde con la tuya
 const DRONE_MODEL = [
   [
-    [0, 0, 16], // 0 nariz
-    [0, -6, 2], // 1 cabina
-    [0, 0, -10], // 2 cola
-    [-18, 1, -8], // 3 ala izq
-    [18, 1, -8], // 4 ala der
-    [-5, 0, 2], // 5 raíz izq
-    [5, 0, 2], // 6 raíz der
-    [-18, -7, -11], // 7 aleta izq
-    [18, -7, -11], // 8 aleta der
-    [0, 5, -4], // 9 panza
+    [0, 0, 18], // 0 nariz
+    [0, -6, 4], // 1 cabina
+    [0, -3, -8], // 2 lomo trasero
+    [0, 0, -12], // 3 cola
+    [-6, 0, 2], // 4 raíz izq
+    [6, 0, 2], // 5 raíz der
+    [-18, 1, -6], // 6 codo ala izq
+    [18, 1, -6], // 7 codo der
+    [-24, 0, 8], // 8 garra izq, hacia adelante
+    [24, 0, 8], // 9 garra der
+    [-18, -8, -9], // 10 aleta izq
+    [18, -8, -9], // 11 aleta der
+    [0, 5, -4], // 12 panza
   ],
   [
-    [0, 1], [1, 2], [0, 5], [0, 6], [5, 3], [6, 4], [3, 2], [4, 2],
-    [3, 7], [4, 8], [0, 9], [9, 2], [5, 9], [6, 9],
+    [0, 1], [1, 2], [2, 3],
+    [0, 4], [0, 5], [4, 6], [5, 7], [6, 3], [7, 3],
+    [6, 8], [7, 9],
+    [6, 10], [7, 11],
+    [0, 12], [12, 3], [4, 12], [5, 12],
   ],
 ];
 const HUNTER_SCALE = 3; // cazadores e interceptores: grandes, fáciles de seguir
@@ -375,7 +394,8 @@ function makeRockModel() {
   ];
 }
 
-// Interceptor: aguja con cuchillas hacia adelante
+// Interceptor: aguja con cuchillas hacia adelante, canards junto a la nariz
+// y una aleta dorsal — un dardo con filo
 const INTER_MODEL = [
   [
     [0, 0, 24], // 0 nariz
@@ -386,10 +406,15 @@ const INTER_MODEL = [
     [0, 0, -14], // 5 cola
     [-15, 0, 7], // 6 cuchilla izq
     [15, 0, 7], // 7 cuchilla der
+    [-9, -1, 14], // 8 canard izq
+    [9, -1, 14], // 9 canard der
+    [0, -8, -12], // 10 aleta dorsal
   ],
   [
     [0, 1], [0, 2], [0, 3], [0, 4], [1, 5], [2, 5], [3, 5], [4, 5],
     [3, 6], [6, 5], [4, 7], [7, 5],
+    [0, 8], [8, 3], [0, 9], [9, 4],
+    [1, 10], [10, 5],
   ],
 ];
 
@@ -415,12 +440,20 @@ const DESTROYER_MODEL = [
     [-60, -150, -290], [60, -150, -290], [60, -150, SD_REAR], [-60, -150, SD_REAR], // 12-15 techo de la torre
     [-130, -165, -340], [130, -165, -340], // 16-17 puente
     [-150, -40, SD_REAR], [150, -40, SD_REAR], // 18-19 líneas de paneles
+    [-36, -30, 420], [36, -30, 420], // 20-21 trinchera dorsal, proa
+    [-56, -56, -250], [56, -56, -250], // 22-23 trinchera dorsal, popa
+    [-60, 38, 60], [60, 38, 60], // 24-25 hangar de la quilla, frente
+    [-60, 44, -120], [60, 44, -120], // 26-27 hangar, fondo
+    [-110, -180, -340], [110, -180, -340], // 28-29 mástiles de los domos
   ],
   [
     [0, 1], [0, 2], [0, 7], [7, 3], [0, 4], [1, 3], [2, 3], [1, 5], [2, 6], [5, 4], [6, 4],
     [0, 5], [0, 6], [0, 18], [0, 19],
     [8, 9], [9, 10], [10, 11], [11, 8], [12, 13], [13, 14], [14, 15], [15, 12],
     [8, 12], [9, 13], [10, 14], [11, 15], [16, 17], [12, 16], [13, 17],
+    [20, 22], [21, 23], [20, 21], // la trinchera que corre hasta la torre
+    [24, 25], [25, 27], [27, 26], [26, 24], // la boca del hangar
+    [12, 28], [13, 29], // los mástiles que sostienen los domos de escudo
   ],
 ];
 // Puntos débiles: torretas en la cubierta, dos domos de escudo sobre el puente,
@@ -612,61 +645,6 @@ function clipHalf(poly, f) {
 
 // --- El cielo, pintado en coordenadas locales (0,0 al centro) ---
 
-// El agujero negro: un cuásar. Sombra, anillo de fotones, un disco que arde
-// como una sola pieza y dos chorros de energía que salen disparados de los
-// polos, con pulsos que viajan hacia afuera — algo que explota, no que traga.
-const BH_RS = 58;
-function bhDisk(g, front) {
-  // semielipses rellenas, de afuera hacia adentro: óxido → ámbar → blanco
-  const layers = [[4.2, RUST, 0.18], [3.3, 0xe89a5c, 0.26], [2.5, 0xf6c98a, 0.38], [1.75, 0xfff1d6, 0.6]];
-  for (const [k, col, al] of layers) {
-    const rx = BH_RS * k;
-    const ry = rx * 0.16;
-    const pts = [];
-    for (let j = 0; j <= 24; j++) {
-      const a = (front ? 0 : Math.PI) + (j / 24) * Math.PI;
-      pts.push({ x: rx * Math.cos(a), y: ry * Math.sin(a) });
-    }
-    g.fillStyle(col, al);
-    g.fillPoints(pts, true);
-  }
-}
-function bhJet(g, dir, t) {
-  const L = BH_RS * 5.2;
-  // el haz: capas de triángulos cada vez más finos y brillantes
-  for (const [w, col, al] of [[0.55, 0x8fb0c4, 0.08], [0.32, 0xb8dbe4, 0.14], [0.14, 0xeef2f7, 0.35]]) {
-    g.fillStyle(col, al * (0.8 + 0.2 * Math.sin(t * 9)));
-    g.fillTriangle(-BH_RS * w, 0, BH_RS * w, 0, 0, dir * L);
-  }
-  // pulsos que viajan hacia afuera y se apagan
-  for (let i = 0; i < 4; i++) {
-    const u = (t * 0.7 + i / 4) % 1;
-    const r = BH_RS * (0.12 - u * 0.08);
-    g.fillStyle(0xeef2f7, 0.9 * (1 - u));
-    g.fillCircle(0, dir * (BH_RS * 1.1 + u * (L - BH_RS)), Math.max(1.5, r));
-  }
-}
-function drawBlackHole(g, t) {
-  for (let i = 5; i > 0; i--) {
-    g.fillStyle(0xe8a060, 0.03);
-    g.fillCircle(0, 0, BH_RS * (1.2 + i * 0.55));
-  }
-  bhJet(g, -1, t);
-  bhJet(g, 1, t + 0.37);
-  bhDisk(g, false);
-  // la mitad lejana del disco, doblada sobre la sombra por la gravedad
-  g.fillStyle(0xf6c98a, 0.5);
-  g.fillEllipse(0, -BH_RS * 0.2, BH_RS * 2.5, BH_RS * 1.5);
-  g.fillStyle(0x000000, 1);
-  g.fillCircle(0, 0, BH_RS);
-  g.lineStyle(2, 0xfff8ea, 0.95);
-  g.strokeCircle(0, 0, BH_RS * 1.03);
-  bhDisk(g, true);
-  // un destello que respira en el borde interno
-  g.fillStyle(0xfff8ea, 0.35 + 0.25 * Math.sin(t * 3));
-  g.fillEllipse(-BH_RS * 1.2, 0, BH_RS * 0.9, BH_RS * 0.14);
-}
-
 // Esfera en franjas: cada franja respeta el contorno; la noche entra por la derecha
 function drawBandedSphere(g, R, bands, night) {
   const N = 22;
@@ -748,11 +726,14 @@ class Game extends Phaser.Scene {
     this.R = { x: 1, y: 0, z: 0 };
     this.yawVel = 0;
     this.pitchVel = 0;
-    this.speed = CRUISE;
+    this.cruise = this.level ? CRUISE : TUTORIAL_CRUISE;
+    this.speed = this.cruise;
     this.boost = BOOST_MAX;
     this.roll = 0; // alabeo solo visual, al girar
-    this.uturn = null;
-    this.uturnReady = 0;
+    this.blinkReady = 0;
+    this.blinkSafe = 0;
+    this.blinkUntil = 0;
+    this.blinkFrom = null;
     this.dashUntil = 0;
     this.fireReadyAt = 0;
     this.invulnUntil = 0;
@@ -822,11 +803,18 @@ class Game extends Phaser.Scene {
       let ang = Math.atan2(-px, -pz) + rnd(-0.4, 0.4); // hacia el sector
       for (let i = 0; i < PARTS.length; i++) {
         ang += rnd(-0.5, 0.5);
-        const nx = px + Math.sin(ang) * 950;
+        let nx = px + Math.sin(ang) * 1250;
         const ny = Phaser.Math.Clamp(py + rnd(-320, 320), -700, 500);
-        const nz = pz + Math.cos(ang) * 950;
-        for (let j = 1; j <= 3; j++) {
-          const t = j / 4;
+        let nz = pz + Math.cos(ang) * 1250;
+        const h = Math.hypot(nx, nz);
+        if (h > 2000) {
+          // la cadena no se sale del sector: dobla hacia adentro
+          nx *= 2000 / h;
+          nz *= 2000 / h;
+          ang = Math.atan2(-nx, -nz) + rnd(-0.4, 0.4);
+        }
+        for (let j = 1; j <= 4; j++) {
+          const t = j / 5;
           this.ents.push({
             k: 'scrap',
             x: px + (nx - px) * t + rnd(-70, 70),
@@ -908,9 +896,10 @@ class Game extends Phaser.Scene {
         a: 0.2 + Math.random() * 0.45,
       });
     }
-    // el polvo: motas cercanas que convierten la velocidad en estelas
+    // el polvo: motas cercanas que convierten la velocidad en estelas —
+    // son la referencia principal de hacia dónde te mueves
     this.dust = [];
-    for (let i = 0; i < 48; i++) {
+    for (let i = 0; i < 96; i++) {
       this.dust.push({
         x: (Math.random() - 0.5) * 560,
         y: (Math.random() - 0.5) * 560,
@@ -1270,28 +1259,26 @@ class Game extends Phaser.Scene {
     const turn = (held.P1_R ? 1 : 0) - (held.P1_L ? 1 : 0);
     const pit = (held.P1_U ? 1 : 0) - (held.P1_D ? 1 : 0); // arriba = nariz arriba
 
-    // B4/B6: media vuelta cerrada hacia ese lado — para no pasarte de lo que
-    // buscabas y para salir de una ráfaga
-    if ((pressed.P1_4 || pressed.P1_6) && !this.uturn && time >= this.uturnReady) {
-      this.uturn = { p: 0, dir: pressed.P1_4 ? -1 : 1 };
-      this.uturnReady = time + UTURN_MS + UTURN_COOLDOWN_MS;
-      Sfx.turn();
-    }
-    let extra = 0;
-    if (this.uturn) {
-      const ease = (x) => x * x * (3 - 2 * x);
-      const p0 = this.uturn.p;
-      const p1 = Math.min(1, p0 + (dt * 1000) / UTURN_MS);
-      extra = Math.PI * (ease(p1) - ease(p0)) * this.uturn.dir;
-      this.uturn.p = p1;
-      if (p1 >= 1) this.uturn = null;
+    // B4/B6: esquive lateral — un salto corto hacia ese lado, intocable un
+    // instante. El rumbo no cambia: es para salirte de una ráfaga y seguir.
+    if ((pressed.P1_4 || pressed.P1_6) && time >= this.blinkReady) {
+      const dir = pressed.P1_4 ? -1 : 1;
+      this.blinkReady = time + BLINK_COOLDOWN_MS;
+      this.blinkSafe = time + BLINK_SAFE_MS;
+      this.blinkUntil = time + 260;
+      this.blinkFrom = { ...this.pos };
+      this.pos.x += this.R.x * BLINK_DIST * dir;
+      this.pos.y += this.R.y * BLINK_DIST * dir;
+      this.pos.z += this.R.z * BLINK_DIST * dir;
+      this.roll -= dir * 0.9; // la sacudida de alabeo, se endereza sola
+      Sfx.dash();
     }
 
     // cabeceo sobre el ala de la nave: arriba es arriba de la pantalla aun de cabeza
     this.yawVel += (turn * YAW_RATE - this.yawVel) * Math.min(1, YAW_EASE * dt);
     this.pitchVel += (pit * PITCH_RATE - this.pitchVel) * Math.min(1, YAW_EASE * dt);
     const pa = this.pitchVel * dt;
-    const ya = this.yawVel * dt + extra;
+    const ya = this.yawVel * dt;
     let F = vmix(this.F, Math.cos(pa), this.U, Math.sin(pa));
     let U = vmix(this.U, Math.cos(pa), this.F, -Math.sin(pa));
     // Turning happens around the sector's vertical while the ship is roughly
@@ -1327,7 +1314,7 @@ class Game extends Phaser.Scene {
     // reserva, y a esa velocidad embistes a los cazadores.
     if (pressed.P1_2 && this.boost >= DASH_COST) {
       this.boost -= DASH_COST;
-      this.speed = Math.max(this.speed, CRUISE) + DASH_KICK;
+      this.speed = Math.max(this.speed, this.cruise) + DASH_KICK;
       this.dashUntil = time + DASH_INVULN_MS;
       Sfx.dash();
     }
@@ -1336,7 +1323,7 @@ class Game extends Phaser.Scene {
       this.speed = Math.min(NITRO_MAX, this.speed + NITRO_ACCEL * dt);
     } else {
       if (!held.P1_2) this.boost = Math.min(BOOST_MAX, this.boost + BOOST_REGEN * dt);
-      this.speed += (CRUISE - this.speed) * Math.min(1, SPEED_EASE * dt);
+      this.speed += (this.cruise - this.speed) * Math.min(1, SPEED_EASE * dt);
     }
 
     const f = this.forward();
@@ -1376,8 +1363,8 @@ class Game extends Phaser.Scene {
       }
     }
 
-    // alabeo con el giro — fuerte durante la media vuelta
-    const bank = this.yawVel * 0.34 + (this.uturn ? this.uturn.dir * 1.2 * Math.sin(this.uturn.p * Math.PI) : 0);
+    // alabeo con el giro
+    const bank = this.yawVel * 0.34;
     this.roll += (bank - this.roll) * Math.min(1, 8 * dt);
 
     // B1: cañón — sale de la nariz, hereda tu velocidad (doble con la mejora)
@@ -1464,7 +1451,7 @@ class Game extends Phaser.Scene {
   }
 
   hitPlayer(time) {
-    if (time < this.invulnUntil || time < this.dashUntil || this.phase === 'out') return;
+    if (time < this.invulnUntil || time < this.dashUntil || time < this.blinkSafe || this.phase === 'out') return;
     this.invulnUntil = time + 1300;
     this.shake = 9;
     Sfx.hurt();
@@ -1526,8 +1513,8 @@ class Game extends Phaser.Scene {
         e.z += e.vz * dt;
         e.yaw = Math.atan2(e.vx, e.vz);
       } else if (e.k === 'emis') {
-        // misil del destructor: te sigue, pero gira mal — un giro cerrado, la
-        // media vuelta o el nitro lo dejan atrás; también se puede derribar
+        // misil del destructor: te sigue, pero gira mal — un giro cerrado,
+        // el esquive o el nitro lo dejan atrás; también se puede derribar
         const k = Math.min(1, 1.1 * dt);
         e.vx += ((dx / dist) * 330 - e.vx) * k;
         e.vy += ((dy / dist) * 330 - e.vy) * k;
@@ -1853,7 +1840,7 @@ class Game extends Phaser.Scene {
   cam() {
     const F = this.camF;
     const U = this.camU;
-    const back = CAM_BACK + Math.max(0, this.speed - CRUISE) * 0.09; // con nitro la cámara se queda atrás
+    const back = CAM_BACK + Math.max(0, this.speed - this.cruise) * 0.09; // con nitro la cámara se queda atrás
     return {
       x: this.pos.x - F.x * back + U.x * CAM_UP,
       y: this.pos.y - F.y * back + U.y * CAM_UP,
@@ -2179,20 +2166,59 @@ class Game extends Phaser.Scene {
     this.drawHole(g, cm, time);
   }
 
-  // El agujero negro es el SUELO: siempre debajo de ti, a profundidad fija.
-  // Bajar lo acerca de verdad — crece con la proyección, no con un truco.
+  // El agujero negro es el SUELO, y está ANCLADO AL MUNDO bajo el centro del
+  // sector: no gira con tu vista ni te sigue — tú te mueves sobre él. El
+  // disco son anillos fijos en el plano, la sombra es una esfera (igual desde
+  // cualquier ángulo) y los chorros son la vertical del mundo.
   drawHole(g, cm, time) {
-    const p = this.project(cm, this.pos.x, BH_Y, this.pos.z);
-    if (!p) return;
-    const sc = Math.min(7, (300 * FOCAL) / p[2] / BH_RS);
-    // en picada el "arriba" del sector degenera: congela el último giro bueno
-    if (Math.hypot(cm.R.y, cm.U.y) > 0.05) this.holeRoll = this.skyRoll(cm);
-    g.save();
-    g.translateCanvas(p[0], p[1]);
-    g.rotateCanvas(this.holeRoll || 0);
-    g.scaleCanvas(sc, sc);
-    drawBlackHole(g, time * 0.001);
-    g.restore();
+    const t = time * 0.001;
+    const RS = 380; // radio del horizonte de sucesos, en unidades de mundo
+    for (const [r, col, al, wd] of [
+      [760, 0xfff1d6, 0.7, 2.5],
+      [950, 0xf6c98a, 0.55, 2],
+      [1200, 0xe89a5c, 0.4, 2],
+      [1550, RUST, 0.3, 1.5],
+      [1980, RUST, 0.2, 1.5],
+      [2500, 0x8a5c48, 0.14, 1.5],
+    ]) {
+      g.lineStyle(wd, col, al);
+      let prev = null;
+      for (let i = 0; i <= 30; i++) {
+        const a = (i / 30) * Math.PI * 2;
+        const pt = [Math.cos(a) * r, BH_Y, Math.sin(a) * r];
+        if (prev) this.worldLine(g, cm, prev, pt);
+        prev = pt;
+      }
+    }
+    const p = this.project(cm, 0, BH_Y, 0);
+    if (p) {
+      const r = (RS * FOCAL) / p[2];
+      g.fillStyle(0xe8a060, 0.05);
+      g.fillCircle(p[0], p[1], r * 2.6);
+      g.fillStyle(0xe8a060, 0.07);
+      g.fillCircle(p[0], p[1], r * 1.7);
+      g.fillStyle(0x000000, 1);
+      g.fillCircle(p[0], p[1], r);
+      g.lineStyle(2, 0xfff8ea, 0.6 + 0.3 * Math.sin(t * 3));
+      g.strokeCircle(p[0], p[1], r * 1.04);
+    }
+    // los chorros, con pulsos que viajan hacia afuera; el de arriba es la
+    // columna de luz que marca el centro del sector desde cualquier parte
+    for (const dir of [-1, 1]) {
+      const base = [0, BH_Y + dir * RS * 1.15, 0];
+      const tip = [0, BH_Y + dir * RS * 5, 0];
+      g.lineStyle(7, 0x8fb0c4, 0.1);
+      this.worldLine(g, cm, base, tip);
+      g.lineStyle(2.5, 0xb8dbe4, 0.3);
+      this.worldLine(g, cm, base, tip);
+      for (let i = 0; i < 3; i++) {
+        const u = (t * 0.5 + i / 3) % 1;
+        const pp = this.project(cm, 0, BH_Y + dir * (RS * 1.15 + u * RS * 3.85), 0);
+        if (!pp) continue;
+        g.fillStyle(0xeef2f7, 0.8 * (1 - u));
+        g.fillCircle(pp[0], pp[1], Math.max(1.5, (RS * 0.1 * (1 - u * 0.6) * FOCAL) / pp[2]));
+      }
+    }
   }
 
   drawStars(g, cm, time) {
@@ -2238,7 +2264,7 @@ class Game extends Phaser.Scene {
   drawDust(g, cm) {
     const L = 560;
     const f = this.forward();
-    const trail = 0.012 + (this.speed / TURBO_SPEED) * 0.05;
+    const trail = 0.016 + (this.speed / TURBO_SPEED) * 0.065;
     for (const m of this.dust) {
       const wx = this.pos.x + Phaser.Math.Wrap(m.x - this.pos.x, -L / 2, L / 2);
       const wy = this.pos.y + Phaser.Math.Wrap(m.y - this.pos.y, -L / 2, L / 2);
@@ -2247,7 +2273,7 @@ class Game extends Phaser.Scene {
       const p2 = this.project(cm, wx + f.x * this.speed * trail, wy + f.y * this.speed * trail, wz + f.z * this.speed * trail);
       if (!p1 || !p2) continue;
       const dist = Math.hypot(wx - this.pos.x, wy - this.pos.y, wz - this.pos.z);
-      const a = Phaser.Math.Clamp(1 - dist / 420, 0, 1) * 0.4 * (this.speed / TURBO_SPEED + 0.3);
+      const a = Phaser.Math.Clamp(1 - dist / 420, 0, 1) * 0.5 * (this.speed / TURBO_SPEED + 0.3);
       if (a <= 0.02) continue;
       g.lineStyle(1, INK, a);
       g.beginPath();
@@ -2476,6 +2502,18 @@ class Game extends Phaser.Scene {
       for (let i = 1; i <= 3; i++) {
         const gp = { x: this.pos.x - f.x * 22 * i, y: this.pos.y - f.y * 22 * i, z: this.pos.z - f.z * 22 * i };
         this.drawBasisModel(g, cm, SHIP_MODEL, gp, this.F, this.U, 1, INK_HI, 0.4 / i, this.roll);
+      }
+    }
+    // esquive: los fantasmas quedan por donde saltaste, de lado
+    if (time < this.blinkUntil && this.blinkFrom) {
+      for (let i = 1; i <= 3; i++) {
+        const q = i / 4;
+        const gp = {
+          x: this.pos.x + (this.blinkFrom.x - this.pos.x) * q,
+          y: this.pos.y + (this.blinkFrom.y - this.pos.y) * q,
+          z: this.pos.z + (this.blinkFrom.z - this.pos.z) * q,
+        };
+        this.drawBasisModel(g, cm, SHIP_MODEL, gp, this.F, this.U, 1, INK_HI, 0.45 - q * 0.3, this.roll);
       }
     }
     this.drawBasisModel(g, cm, SHIP_MODEL, this.pos, this.F, this.U, 1, INK, 1, this.roll);
