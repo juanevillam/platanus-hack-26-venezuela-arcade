@@ -33,16 +33,25 @@ const GOD = true;
 // --- Vuelo: la nave SIEMPRE avanza; el stick dirige, el turbo se recarga.
 // Arriba/abajo cabecea sin tope: mantenlo y das la vuelta completa. La cámara
 // va pegada a la nave, así que izquierda es izquierda aun de cabeza. ---
-const YAW_RATE = 2.1; // rad/s tope
-const YAW_EASE = 7; // 1/s, el giro entra y sale suave
-const PITCH_RATE = 1.9; // rad/s de cabeceo
+const YAW_RATE = 2.4; // rad/s tope
+const YAW_EASE = 9; // 1/s, el giro entra y sale suave
+const PITCH_RATE = 2.1; // rad/s de cabeceo
 const ROLL_LEVEL = 1.5; // rad/s: suelto el stick, la nave rota sobre su eje hasta quedar derecha
 const CRUISE = 235; // crucero constante — la nave NUNCA se detiene
-const TURBO_SPEED = 470;
-const SPEED_EASE = 3; // 1/s hacia la velocidad objetivo
+const TURBO_SPEED = 470; // referencia de "rápido" para estelas y cámara
+const NITRO_MAX = 760; // manteniendo B2 la nave acelera sin parar hasta aquí
+const NITRO_ACCEL = 260; // unidades/s²
+const SPEED_EASE = 3; // 1/s de vuelta al crucero
 const BOOST_MAX = 100;
-const BOOST_DRAIN = 42; // por segundo de turbo
+const BOOST_DRAIN = 30; // por segundo de nitro
 const BOOST_REGEN = 17; // por segundo de recarga
+const DASH_COST = 22; // cada toque de B2: un dash, intocable un instante
+const DASH_KICK = 260;
+const DASH_INVULN_MS = 450;
+const RAM_SPEED = 430; // por encima, embistes a los cazadores y los destrozas
+const UTURN_MS = 620; // B4/B6: media vuelta cerrada
+const UTURN_COOLDOWN_MS = 900;
+const MAGNET_R = 240; // lo recogible viene hacia ti
 const FIRE_MS = 160;
 const BOLT_SPEED = 980;
 const BOLT_LIFE = 1.3;
@@ -69,7 +78,7 @@ const SCORE_KEY = 'space-explorer:scores';
 // Las tres piezas del hipersalto
 const PARTS = ['MOTOR', 'NÚCLEO NAV', 'REACTOR'];
 
-const HINT_MAIN = 'STICK DIRIGE · B1 DISPARA · B2 TURBO · B3 MISIL';
+const HINT_MAIN = 'STICK DIRIGE · B1 DISPARA · B2 NITRO · B3 MISIL · B4/B6 VUELTA';
 
 // --------------------------------------------------------------------------
 // Arcade cabinet button → keyboard key mapping.
@@ -245,6 +254,13 @@ const Sfx = {
   part() {
     const t = this.ctx && this.ctx.currentTime;
     [440, 554, 659, 880].forEach((f, i) => this.tone(f, 0.5, 'triangle', 0.15, 0, t + i * 0.09));
+  },
+  dash() {
+    this.noise(0.18, 0.18);
+    this.tone(220, 0.25, 'sawtooth', 0.12, 880);
+  },
+  turn() {
+    this.tone(330, 0.3, 'sine', 0.12, 160);
   },
   jump() {
     const t = this.ctx && this.ctx.currentTime;
@@ -548,6 +564,14 @@ const vnorm = (a) => {
   return { x: a.x / m, y: a.y / m, z: a.z / m };
 };
 const WORLD_UP = { x: 0, y: -1, z: 0 };
+// Rota v un ángulo alrededor del eje unitario A (Rodrigues)
+function rotAxis(v, A, ang) {
+  const c = Math.cos(ang);
+  const s = Math.sin(ang);
+  const k = vdot(A, v) * (1 - c);
+  const x = vcross(A, v);
+  return { x: v.x * c + x.x * s + A.x * k, y: v.y * c + x.y * s + A.y * k, z: v.z * c + x.z * s + A.z * k };
+}
 
 // Re-ortonormaliza una base (F, U) → [F, U, R], para que los errores de
 // redondeo de rotar cada frame nunca la deformen
@@ -579,61 +603,59 @@ function clipHalf(poly, f) {
 
 // --- El cielo, pintado en coordenadas locales (0,0 al centro) ---
 
-// El agujero negro: sombra, anillo de fotones, disco de acreción que pasa por
-// delante y su otra mitad curvada por la gravedad sobre la sombra
-const BH_RS = 64;
-const BH_HOT = [0xfff1d6, 0xf6c98a, 0xe89a5c, 0xc97b5a, RUST];
+// El agujero negro: un cuásar. Sombra, anillo de fotones, un disco que arde
+// como una sola pieza y dos chorros de energía que salen disparados de los
+// polos, con pulsos que viajan hacia afuera — algo que explota, no que traga.
+const BH_RS = 58;
 function bhDisk(g, front) {
-  for (let k = 0; k < 7; k++) {
-    const rx = BH_RS * (1.55 + k * 0.42);
-    const ry = rx * 0.17;
-    const col = BH_HOT[Math.min(4, Math.floor(k * 0.75))];
-    const heat = 1 - k / 7;
-    for (let j = 0; j < 16; j++) {
-      const a0 = (front ? 0 : Math.PI) + (j / 16) * Math.PI;
-      const a1 = a0 + Math.PI / 16;
-      // el lado que viene hacia ti brilla más (Doppler)
-      const dop = 0.5 - 0.5 * Math.cos(a0 + 0.1);
-      g.lineStyle(k < 2 ? 2.5 : 1.5, col, (0.2 + 0.6 * heat) * (0.45 + 0.55 * dop));
-      g.beginPath();
-      g.moveTo(rx * Math.cos(a0), ry * Math.sin(a0));
-      g.lineTo(rx * Math.cos(a1), ry * Math.sin(a1));
-      g.strokePath();
+  // semielipses rellenas, de afuera hacia adentro: óxido → ámbar → blanco
+  const layers = [[4.2, RUST, 0.18], [3.3, 0xe89a5c, 0.26], [2.5, 0xf6c98a, 0.38], [1.75, 0xfff1d6, 0.6]];
+  for (const [k, col, al] of layers) {
+    const rx = BH_RS * k;
+    const ry = rx * 0.16;
+    const pts = [];
+    for (let j = 0; j <= 24; j++) {
+      const a = (front ? 0 : Math.PI) + (j / 24) * Math.PI;
+      pts.push({ x: rx * Math.cos(a), y: ry * Math.sin(a) });
     }
+    g.fillStyle(col, al);
+    g.fillPoints(pts, true);
+  }
+}
+function bhJet(g, dir, t) {
+  const L = BH_RS * 5.2;
+  // el haz: capas de triángulos cada vez más finos y brillantes
+  for (const [w, col, al] of [[0.55, 0x8fb0c4, 0.08], [0.32, 0xb8dbe4, 0.14], [0.14, 0xeef2f7, 0.35]]) {
+    g.fillStyle(col, al * (0.8 + 0.2 * Math.sin(t * 9)));
+    g.fillTriangle(-BH_RS * w, 0, BH_RS * w, 0, 0, dir * L);
+  }
+  // pulsos que viajan hacia afuera y se apagan
+  for (let i = 0; i < 4; i++) {
+    const u = (t * 0.7 + i / 4) % 1;
+    const r = BH_RS * (0.12 - u * 0.08);
+    g.fillStyle(0xeef2f7, 0.9 * (1 - u));
+    g.fillCircle(0, dir * (BH_RS * 1.1 + u * (L - BH_RS)), Math.max(1.5, r));
   }
 }
 function drawBlackHole(g, t) {
   for (let i = 5; i > 0; i--) {
-    g.fillStyle(0xe8a060, 0.022);
-    g.fillCircle(0, 0, BH_RS * (1.4 + i * 0.7));
+    g.fillStyle(0xe8a060, 0.03);
+    g.fillCircle(0, 0, BH_RS * (1.2 + i * 0.55));
   }
+  bhJet(g, -1, t);
+  bhJet(g, 1, t + 0.37);
   bhDisk(g, false);
-  // la mitad lejana del disco, doblada por encima y por debajo de la sombra
-  for (let k = 0; k < 5; k++) {
-    g.lineStyle(k < 2 ? 3.5 : 2, BH_HOT[k], 0.7 - k * 0.11);
-    g.beginPath();
-    g.arc(0, 0, BH_RS * (1.1 + k * 0.13), Math.PI * 1.04, Math.PI * 1.96);
-    g.strokePath();
-    g.lineStyle(1, BH_HOT[k], 0.3 - k * 0.05);
-    g.beginPath();
-    g.arc(0, 0, BH_RS * (1.08 + k * 0.06), Math.PI * 0.12, Math.PI * 0.88);
-    g.strokePath();
-  }
+  // la mitad lejana del disco, doblada sobre la sombra por la gravedad
+  g.fillStyle(0xf6c98a, 0.5);
+  g.fillEllipse(0, -BH_RS * 0.2, BH_RS * 2.5, BH_RS * 1.5);
   g.fillStyle(0x000000, 1);
   g.fillCircle(0, 0, BH_RS);
-  g.lineStyle(1.5, 0xfff8ea, 0.95);
+  g.lineStyle(2, 0xfff8ea, 0.95);
   g.strokeCircle(0, 0, BH_RS * 1.03);
   bhDisk(g, true);
-  // grumos de materia girando en el disco
-  for (let i = 0; i < 18; i++) {
-    const rx = BH_RS * (1.7 + (i % 6) * 0.45);
-    const a = t * (1.4 - (i % 6) * 0.16) + i * 2.1;
-    const x = rx * Math.cos(a);
-    const y = rx * 0.17 * Math.sin(a);
-    if (y < 0 && Math.hypot(x, y) < BH_RS * 1.05) continue;
-    g.fillStyle(BH_HOT[i % 3], 0.8);
-    g.fillRect(x - 1, y - 1, 2.5, 2.5);
-  }
+  // un destello que respira en el borde interno
+  g.fillStyle(0xfff8ea, 0.35 + 0.25 * Math.sin(t * 3));
+  g.fillEllipse(-BH_RS * 1.2, 0, BH_RS * 0.9, BH_RS * 0.14);
 }
 
 // Esfera en franjas: cada franja respeta el contorno; la noche entra por la derecha
@@ -714,6 +736,9 @@ class Game extends Phaser.Scene {
     this.speed = CRUISE;
     this.boost = BOOST_MAX;
     this.roll = 0; // alabeo solo visual, al girar
+    this.uturn = null;
+    this.uturnReady = 0;
+    this.dashUntil = 0;
     this.fireReadyAt = 0;
     this.invulnUntil = 0;
     this.hull = HULL_MAX;
@@ -811,13 +836,15 @@ class Game extends Phaser.Scene {
 
   // Estrellas: puntos fijos del mundo, envueltos en una caja alrededor tuyo
   buildStars() {
+    // Stars sit at infinity: they only turn with the view and never slide
+    // past, so the one thing moving through the sector is you
     this.stars = [];
-    for (let i = 0; i < 240; i++) {
+    for (let i = 0; i < 320; i++) {
+      const v = vnorm({ x: Math.random() - 0.5, y: Math.random() - 0.5, z: Math.random() - 0.5 });
       this.stars.push({
-        x: (Math.random() - 0.5) * 1700,
-        y: (Math.random() - 0.5) * 1700,
-        z: (Math.random() - 0.5) * 1700,
-        s: Math.random() < 0.12 ? 3 : Math.random() < 0.45 ? 2 : 1,
+        v,
+        s: Math.random() < 0.1 ? 3 : Math.random() < 0.4 ? 2 : 1,
+        a: 0.25 + Math.random() * 0.45,
         tw: Math.random() < 0.25 ? 1 + Math.random() * 2 : 0, // parpadeo
         ph: Math.random() * 6.3,
       });
@@ -835,7 +862,7 @@ class Game extends Phaser.Scene {
     }
     // el polvo: motas cercanas que convierten la velocidad en estelas
     this.dust = [];
-    for (let i = 0; i < 34; i++) {
+    for (let i = 0; i < 48; i++) {
       this.dust.push({
         x: (Math.random() - 0.5) * 560,
         y: (Math.random() - 0.5) * 560,
@@ -949,6 +976,7 @@ class Game extends Phaser.Scene {
       yaw: Math.atan2(-f.x, -f.z), // la proa hacia ti
       hangarAt: 6,
       cannonAt: 9,
+      missileAt: 4,
       charging: 0,
       parts: SD_PARTS.map(([kind, ox, oy, oz, hp]) => ({ kind, ox, oy, oz, hp, max: hp, fireAt: 1 + Math.random() * 3, burst: 0 })),
     };
@@ -1062,6 +1090,20 @@ class Game extends Phaser.Scene {
       }
     }
 
+    // la torre suelta una pareja de misiles que te persiguen
+    b.missileAt -= dt;
+    if (b.missileAt <= 0 && dist < 2600) {
+      b.missileAt = 7;
+      for (const side of [-1, 1]) {
+        const [wx, wy, wz] = this.bossToWorld(b, side * 60, -170, -330);
+        const [ox, , oz] = this.bossToWorld(b, side * 400, 0, -330);
+        const vx = (ox - b.x) * 0.3;
+        const vz = (oz - b.z) * 0.3;
+        this.ents.push({ k: 'emis', x: wx, y: wy, z: wz, r: 22, hp: 1, t: 0, yaw: 0, vx, vy: -160, vz, life: 9 });
+      }
+      Sfx.missile();
+    }
+
     // el cañón de proa: carga a la vista y suelta una esfera enorme y lenta
     if (b.charging > 0) {
       b.charging -= dt;
@@ -1146,15 +1188,40 @@ class Game extends Phaser.Scene {
     const turn = (held.P1_R ? 1 : 0) - (held.P1_L ? 1 : 0);
     const pit = (held.P1_U ? 1 : 0) - (held.P1_D ? 1 : 0); // arriba = nariz arriba
 
-    // giro y cabeceo con inercia, siempre respecto a la NAVE: la cámara va
-    // pegada a ella, así que arriba es arriba de la pantalla aun de cabeza
+    // B4/B6: media vuelta cerrada hacia ese lado — para no pasarte de lo que
+    // buscabas y para salir de una ráfaga
+    if ((pressed.P1_4 || pressed.P1_6) && !this.uturn && time >= this.uturnReady) {
+      this.uturn = { p: 0, dir: pressed.P1_4 ? -1 : 1 };
+      this.uturnReady = time + UTURN_MS + UTURN_COOLDOWN_MS;
+      Sfx.turn();
+    }
+    let extra = 0;
+    if (this.uturn) {
+      const ease = (x) => x * x * (3 - 2 * x);
+      const p0 = this.uturn.p;
+      const p1 = Math.min(1, p0 + (dt * 1000) / UTURN_MS);
+      extra = Math.PI * (ease(p1) - ease(p0)) * this.uturn.dir;
+      this.uturn.p = p1;
+      if (p1 >= 1) this.uturn = null;
+    }
+
+    // cabeceo sobre el ala de la nave: arriba es arriba de la pantalla aun de cabeza
     this.yawVel += (turn * YAW_RATE - this.yawVel) * Math.min(1, YAW_EASE * dt);
     this.pitchVel += (pit * PITCH_RATE - this.pitchVel) * Math.min(1, YAW_EASE * dt);
     const pa = this.pitchVel * dt;
-    const ya = this.yawVel * dt;
+    const ya = this.yawVel * dt + extra;
     let F = vmix(this.F, Math.cos(pa), this.U, Math.sin(pa));
     let U = vmix(this.U, Math.cos(pa), this.F, -Math.sin(pa));
-    F = vmix(F, Math.cos(ya), vcross(F, U), Math.sin(ya));
+    // Turning happens around the sector's vertical while the ship is roughly
+    // upright (or inverted), like a banked aircraft: the view pans and never
+    // rolls, so the sky stays put. Near vertical there is no sensible
+    // "vertical", so it falls back to the ship's own axis.
+    const upness = vdot(U, WORLD_UP);
+    if (Math.abs(upness) > 0.25) {
+      const A = upness > 0 ? WORLD_UP : { x: 0, y: 1, z: 0 };
+      F = rotAxis(F, A, -ya);
+      U = rotAxis(U, A, -ya);
+    } else F = vmix(F, Math.cos(ya), vcross(F, U), Math.sin(ya));
     let R;
     [F, U, R] = orthoBasis(F, U);
 
@@ -1173,12 +1240,22 @@ class Game extends Phaser.Scene {
     this.U = U;
     this.R = R;
 
-    // la nave siempre avanza; B2 es turbo con reserva
-    const boosting = held.P1_2 && this.boost > 0;
-    if (boosting) this.boost = Math.max(0, this.boost - BOOST_DRAIN * dt);
-    else this.boost = Math.min(BOOST_MAX, this.boost + BOOST_REGEN * dt);
-    const want = boosting ? TURBO_SPEED : CRUISE;
-    this.speed += (want - this.speed) * Math.min(1, SPEED_EASE * dt);
+    // B2: cada toque es un dash — un tirón hacia adelante, intocable un
+    // instante. Mantenido es nitro: la nave acelera sin parar mientras dure la
+    // reserva, y a esa velocidad embistes a los cazadores.
+    if (pressed.P1_2 && this.boost >= DASH_COST) {
+      this.boost -= DASH_COST;
+      this.speed = Math.max(this.speed, CRUISE) + DASH_KICK;
+      this.dashUntil = time + DASH_INVULN_MS;
+      Sfx.dash();
+    }
+    if (held.P1_2 && this.boost > 0) {
+      this.boost = Math.max(0, this.boost - BOOST_DRAIN * dt);
+      this.speed = Math.min(NITRO_MAX, this.speed + NITRO_ACCEL * dt);
+    } else {
+      if (!held.P1_2) this.boost = Math.min(BOOST_MAX, this.boost + BOOST_REGEN * dt);
+      this.speed += (CRUISE - this.speed) * Math.min(1, SPEED_EASE * dt);
+    }
 
     const f = this.forward();
     this.pos.x += f.x * this.speed * dt;
@@ -1193,8 +1270,9 @@ class Game extends Phaser.Scene {
       this.pos.z -= (this.pos.z / rr) * (rr - SECTOR_R) * 2 * dt;
     }
 
-    // alabeo con el giro
-    this.roll += (this.yawVel * 0.34 - this.roll) * Math.min(1, 8 * dt);
+    // alabeo con el giro — fuerte durante la media vuelta
+    const bank = this.yawVel * 0.34 + (this.uturn ? this.uturn.dir * 1.2 * Math.sin(this.uturn.p * Math.PI) : 0);
+    this.roll += (bank - this.roll) * Math.min(1, 8 * dt);
 
     // B1: cañón — sale de la nariz, hereda tu velocidad (doble con la mejora)
     if (held.P1_1 && time >= this.fireReadyAt) {
@@ -1204,14 +1282,25 @@ class Game extends Phaser.Scene {
       const sp = BOLT_SPEED + this.speed;
       const twin = time < this.twinUntil;
       const R = this.R;
+      // contra el destructor, el cañón corrige hacia el punto débil abierto
+      // que tengas casi de frente — pegarle es cuestión de apuntar cerca
+      let aim = f;
+      if (this.boss) {
+        const pt = this.bossAimPart(this.boss, f);
+        if (pt) {
+          const [wx, wy, wz] = this.bossToWorld(this.boss, pt.ox, pt.oy, pt.oz);
+          const to = vnorm({ x: wx - this.pos.x, y: wy - this.pos.y, z: wz - this.pos.z });
+          if (vdot(to, f) > 0.985) aim = to;
+        }
+      }
       for (const off of twin ? [-9, 9] : [0]) {
         this.bolts.push({
           x: this.pos.x + f.x * 24 + R.x * off,
           y: this.pos.y + f.y * 24 + R.y * off,
           z: this.pos.z + f.z * 24 + R.z * off,
-          vx: f.x * sp,
-          vy: f.y * sp,
-          vz: f.z * sp,
+          vx: aim.x * sp,
+          vy: aim.y * sp,
+          vz: aim.z * sp,
           life: BOLT_LIFE,
         });
       }
@@ -1269,7 +1358,7 @@ class Game extends Phaser.Scene {
   }
 
   hitPlayer(time) {
-    if (time < this.invulnUntil || this.phase === 'out') return;
+    if (time < this.invulnUntil || time < this.dashUntil || this.phase === 'out') return;
     this.invulnUntil = time + 1300;
     this.shake = 9;
     Sfx.hurt();
@@ -1330,6 +1419,21 @@ class Game extends Phaser.Scene {
         e.y += e.vy * dt;
         e.z += e.vz * dt;
         e.yaw = Math.atan2(e.vx, e.vz);
+      } else if (e.k === 'emis') {
+        // misil del destructor: te sigue, pero gira mal — un giro cerrado, la
+        // media vuelta o el nitro lo dejan atrás; también se puede derribar
+        const k = Math.min(1, 1.1 * dt);
+        e.vx += ((dx / dist) * 330 - e.vx) * k;
+        e.vy += ((dy / dist) * 330 - e.vy) * k;
+        e.vz += ((dz / dist) * 330 - e.vz) * k;
+        e.x += e.vx * dt;
+        e.y += e.vy * dt;
+        e.z += e.vz * dt;
+        e.life -= dt;
+        if (e.life <= 0) {
+          e.dead = true;
+          this.boomAt(e);
+        }
       } else if (e.k === 'boss') {
         this.updateBoss(e, dx, dz, dist, dt);
       } else if (e.k === 'pow') {
@@ -1367,6 +1471,24 @@ class Game extends Phaser.Scene {
           e.y = P.y + (Math.random() - 0.5) * 900;
           e.z = P.z + Math.cos(ang) * 1600;
         }
+      }
+
+      // lo que se mueve deja estela: se lee hacia dónde va
+      if (e.vx !== undefined && e.k !== 'rock') {
+        e.tt = (e.tt || 0) + dt;
+        if (e.tt > 0.05) {
+          e.tt = 0;
+          (e.trail = e.trail || []).push([e.x, e.y, e.z]);
+          if (e.trail.length > 12) e.trail.shift();
+        }
+      }
+
+      // lo recogible viene hacia ti cuando pasas cerca
+      if ((e.k === 'scrap' || e.k === 'pow' || e.k === 'part') && dist < MAGNET_R) {
+        const pull = (560 * dt) / dist;
+        e.x += dx * pull;
+        e.y += dy * pull;
+        e.z += dz * pull;
       }
 
       // contra el destructor chocas con su casco, no con una esfera
@@ -1415,6 +1537,10 @@ class Game extends Phaser.Scene {
           } else {
             this.say(PARTS[e.idx] + ' A BORDO. ' + (PARTS.length - this.partsGot) + ' MÁS.');
           }
+        } else if (this.speed > RAM_SPEED && (e.k === 'drone' || e.k === 'inter' || e.k === 'emis')) {
+          // a toda velocidad, la nave es el arma
+          this.damage(e, 99);
+          this.shake = 7;
         } else {
           if (e.k !== 'sentry' && e.k !== 'boss') e.dead = true;
           this.boomAt(e);
@@ -1514,6 +1640,8 @@ class Game extends Phaser.Scene {
   }
 
   shootAtPlayer(e, sp, big) {
+    // el fogonazo marca de dónde sale — se ve quién te dispara
+    this.booms.push({ wx: e.x, wy: e.y, wz: e.z, t: 0.28, muzzle: true });
     // apunta a donde VAS a estar, no a donde estás
     const t = Math.hypot(this.pos.x - e.x, this.pos.y - e.y, this.pos.z - e.z) / sp;
     const f = this.forward();
@@ -1616,10 +1744,11 @@ class Game extends Phaser.Scene {
   cam() {
     const F = this.camF;
     const U = this.camU;
+    const back = CAM_BACK + Math.max(0, this.speed - CRUISE) * 0.09; // con nitro la cámara se queda atrás
     return {
-      x: this.pos.x - F.x * CAM_BACK + U.x * CAM_UP,
-      y: this.pos.y - F.y * CAM_BACK + U.y * CAM_UP,
-      z: this.pos.z - F.z * CAM_BACK + U.z * CAM_UP,
+      x: this.pos.x - F.x * back + U.x * CAM_UP,
+      y: this.pos.y - F.y * back + U.y * CAM_UP,
+      z: this.pos.z - F.z * back + U.z * CAM_UP,
       F,
       U,
       R: this.camR,
@@ -1749,7 +1878,7 @@ class Game extends Phaser.Scene {
     for (const s of this.shots) {
       const p = this.project(cm, s.x, s.y, s.z);
       if (!p) continue;
-      const q = this.project(cm, s.x - s.vx * 0.12, s.y - s.vy * 0.12, s.z - s.vz * 0.12);
+      const q = this.project(cm, s.x - s.vx * 0.35, s.y - s.vy * 0.35, s.z - s.vz * 0.35);
       const r = Phaser.Math.Clamp(((s.big ? 48 : 7) * FOCAL) / p[2], s.big ? 6 : 3, s.big ? 70 : 14);
       if (q) {
         g.lineStyle(r * 0.9, RUST, 0.35);
@@ -1774,6 +1903,11 @@ class Game extends Phaser.Scene {
       const p = this.project(cm, bm.wx, bm.wy, bm.wz);
       if (!p) continue;
       const k = FOCAL / p[2];
+      if (bm.muzzle) {
+        g.fillStyle(RUST_HI, (0.5 - bm.t) * 3.5);
+        g.fillCircle(p[0], p[1], Math.max(4, 30 * k));
+        continue;
+      }
       const r = (4 + bm.t * (bm.r ? bm.r * 2.4 : bm.big ? 260 : 150)) * k;
       if (bm.r) {
         g.fillStyle(0xf6c98a, 0.35 * (1 - bm.t / 0.5));
@@ -1795,6 +1929,7 @@ class Game extends Phaser.Scene {
 
     this.drawShip(g, cm, time);
     this.drawNav(g, cm);
+    this.drawIncoming(g, cm, time);
 
     // barra de carga del hipersalto, o la vida que le queda al destructor
     if (this.phase === 'charge') {
@@ -1930,17 +2065,11 @@ class Game extends Phaser.Scene {
   }
 
   drawStars(g, cm, time) {
-    const L = 1700;
     for (const m of this.stars) {
-      const wx = this.pos.x + Phaser.Math.Wrap(m.x - this.pos.x, -L / 2, L / 2);
-      const wy = this.pos.y + Phaser.Math.Wrap(m.y - this.pos.y, -L / 2, L / 2);
-      const wz = this.pos.z + Phaser.Math.Wrap(m.z - this.pos.z, -L / 2, L / 2);
-      const p = this.project(cm, wx, wy, wz);
-      if (!p) continue;
-      const dist = Math.hypot(wx - this.pos.x, wy - this.pos.y, wz - this.pos.z);
-      let a = this.fogAlpha(dist) * 0.55;
+      const p = this.projectDir(cm, m.v);
+      if (!p || p[0] < -4 || p[0] > W + 4 || p[1] < -4 || p[1] > H + 4) continue;
+      let a = m.a;
       if (m.tw) a *= 0.6 + 0.4 * Math.sin(time * 0.001 * m.tw + m.ph);
-      if (a <= 0.02) continue;
       g.fillStyle(INK, a);
       g.fillRect(p[0], p[1], m.s, m.s);
       if (m.s === 3) {
@@ -1981,10 +2110,27 @@ class Game extends Phaser.Scene {
 
   drawEnt(g, cm, e, time) {
     const dist = Math.hypot(e.x - this.pos.x, e.y - this.pos.y, e.z - this.pos.z);
+    // la estela de lo que se mueve: se ve de dónde viene y hacia dónde va
+    if (e.trail && dist < 2200) {
+      const n = e.trail.length;
+      for (let i = 1; i < n; i++) {
+        g.lineStyle(e.k === 'emis' ? 3 : 2, RUST_HI, (i / n) * 0.5);
+        this.worldLine(g, cm, e.trail[i - 1], i === n - 1 ? [e.x, e.y, e.z] : e.trail[i]);
+      }
+    }
     const p = this.project(cm, e.x, e.y, e.z);
     if (!p) return;
     let a = this.fogAlpha(dist);
     if (e.k === 'part') a = Math.max(a, 0.5); // la pieza brilla sola
+
+    if (e.k === 'emis') {
+      const F = vnorm({ x: e.vx, y: e.vy, z: e.vz });
+      const U = vnorm(vmix(WORLD_UP, 1, F, -vdot(WORLD_UP, F)));
+      this.drawBasisModel(g, cm, MISSILE_MODEL, e, F, U, 1.6, e.flashT > 0 ? INK_HI : RUST_HI, 1, e.t * 8);
+      g.fillStyle(RUST_HI, 0.5 + 0.4 * Math.sin(e.t * 20));
+      g.fillCircle(p[0], p[1], Math.max(3, (16 * FOCAL) / p[2]));
+      return;
+    }
 
     if (a <= 0.03) {
       if ((e.k === 'drone' || e.k === 'eel' || e.k === 'sentry') && dist < 3000) {
@@ -2068,6 +2214,7 @@ class Game extends Phaser.Scene {
       g.fillCircle(p[0], p[1], r * 0.7);
     }
     const shielded = b.parts.some((q) => q.kind === 'dome' && q.hp > 0);
+    const aimed = this.bossAimPart(b, this.F);
     for (const pt of b.parts) {
       if (pt.hp <= 0) continue;
       const [wx, wy, wz] = this.bossToWorld(b, pt.ox, pt.oy, pt.oz);
@@ -2075,6 +2222,25 @@ class Game extends Phaser.Scene {
       if (!p) continue;
       const k = (SD_SCALE * FOCAL) / p[2];
       const hot = pt.flashT > 0 ? INK_HI : RUST_HI;
+      // los puntos débiles abiertos llevan mira: ahí es donde se le pega
+      if (this.bossPartOpen(b, pt)) {
+        const main = pt.kind !== 'turret';
+        const r = Math.max(main ? 20 : 12, SD_PART_R[pt.kind] * (FOCAL / p[2]) * 0.8);
+        const c = r * 0.4;
+        g.lineStyle(main ? 2 : 1.5, main ? INK_HI : RUST_HI, main ? 0.6 + 0.4 * Math.sin(b.t * 6) : 0.45);
+        for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+          g.beginPath();
+          g.moveTo(p[0] + sx * r, p[1] + sy * (r - c));
+          g.lineTo(p[0] + sx * r, p[1] + sy * r);
+          g.lineTo(p[0] + sx * (r - c), p[1] + sy * r);
+          g.strokePath();
+        }
+        // la que tienes en la mira muestra cuánto le queda
+        if (pt === aimed) {
+          g.fillStyle(INK_HI, 0.9);
+          for (let i = 0; i < pt.hp; i++) g.fillRect(p[0] - pt.max * 3 + i * 6, p[1] - r - 10, 4, 4);
+        }
+      }
       if (pt.kind === 'turret') {
         this.drawWorldModel(g, cm, SENTRY_MODEL, { x: wx, y: wy - 12 * SD_SCALE, z: wz, yaw: b.yaw }, 1.1 * SD_SCALE, pt.flashT > 0 ? INK_HI : RUST, a);
         g.fillStyle(hot, a);
@@ -2140,8 +2306,26 @@ class Game extends Phaser.Scene {
   drawShip(g, cm, time) {
     if (this.phase === 'out') return;
     if (time < this.invulnUntil && Math.floor(time / 60) % 2 === 0) return;
-    this.drawBasisModel(g, cm, SHIP_MODEL, this.pos, this.F, this.U, 1, INK, 1, this.roll);
     const f = this.forward();
+    // dash: la nave deja copias fantasma — mientras se ven, nada te toca
+    if (time < this.dashUntil) {
+      for (let i = 1; i <= 3; i++) {
+        const gp = { x: this.pos.x - f.x * 22 * i, y: this.pos.y - f.y * 22 * i, z: this.pos.z - f.z * 22 * i };
+        this.drawBasisModel(g, cm, SHIP_MODEL, gp, this.F, this.U, 1, INK_HI, 0.4 / i, this.roll);
+      }
+    }
+    this.drawBasisModel(g, cm, SHIP_MODEL, this.pos, this.F, this.U, 1, INK, 1, this.roll);
+    // a velocidad de embestida, la proa se enciende
+    if (this.speed > RAM_SPEED) {
+      const np = this.project(cm, this.pos.x + f.x * 22, this.pos.y + f.y * 22, this.pos.z + f.z * 22);
+      if (np) {
+        const k = Math.min(1, (this.speed - RAM_SPEED) / 150);
+        g.lineStyle(2, INK_HI, 0.5 * k + 0.2 * Math.sin(time * 0.05));
+        g.strokeCircle(np[0], np[1], (20 * FOCAL) / np[2]);
+        g.fillStyle(INK_HI, 0.18 * k);
+        g.fillCircle(np[0], np[1], (20 * FOCAL) / np[2]);
+      }
+    }
     // el escudo envuelve la nave; el fogonazo vive en la nariz
     const sp0 = this.project(cm, this.pos.x, this.pos.y, this.pos.z);
     if (this.shield && sp0) {
@@ -2178,6 +2362,30 @@ class Game extends Phaser.Scene {
     }
   }
 
+  // Lo que viene hacia ti desde fuera de la pantalla se anuncia en el borde,
+  // del lado por el que llega
+  drawIncoming(g, cm, time) {
+    const threats = this.shots.concat(this.ents.filter((e) => e.k === 'emis' || e.k === 'inter'));
+    for (const s of threats) {
+      const d = { x: this.pos.x - s.x, y: this.pos.y - s.y, z: this.pos.z - s.z };
+      const dist = Math.hypot(d.x, d.y, d.z);
+      if (dist > 1000 || d.x * s.vx + d.y * s.vy + d.z * s.vz <= 0) continue;
+      const p = this.project(cm, s.x, s.y, s.z);
+      if (p && p[0] > 30 && p[0] < W - 30 && p[1] > 30 && p[1] < H - 30) continue;
+      const o = { x: -d.x, y: -d.y, z: -d.z };
+      const ang = Math.atan2(-vdot(o, cm.U), vdot(o, cm.R) || 0.001);
+      const ex = CX + Math.cos(ang) * (CX - 28);
+      const ey = CY + Math.sin(ang) * (CY - 28);
+      const pulse = 0.55 + 0.45 * Math.sin(time * 0.02);
+      g.lineStyle(3, RUST_HI, pulse * (1 - dist / 1100));
+      g.beginPath();
+      g.moveTo(ex - Math.cos(ang + 0.6) * 16, ey - Math.sin(ang + 0.6) * 16);
+      g.lineTo(ex, ey);
+      g.lineTo(ex - Math.cos(ang - 0.6) * 16, ey - Math.sin(ang - 0.6) * 16);
+      g.strokePath();
+    }
+  }
+
   // La marca de navegación: hacia la pieza que falta
   drawNav(g, cm) {
     let target = null;
@@ -2186,8 +2394,19 @@ class Game extends Phaser.Scene {
       target = this.ents.find((e) => e.k === 'part');
       if (target) label = PARTS[target.idx];
     } else if (this.phase === 'boss' && this.boss) {
-      target = this.boss;
-      label = 'DESTRUCTOR';
+      // no al centro del destructor: al punto débil que toca romper
+      const b = this.boss;
+      let bd = 1e9;
+      for (const pt of b.parts) {
+        if (pt.kind === 'turret' || !this.bossPartOpen(b, pt)) continue;
+        const [x, y, z] = this.bossToWorld(b, pt.ox, pt.oy, pt.oz);
+        const d = Math.hypot(x - this.pos.x, y - this.pos.y, z - this.pos.z);
+        if (d < bd) {
+          bd = d;
+          target = { x, y, z };
+          label = pt.kind === 'dome' ? 'DOMO DE ESCUDO' : 'PUENTE';
+        }
+      }
     } else if (this.phase === 'charge') {
       this.navText.setText('RESISTE');
       return;
