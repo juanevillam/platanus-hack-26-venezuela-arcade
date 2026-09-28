@@ -35,7 +35,8 @@ const GOD = true;
 const YAW_RATE = 2.1; // rad/s tope
 const YAW_EASE = 7; // 1/s, el giro entra y sale suave
 const PITCH_RATE = 1.7; // rad/s de cabeceo
-const LEVEL_EASE = 1.3; // 1/s: suelta el stick cerca del nivel y se endereza
+const MAX_PITCH = 1.05; // ~60°: nunca pasa la vertical
+const LEVEL_EASE = 1.3; // 1/s: suelta el stick y se endereza
 const CRUISE = 235; // crucero constante — la nave NUNCA se detiene
 const TURBO_SPEED = 470;
 const SPEED_EASE = 3; // 1/s hacia la velocidad objetivo
@@ -283,15 +284,26 @@ const SENTRY_MODEL = [
   ],
 ];
 
-// Dron cazador: cuña con aguijones
+// Dron cazador: caza con cabina, alas y aletas en las puntas
 const DRONE_MODEL = [
   [
-    [0, 0, 14], [-12, 0, -8], [12, 0, -8], [0, -6, -6], [0, 4, -6],
+    [0, 0, 16], // 0 nariz
+    [0, -6, 2], // 1 cabina
+    [0, 0, -10], // 2 cola
+    [-18, 1, -8], // 3 ala izq
+    [18, 1, -8], // 4 ala der
+    [-5, 0, 2], // 5 raíz izq
+    [5, 0, 2], // 6 raíz der
+    [-18, -7, -11], // 7 aleta izq
+    [18, -7, -11], // 8 aleta der
+    [0, 5, -4], // 9 panza
   ],
   [
-    [0, 1], [0, 2], [0, 3], [0, 4], [1, 3], [2, 3], [1, 4], [2, 4],
+    [0, 1], [1, 2], [0, 5], [0, 6], [5, 3], [6, 4], [3, 2], [4, 2],
+    [3, 7], [4, 8], [0, 9], [9, 2], [5, 9], [6, 9],
   ],
 ];
+const HUNTER_SCALE = 2; // cazadores e interceptores: grandes, fáciles de seguir
 
 // Mina: octaedro
 const MINE_MODEL = [
@@ -305,23 +317,47 @@ const MINE_MODEL = [
 
 const PART_MODEL = MINE_MODEL; // la pieza: el mismo octaedro, en tinta y girando
 
-// Asteroide: pedrusco irregular
-const ROCK_MODEL = [
-  [
-    [-6, -16, 4], [12, -10, -6], [18, 2, 6], [8, 14, -4], [-10, 12, 6], [-18, 0, -4], [-12, -8, -10], [4, -2, 14],
-  ],
-  [
-    [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 0], [0, 7], [2, 7], [4, 7], [6, 1], [5, 3],
-  ],
+// Asteroide: icosaedro con cada vértice desplazado — cada roca es única,
+// facetada como piedra en vez de un contorno plano
+const ICO_PHI = (1 + Math.sqrt(5)) / 2;
+const ICO_VERTS = [
+  [-1, ICO_PHI, 0], [1, ICO_PHI, 0], [-1, -ICO_PHI, 0], [1, -ICO_PHI, 0],
+  [0, -1, ICO_PHI], [0, 1, ICO_PHI], [0, -1, -ICO_PHI], [0, 1, -ICO_PHI],
+  [ICO_PHI, 0, -1], [ICO_PHI, 0, 1], [-ICO_PHI, 0, -1], [-ICO_PHI, 0, 1],
 ];
+const ICO_EDGES = [];
+for (let i = 0; i < 12; i++) {
+  for (let j = i + 1; j < 12; j++) {
+    const [a, b] = [ICO_VERTS[i], ICO_VERTS[j]];
+    if (Math.abs(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) - 2) < 0.01) ICO_EDGES.push([i, j]);
+  }
+}
+function makeRockModel() {
+  const k = 16 / Math.hypot(1, ICO_PHI);
+  return [
+    ICO_VERTS.map(([x, y, z]) => {
+      const j = (0.68 + Math.random() * 0.5) * k;
+      return [x * j, y * j * 0.8, z * j];
+    }),
+    ICO_EDGES,
+  ];
+}
 
-// Interceptor: aguja que embiste
+// Interceptor: aguja con cuchillas hacia adelante
 const INTER_MODEL = [
   [
-    [0, 0, 18], [-7, 0, -10], [7, 0, -10], [0, -4, -10], [0, 0, -14],
+    [0, 0, 24], // 0 nariz
+    [0, -4, -4], // 1 lomo
+    [0, 4, -4], // 2 quilla
+    [-4, 0, -4], // 3 flanco izq
+    [4, 0, -4], // 4 flanco der
+    [0, 0, -14], // 5 cola
+    [-15, 0, 7], // 6 cuchilla izq
+    [15, 0, 7], // 7 cuchilla der
   ],
   [
-    [0, 1], [0, 2], [0, 3], [1, 4], [2, 4], [3, 4],
+    [0, 1], [0, 2], [0, 3], [0, 4], [1, 5], [2, 5], [3, 5], [4, 5],
+    [3, 6], [6, 5], [4, 7], [7, 5],
   ],
 ];
 
@@ -364,13 +400,16 @@ const POW_MODELS = {
 };
 const POW_NAMES = { shield: 'ESCUDO ARRIBA', hull: 'CASCO REPARADO', twin: 'CAÑÓN DOBLE' };
 
-// Chatarra: esquirla
+// Chatarra: un trozo de casco — placa con borde, puntal y una solapa doblada
 const SCRAP_MODEL = [
   [
-    [0, -7, 0], [6, 5, 0], [-6, 5, 0], [0, 0, 6],
+    [-8, -6, 0], [7, -7, 0], [9, 4, 0], [-6, 6, 0], // 0-3 placa
+    [13, 8, -6], [-2, 11, -6], // 4-5 solapa doblada
+    [-8, -6, -4], [7, -7, -4], // 6-7 borde
   ],
   [
-    [0, 1], [1, 2], [2, 0], [0, 3], [1, 3], [2, 3],
+    [0, 1], [1, 2], [2, 3], [3, 0], [2, 4], [4, 5], [5, 3],
+    [0, 6], [1, 7], [6, 7], [0, 2],
   ],
 ];
 
@@ -549,7 +588,7 @@ class Game extends Phaser.Scene {
     for (let i = 0; i < 14; i++) {
       const p = this.randIn(SECTOR_R * 0.95);
       this.ents.push({
-        k: 'rock', x: p[0], y: p[1] * 0.5, z: p[2], r: 42, hp: 2, t: rnd(0, 9),
+        k: 'rock', x: p[0], y: p[1] * 0.5, z: p[2], r: 42, hp: 2, t: rnd(0, 9), model: makeRockModel(),
         spin: rnd(-0.5, 0.5), vx: rnd(-16, 16), vy: rnd(-10, 10), vz: rnd(-16, 16), yaw: 0,
       });
     }
@@ -580,6 +619,17 @@ class Game extends Phaser.Scene {
         s: Math.random() < 0.12 ? 3 : Math.random() < 0.45 ? 2 : 1,
         tw: Math.random() < 0.25 ? 1 + Math.random() * 2 : 0, // parpadeo
         ph: Math.random() * 6.3,
+      });
+    }
+    // the galaxy's band: dense faint stars hugging the horizon
+    this.band = [];
+    for (let i = 0; i < 260; i++) {
+      const u = Math.random() + Math.random() + Math.random() - 1.5;
+      this.band.push({
+        yaw: Math.random() * Math.PI * 2,
+        el: u * 26,
+        s: Math.random() < 0.2 ? 2 : 1,
+        a: 0.2 + Math.random() * 0.45,
       });
     }
     // el polvo: motas cercanas que convierten la velocidad en estelas
@@ -668,7 +718,7 @@ class Game extends Phaser.Scene {
       x: this.pos.x + Math.sin(ang) * 1200,
       y: this.pos.y + (Math.random() - 0.5) * 500,
       z: this.pos.z + Math.cos(ang) * 1200,
-      r: 22,
+      r: 22 * HUNTER_SCALE,
       hp: 1,
       t: 0,
       yaw: 0,
@@ -800,29 +850,16 @@ class Game extends Phaser.Scene {
     // giro y cabeceo con inercia: sin golpes de cámara
     this.yawVel += (turn * YAW_RATE - this.yawVel) * Math.min(1, YAW_EASE * dt);
     this.yaw += this.yawVel * dt;
+    // Pitch stops short of vertical: past it the ship either flies inverted
+    // (left/right swap) or has to flip itself, and yawing near vertical spins
+    // the view around a point overhead. Turning around is done with the stick.
     this.pitchVel += (pit * PITCH_RATE - this.pitchVel) * Math.min(1, YAW_EASE * dt);
     this.pitch += this.pitchVel * dt;
-    while (this.pitch > Math.PI) this.pitch -= Math.PI * 2;
-    while (this.pitch < -Math.PI) this.pitch += Math.PI * 2;
-
-    if (!pit) {
-      // pasada la vertical y con el stick suelto, la nave sale del arco como
-      // un piloto: misma dirección de vuelo re-expresada derecha (Immelmann),
-      // con el medio tonel visual que el alabeo deshace solo. Así nunca queda
-      // invertida y la izquierda siempre es la izquierda.
-      if (Math.abs(this.pitch) > Math.PI / 2) {
-        const s = Math.sign(this.pitch);
-        this.pitch = s * (Math.PI - Math.abs(this.pitch));
-        this.pitchVel = -this.pitchVel;
-        this.yaw += Math.PI;
-        this.roll += s * Math.PI;
-        // la cámara salta a la expresión equivalente de la MISMA mirada
-        this.camYaw += Math.PI;
-        this.camPitch = Math.sign(this.camPitch || s) * (Math.PI - Math.abs(this.camPitch));
-      }
-      // y sin input, siempre puede enderezarse
-      this.pitch -= this.pitch * Math.min(1, LEVEL_EASE * dt);
+    if (Math.abs(this.pitch) > MAX_PITCH) {
+      this.pitch = Math.sign(this.pitch) * MAX_PITCH;
+      this.pitchVel = 0;
     }
+    if (!pit) this.pitch -= this.pitch * Math.min(1, LEVEL_EASE * dt);
 
     // la nave siempre avanza; B2 es turbo con reserva
     const boosting = held.P1_2 && this.boost > 0;
@@ -1117,7 +1154,7 @@ class Game extends Phaser.Scene {
     if (e.k === 'rock' && e.r > 20) {
       for (let i = 0; i < 2; i++) {
         this.ents.push({
-          k: 'rock', x: e.x, y: e.y, z: e.z, r: 18, hp: 1, t: 0, yaw: 0,
+          k: 'rock', x: e.x, y: e.y, z: e.z, r: 18, hp: 1, t: 0, yaw: 0, model: makeRockModel(),
           spin: (Math.random() - 0.5) * 3,
           vx: (Math.random() - 0.5) * 120,
           vy: (Math.random() - 0.5) * 80,
@@ -1428,11 +1465,47 @@ class Game extends Phaser.Scene {
     while (d < -Math.PI) d += Math.PI * 2;
     if (Math.abs(d) > 1.7) return null;
     // cabecear también mueve el cielo
-    return [CX + d * FOCAL, CY + elev + this.camPitch * FOCAL];
+    return [CX + d * FOCAL, this.horizonY() + elev];
+  }
+
+  // Where the sector's level plane meets the sky; the camera never rolls,
+  // so it is always a horizontal line
+  horizonY() {
+    return CY + Math.tan(this.camPitch) * FOCAL;
+  }
+
+  // Up and down must always read: a hazy floor below the horizon and the
+  // galaxy's band lying along it
+  drawHorizon(g) {
+    const hy = this.horizonY();
+    for (let i = 0; i < 10; i++) {
+      const y0 = hy + i * i * 7;
+      if (y0 > H) break;
+      g.fillStyle(0x2c323c, 0.17 - i * 0.016);
+      g.fillRect(0, Math.max(0, y0), W, H - Math.max(0, y0));
+    }
+    g.fillStyle(0x3a4452, 0.1);
+    g.fillRect(0, hy - 18, W, 36);
+    g.fillStyle(0x5a6878, 0.1);
+    g.fillRect(0, hy - 6, W, 12);
+    g.lineStyle(1, INK, 0.22);
+    g.beginPath();
+    g.moveTo(0, hy);
+    g.lineTo(W, hy);
+    g.strokePath();
+    for (const b of this.band) {
+      let d = b.yaw - this.camYaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      if (Math.abs(d) > 1.1) continue;
+      g.fillStyle(INK, b.a);
+      g.fillRect(CX + d * FOCAL, hy + b.el, b.s, b.s);
+    }
   }
 
   // El cielo: nebulosas tenues y un gigante gaseoso con bandas, más su luna
   drawSky(g) {
+    this.drawHorizon(g);
     // nebulosas: manchas apenas visibles que dan fondo al negro
     const nebs = [
       [0.9, -60, 300, 0x33506a, 0.05],
@@ -1448,7 +1521,7 @@ class Game extends Phaser.Scene {
       g.fillCircle(p[0] + r * 0.4, p[1] - r * 0.25, r * 0.6);
     }
 
-    const p = this.skyPoint(2.4, -132);
+    const p = this.skyPoint(2.4, -200);
     if (!p) return;
     const [sx, sy] = p;
     const R = 150;
@@ -1474,7 +1547,7 @@ class Game extends Phaser.Scene {
       g.fillRect(tx, sy + y0, sx + hw - tx, y1 - y0 + 1);
     }
     // la luna: pequeña, con su propia noche
-    const mp = this.skyPoint(2.04, -210);
+    const mp = this.skyPoint(2.04, -300);
     if (mp) {
       g.fillStyle(0x474d55, 1);
       g.fillCircle(mp[0], mp[1], 20);
@@ -1599,8 +1672,9 @@ class Game extends Phaser.Scene {
 
     const model =
       e.k === 'sentry' ? SENTRY_MODEL : e.k === 'drone' ? DRONE_MODEL : e.k === 'inter' ? INTER_MODEL
-      : e.k === 'pow' ? POW_MODELS[e.sub] : e.k === 'rock' ? ROCK_MODEL : e.k === 'part' ? PART_MODEL : SCRAP_MODEL;
-    const scale = e.k === 'rock' ? e.r / 16 : e.k === 'part' ? 1.4 : e.k === 'sentry' ? 1.6 : 1;
+      : e.k === 'pow' ? POW_MODELS[e.sub] : e.k === 'rock' ? e.model : e.k === 'part' ? PART_MODEL : SCRAP_MODEL;
+    const scale = e.k === 'rock' ? e.r / 16 : e.k === 'part' ? 1.4 : e.k === 'sentry' ? 1.6
+      : e.k === 'drone' || e.k === 'inter' ? HUNTER_SCALE : 1;
     const rot = e.k === 'rock' ? e.t * e.spin : e.k === 'part' || e.k === 'scrap' || e.k === 'pow' ? e.t * 1.1 : 0;
     this.drawWorldModel(g, cm, model, e, scale, color, a, rot);
 
