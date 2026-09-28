@@ -487,6 +487,7 @@ class Game extends Phaser.Scene {
     this.camPitch = 0;
 
     this.phase = 'play'; // play → charge → out
+    this.jumping = false; // Phaser reuses the scene instance across runs
     this.charge = 0;
     this.score = 0;
     this.partsGot = 0;
