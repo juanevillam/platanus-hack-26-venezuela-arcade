@@ -654,6 +654,7 @@ class Game extends Phaser.Scene {
     this.ammo = 3;
     this.ar = 0;
     this.sq = 0;
+    this.sqSaid = 0;
 
     // cámara: la misma base, suavizada — sigue la nave también de cabeza
     this.camF = { ...this.F };
@@ -705,10 +706,6 @@ class Game extends Phaser.Scene {
   // bordes — el sector eres tú
   po() {
     const rnd = (a, b) => a + RND() * (b - a);
-    for (let i = 0; i < 2; i++) {
-      const p = this.ri(SECTOR_R * 0.8);
-      this.en.push({ k: 'eel', x: p[0], y: p[1] * 0.4, z: p[2], r: 22, hp: 2, t: rnd(0, 9), yaw: rnd(0, 6.3) });
-    }
     const rocks = 10;
     const scraps = 12;
     for (let i = 0; i < rocks; i++) {
@@ -814,6 +811,10 @@ class Game extends Phaser.Scene {
 
     const cine = this.boss && this.boss.cine;
     if (this.fz === 'play' && !cine) {
+      if (this.boss) {
+        // la pelea es contra ÉL: apenas entra escolta, y nada más
+        this.sd(dt, 1, 16);
+      } else {
       // el reloj del arcade: todo aprieta con los minutos
       this.sd(dt, MIN(6, 1 + FLR(this.ep / 40)), MAX(4.5, 11 - this.ep / 40));
       this.wvAt -= dt;
@@ -841,14 +842,13 @@ class Game extends Phaser.Scene {
         }
       }
       // el destructor vuelve siempre — y cada vez con menos ceremonia
-      if (!this.boss) {
-        const was = this.bq;
-        this.bq -= dt;
-        if (was > 2.5 && this.bq <= 2.5) this.say('MASSIVE SIGNAL.');
-        if (this.bq <= 0) {
-          this.say('HYPERSPACE RUPTURE.');
-          this.spawnBoss();
-        }
+      const was = this.bq;
+      this.bq -= dt;
+      if (was > 2.5 && this.bq <= 2.5) this.say('MASSIVE SIGNAL.');
+      if (this.bq <= 0) {
+        this.say('HYPERSPACE RUPTURE.');
+        this.spawnBoss();
+      }
       }
       // sobrevivir puntúa solo
       this.svT += dt;
@@ -928,8 +928,9 @@ class Game extends Phaser.Scene {
     // entero, imponente. No hay anillo: el sector eres tú.
     const f = this.F;
     const h = HYP(f.x, f.z) || 1;
-    const bx = this.pos.x + (f.x / h) * 1900;
-    const bz = this.pos.z + (f.z / h) * 1900;
+    const bd = this.bossN ? 2200 : 2600;
+    const bx = this.pos.x + (f.x / h) * bd;
+    const bz = this.pos.z + (f.z / h) * bd;
     this.boss = {
       k: 'boss',
       x: bx,
@@ -1571,18 +1572,6 @@ class Game extends Phaser.Scene {
           e.fireAt = 3.2;
           this.sa(e, SHOT_SPEED);
         }
-      } else if (e.k === 'eel') {
-        if (dist < 560) {
-          e.yaw = AT2(dx, dz);
-          e.x += (dx / dist) * 265 * dt;
-          e.y += (dy / dist) * 210 * dt;
-          e.z += (dz / dist) * 265 * dt;
-        } else {
-          e.yaw += SIN(e.t * 0.7) * 0.4 * dt;
-          e.x += SIN(e.yaw) * 120 * dt;
-          e.z += COS(e.yaw) * 120 * dt;
-          e.y += SIN(e.t * 1.7) * 26 * dt;
-        }
       } else if (e.k === 'rock') {
         e.x += e.vx * dt;
         e.y += e.vy * dt;
@@ -1648,8 +1637,13 @@ class Game extends Phaser.Scene {
           if (this.sq >= SCRAP_PER_MISSILE && this.ammo < MISSILE_MAX) {
             this.sq = 0;
             this.ammo++;
+            this.say('+1 MISSILE.');
             Sfx.ammo();
           } else {
+            if (!this.sqSaid) {
+              this.sqSaid = 1;
+              this.say('SCRAP +10 — 3 MAKE A MISSILE.');
+            }
             Sfx.pickup();
           }
         } else if (e.k === 'pow') {
@@ -2301,7 +2295,7 @@ class Game extends Phaser.Scene {
     }
 
     if (a <= 0.03) {
-      if ((e.k === 'drone' || e.k === 'eel' || e.k === 'sentry') && dist < 3000) {
+      if ((e.k === 'drone' || e.k === 'inter' || e.k === 'sentry') && dist < 3200) {
         fr(g, p[0], p[1], 2.5, 2.5, RUST_HI, 0.6);
       }
       return;
@@ -2313,23 +2307,6 @@ class Game extends Phaser.Scene {
       ? INK_HI
       : e.k === 'pow' ? BLU : e.k === 'scrap' ? BLD : e.k === 'rock' ? GRY : RUST;
     if (e.k === 'rock' && !flash) a *= 0.7;
-
-    if (e.k === 'eel') {
-      // la serpiente del vacío: una línea sinuosa con cabeza de brasa
-      g.lineStyle(1.5, RUST, a);
-      const fx = SIN(e.yaw);
-      const fz = COS(e.yaw);
-      let prev = null;
-      for (let i = 0; i < 8; i++) {
-        const wx = e.x - fx * i * 16 + fz * SIN(e.t * 4 + i) * 8;
-        const wy = e.y + COS(e.t * 3 + i) * 6;
-        const wz = e.z - fz * i * 16 - fx * SIN(e.t * 4 + i) * 8;
-        if (prev) this.wl(g, cm, prev, [wx, wy, wz]);
-        prev = [wx, wy, wz];
-      }
-      fc(g, p[0], p[1], MAX(1.5, 320 / p[2]), RUST_HI, a);
-      return;
-    }
 
     const model =
       e.k === 'sentry' ? SENTRY_MODEL : e.k === 'drone' ? DRONE_MODEL : e.k === 'inter' ? INTER_MODEL
@@ -2547,11 +2524,30 @@ class Game extends Phaser.Scene {
   // Lo que viene hacia ti desde fuera de la pantalla se anuncia en el borde,
   // del lado por el que llega
   di(g, cm, time) {
+    // las naves cercanas SIEMPRE se anuncian en el borde — aunque no se
+    // estén acercando; los proyectiles, desde más lejos que antes
+    for (const e of this.en) {
+      if ((e.k !== 'drone' && e.k !== 'inter') || e.dead) continue;
+      const d = { x: e.x - this.pos.x, y: e.y - this.pos.y, z: e.z - this.pos.z };
+      const dist = HYP(d.x, d.y, d.z);
+      if (dist > 1900) continue;
+      const p = this.pj(cm, e.x, e.y, e.z);
+      if (p && p[0] > 30 && p[0] < W - 30 && p[1] > 30 && p[1] < H - 30) continue;
+      const ang = AT2(-vdot(d, cm.U), vdot(d, cm.R) || 0.001);
+      const ex = CX + COS(ang) * (CX - 24);
+      const ey = CY + SIN(ang) * (CY - 24);
+      g.lineStyle(2, RUST_HI, 0.55);
+      ln(g, ex - COS(ang + 0.5) * 11, ey - SIN(ang + 0.5) * 11, ex, ey);
+      g.beginPath();
+      g.moveTo(ex, ey);
+      g.lineTo(ex - COS(ang - 0.5) * 11, ey - SIN(ang - 0.5) * 11);
+      g.strokePath();
+    }
     const threats = this.ss.concat(this.en.filter((e) => e.k === 'emis' || e.k === 'inter'));
     for (const s of threats) {
       const d = { x: this.pos.x - s.x, y: this.pos.y - s.y, z: this.pos.z - s.z };
       const dist = HYP(d.x, d.y, d.z);
-      if (dist > 1000 || d.x * s.vx + d.y * s.vy + d.z * s.vz <= 0) continue;
+      if (dist > 1500 || d.x * s.vx + d.y * s.vy + d.z * s.vz <= 0) continue;
       const p = this.pj(cm, s.x, s.y, s.z);
       if (p && p[0] > 30 && p[0] < W - 30 && p[1] > 30 && p[1] < H - 30) continue;
       const o = { x: -d.x, y: -d.y, z: -d.z };
@@ -2559,7 +2555,7 @@ class Game extends Phaser.Scene {
       const ex = CX + COS(ang) * (CX - 28);
       const ey = CY + SIN(ang) * (CY - 28);
       const pulse = 0.55 + 0.45 * SIN(time * 0.02);
-      g.lineStyle(3, RUST_HI, pulse * (1 - dist / 1100));
+      g.lineStyle(3, RUST_HI, pulse * (1 - dist / 1600));
       g.beginPath();
       g.moveTo(ex - COS(ang + 0.6) * 16, ey - SIN(ang + 0.6) * 16);
       g.lineTo(ex, ey);
