@@ -929,7 +929,7 @@ class Game extends Phaser.Scene {
     Sfx.turn();
     for (let i = 0; i < n; i++) {
       const ang = (i / n) * PI * 2 + RND() * 0.8;
-      const inter = i % 3 === 2;
+      const inter = i === 2 && n >= 4; // un solo embestidor, y no en la primera
       this.en.push({
         k: inter ? 'inter' : 'drone',
         x: this.pos.x + SIN(ang) * 1500,
@@ -1697,7 +1697,7 @@ class Game extends Phaser.Scene {
           } else {
             this.say(PARTS[e.idx] + '. ' + (PARTS.length - this.pg) + ' LEFT.');
             this.time.delayedCall(1400, () => {
-              if (this.fz === 'play') this.wave(2 + this.pg);
+              if (this.fz === 'play') this.wave(1 + this.pg);
             });
           }
         } else if (
@@ -1708,9 +1708,11 @@ class Game extends Phaser.Scene {
           this.damage(e, 99);
           this.sh = 7;
         } else if (e.k === 'drone' || e.k === 'inter') {
-          // metal contra metal no perdona: chocar un caza es morir
+          // metal contra metal: el caza estalla y tú pierdes UN casco —
+          // morir de un toque contra algo tan pequeño no era justo, y las
+          // emboscadas lo convertían en ejecución
           this.damage(e, 99);
-          this.die();
+          this.hy(time);
         } else {
           if (e.k !== 'sentry' && e.k !== 'boss') e.dead = true;
           this.bm(e);
