@@ -703,6 +703,7 @@ class Game extends Phaser.Scene {
     this.shield = false;
     this.mz2 = 0;
     this.boss = null;
+    this.boss2 = null; // el refuerzo que llama al perder los escudos
 
     this.po();
     this.bs();
@@ -803,7 +804,7 @@ class Game extends Phaser.Scene {
   update(time, delta) {
     const dt = MIN(delta, 50) / 1000;
     this.ep += dt;
-    Music.boss = !!this.boss;
+    Music.boss = !!(this.boss || this.boss2);
     Music.tick();
 
     // pausa: START congela el sector
@@ -820,9 +821,10 @@ class Game extends Phaser.Scene {
     this.mz2 -= dt;
     this.ht = MAX(0, this.ht - dt);
 
-    const cine = this.boss && this.boss.cine;
-    if (this.fz === 'play' && !cine) {
-      if (this.boss) {
+    const cb = (this.boss && this.boss.cine && this.boss) || (this.boss2 && this.boss2.cine && this.boss2);
+    const anyB = this.boss || this.boss2;
+    if (this.fz === 'play' && !cb) {
+      if (anyB) {
         // la pelea es contra ÉL: apenas entra escolta, y nada más
         this.sd(dt, 1, 16);
       } else {
@@ -855,12 +857,14 @@ class Game extends Phaser.Scene {
         }
       }
       // el destructor vuelve siempre — y cada vez con menos ceremonia
+      if (!anyB) {
       const was = this.bq;
       this.bq -= dt;
       if (was > 2.5 && this.bq <= 2.5) this.say('MASSIVE SIGNAL.');
       if (this.bq <= 0) {
         this.say('HYPERSPACE RUPTURE.');
         this.spawnBoss();
+      }
       }
       }
       // sobrevivir puntúa solo
@@ -938,15 +942,17 @@ class Game extends Phaser.Scene {
   // CERCA DEL CENTRO del sector (la pelea nunca vive contra el borde, que
   // te empuja de vuelta), y al punto del anillo MÁS LEJANO de ti: la
   // entrada y la salva se ven enteras, de lejos, como una escena.
-  spawnBoss() {
+  spawnBoss(mini) {
     // Aparece LEJOS, delante de ti y a TU MISMA ALTURA: lo ves de lado,
-    // entero, imponente. No hay anillo: el sector eres tú.
+    // entero, imponente. No hay anillo: el sector eres tú. El MINI es el
+    // refuerzo: escolta sin domos, con menos casco — pero son DOS.
     const f = this.F;
     const h = HYP(f.x, f.z) || 1;
-    const bd = this.bossN ? 2200 : 2600;
-    const bx = this.pos.x + (f.x / h) * bd;
-    const bz = this.pos.z + (f.z / h) * bd;
-    this.boss = {
+    const bd = mini ? 2400 : this.bossN ? 2200 : 2600;
+    const ang = mini ? RND() * PI * 2 : 0;
+    const bx = this.pos.x + (mini ? SIN(ang) : f.x / h) * bd;
+    const bz = this.pos.z + (mini ? COS(ang) : f.z / h) * bd;
+    const nb = {
       k: 'boss',
       x: bx,
       y: MIN(this.pos.y, surfY(bx, bz) - 380),
@@ -963,12 +969,16 @@ class Game extends Phaser.Scene {
       hd: 1,
       cine: 1,
       cineT: 0,
-      short: this.bossN ? 1 : 0, // el primero con toda la ceremonia; después, al grano
+      short: mini || this.bossN ? 1 : 0, // el primero con toda la ceremonia
       tpAt: 0,
       salvoAt: 0,
-      parts: SD_PARTS.map(([kind, ox, oy, oz, hp]) => ({ kind, ox, oy, oz, hp, max: hp, fireAt: 1 + RND() * 3, burst: 0 })),
+      mini: mini ? 1 : 0,
+      parts: SD_PARTS.filter(([kind]) => !mini || kind !== 'dome')
+        .map(([kind, ox, oy, oz, hp]) => ({ kind, ox, oy, oz, hp: mini && kind === 'bridge' ? 8 : hp, max: mini && kind === 'bridge' ? 8 : hp, fireAt: 1 + RND() * 3, burst: 0 })),
     };
-    this.en.push(this.boss);
+    if (mini) this.boss2 = nb;
+    else this.boss = nb;
+    this.en.push(nb);
   }
 
   // Del casco del destructor al mundo, y de vuelta
@@ -1037,8 +1047,14 @@ class Game extends Phaser.Scene {
       this.dp(wx, wy, wz, 0.6);
     } else if (pt.kind === 'dome') {
       this.ad(150);
-      this.say(b.parts.some((q) => q.kind === 'dome' && q.hp > 0) ? 'DOME DOWN.' : 'HIT THE BRIDGE.');
-      b.tpAt = 0.7; // perder un domo lo hace saltar a otro punto del anillo
+      const domesLeft = b.parts.some((q) => q.kind === 'dome' && q.hp > 0);
+      this.say(domesLeft ? 'DOME DOWN.' : 'HIT THE BRIDGE.');
+      b.tpAt = 0.7; // perder un domo lo hace saltar
+      // sin escudos, no pelea limpio: llama a su escolta — ahora son DOS
+      if (!domesLeft && !this.boss2 && !b.mini) {
+        this.say('IT CALLS FOR BACKUP.');
+        this.spawnBoss(1);
+      }
     } else {
       this.kb(b);
     }
@@ -1236,18 +1252,19 @@ class Game extends Phaser.Scene {
 
   kb(b) {
     b.dead = true;
-    this.boss = null;
+    if (this.boss === b) this.boss = null;
+    if (this.boss2 === b) this.boss2 = null;
     for (let i = 0; i < 9; i++) {
       const [wx, wy, wz] = this.bw(b, (RND() - 0.5) * 400, (RND() - 0.7) * 150, SD_REAR + RND() * 900);
       this.bx.push({ wx, wy, wz, t: -i * 0.12, big: true });
     }
     this.sy(b.x, b.y, b.z, 24);
     this.sh = 16;
-    this.score += 1500;
+    this.score += b.mini ? 800 : 1500;
     Sfx.boom();
     this.bossN++;
-    this.bq = 50; // el siguiente ya viene
-    this.say('DESTROYER DOWN. +1500');
+    this.bq = 50; // el siguiente ya viene (cuando no quede ninguno)
+    this.say(b.mini ? 'BACKUP DOWN. +800' : 'DESTROYER DOWN. +1500');
   }
 
   ad(pts) {
@@ -1295,9 +1312,10 @@ class Game extends Phaser.Scene {
     // la entrada del destructor es una escena: motores al mínimo, sin dash
     // ni nitro, y la nave se NIVELA Y ENCUADRA al destructor sola — lo ves
     // de lado, entero, y recuperas el mando cuando la luz vuelve
-    const sceneHold = this.boss && this.boss.cine;
+    const cineB = (this.boss && this.boss.cine && this.boss) || (this.boss2 && this.boss2.cine && this.boss2);
+    const sceneHold = !!cineB;
     if (sceneHold) {
-      const b = this.boss;
+      const b = cineB;
       // encuadra 500 POR ENCIMA del casco: el destructor queda en cuadro,
       // y al volver el mando tu rumbo pasa limpio sobre la torre en vez de
       // estamparte contra la proa
@@ -1384,8 +1402,9 @@ class Game extends Phaser.Scene {
 
     // cerca del destructor la pasada se frena sola (salvo con nitro):
     // giras antes, lo pierdes de vista menos, la pelea se queda contigo
-    if (this.boss && !sceneHold && !held.P1_2 && this.sp > 190) {
-      const bd2 = HYP(this.boss.x - this.pos.x, this.boss.y - this.pos.y, this.boss.z - this.pos.z);
+    for (const bb of [this.boss, this.boss2]) {
+      if (!bb || sceneHold || held.P1_2 || this.sp <= 190) continue;
+      const bd2 = HYP(bb.x - this.pos.x, bb.y - this.pos.y, bb.z - this.pos.z);
       if (bd2 < 700) this.sp += (190 - this.sp) * MIN(1, 1 * dt);
     }
 
@@ -1444,12 +1463,16 @@ class Game extends Phaser.Scene {
       // contra el destructor, el cañón corrige hacia el punto débil abierto
       // que tengas casi de frente — pegarle es cuestión de apuntar cerca
       let aim = f;
-      if (this.boss) {
-        const pt = this.ba(this.boss, f);
+      for (const bb of [this.boss, this.boss2]) {
+        if (!bb || bb.hd) continue;
+        const pt = this.ba(bb, f);
         if (pt) {
-          const [wx, wy, wz] = this.bw(this.boss, pt.ox, pt.oy, pt.oz);
+          const [wx, wy, wz] = this.bw(bb, pt.ox, pt.oy, pt.oz);
           const to = vnorm({ x: wx - this.pos.x, y: wy - this.pos.y, z: wz - this.pos.z });
-          if (vdot(to, f) > 0.96) aim = to;
+          if (vdot(to, f) > 0.96) {
+            aim = to;
+            break;
+          }
         }
       }
       for (const off of [-9, 9]) {
@@ -1518,7 +1541,7 @@ class Game extends Phaser.Scene {
 
   // La muerte: una sola, para todo lo que mata de un golpe
   die() {
-    if (this.fz === 'out' || (this.boss && this.boss.cine)) return;
+    if (this.fz === 'out' || (this.boss && this.boss.cine) || (this.boss2 && this.boss2.cine)) return;
     this.fz = 'out';
     this.bx.push({ wx: this.pos.x, wy: this.pos.y, wz: this.pos.z, t: 0, big: true });
     this.sh = 14;
@@ -1527,7 +1550,7 @@ class Game extends Phaser.Scene {
   }
 
   hy(time) {
-    if (this.fz === 'out' || (this.boss && this.boss.cine)) return;
+    if (this.fz === 'out' || (this.boss && this.boss.cine) || (this.boss2 && this.boss2.cine)) return;
     if (time < this.su) {
       // la burbuja se lleva el golpe: se ve dónde pegó
       this.ht = 0.3;
@@ -1802,7 +1825,14 @@ class Game extends Phaser.Scene {
 
     // tus disparos contra el sector
     for (const b of this.bl) {
-      if (this.boss && !this.boss.hd && this.boltVsBoss(this.boss, b)) continue;
+      let ate = false;
+      for (const bb of [this.boss, this.boss2]) {
+        if (bb && !bb.hd && this.boltVsBoss(bb, b)) {
+          ate = true;
+          break;
+        }
+      }
+      if (ate) continue;
       for (const e of this.en) {
         if (e.dead || e.k === 'scrap' || e.k === 'pow' || e.k === 'boss') continue;
         const d = HYP(b.x - e.x, b.y - e.y, b.z - e.z);
@@ -1947,7 +1977,9 @@ class Game extends Phaser.Scene {
         m.vz += ((dz / d) * MISSILE_SPEED - m.vz) * k;
         if (d < hitR) this.dn(m);
       }
-      if (!m.dead && this.boss && !this.boss.hd && this.ib(this.boss, m.x, m.y, m.z, 0)) this.dn(m);
+      for (const bb of [this.boss, this.boss2]) {
+        if (!m.dead && bb && !bb.hd && this.ib(bb, m.x, m.y, m.z, 0)) this.dn(m);
+      }
       m.tr.push([m.x, m.y, m.z]);
       if (m.tr.length > 14) m.tr.shift();
       m.x += m.vx * dt;
@@ -1964,8 +1996,8 @@ class Game extends Phaser.Scene {
     this.bx.push({ wx: m.x, wy: m.y, wz: m.z, t: 0, big: true, r: MISSILE_SPLASH });
     this.sh = MAX(this.sh, 5);
     Sfx.boom();
-    const boss = this.boss;
-    if (boss) {
+    for (const boss of [this.boss, this.boss2]) {
+      if (!boss) continue;
       for (const pt of boss.parts) {
         const [wx, wy, wz] = this.bw(boss, pt.ox, pt.oy, pt.oz);
         if (pt === m.part || HYP(m.x - wx, m.y - wy, m.z - wz) < MISSILE_SPLASH) {
@@ -2092,7 +2124,8 @@ class Game extends Phaser.Scene {
     this.label.setVisible(false);
     // la escena de la salva: el sector entero se apaga y solo quedan el
     // destructor, sus cohetes, tus disparos y tú
-    const cine = this.boss && this.boss.cine ? this.boss.cineDark || 0 : 0;
+    const cineB2 = (this.boss && this.boss.cine && this.boss) || (this.boss2 && this.boss2.cine && this.boss2);
+    const cine = cineB2 ? cineB2.cineDark || 0 : 0;
     for (const e of this.en) {
       if (cine > 0 && (e.k === 'boss' || e.k === 'emis')) continue;
       this.de(g, cm, e, time);
@@ -2177,13 +2210,16 @@ class Game extends Phaser.Scene {
     this.di(g, cm, time);
 
     // barra de carga del hipersalto, o la vida que le queda al destructor
-    if (this.boss && !this.boss.hd) {
+    if ((this.boss && !this.boss.hd) || (this.boss2 && !this.boss2.hd)) {
       let hp = 0;
       let max = 0;
-      for (const pt of this.boss.parts) {
-        if (pt.kind === 'turret') continue;
-        hp += MAX(0, pt.hp);
-        max += pt.max;
+      for (const bb of [this.boss, this.boss2]) {
+        if (!bb || bb.hd) continue;
+        for (const pt of bb.parts) {
+          if (pt.kind === 'turret') continue;
+          hp += MAX(0, pt.hp);
+          max += pt.max;
+        }
       }
       g.lineStyle(1.5, RUST, 0.9);
       g.strokeRect(CX - 160, 30, 320, 10);
@@ -2647,7 +2683,7 @@ class Game extends Phaser.Scene {
   dv(g, cm) {
     let target = null;
     let label = '';
-    if (!this.boss) {
+    if (!this.boss && !this.boss2) {
       let bd = 1e9;
       for (const e of this.en) {
         if (e.k !== 'pow' || e.dead) continue;
@@ -2658,18 +2694,20 @@ class Game extends Phaser.Scene {
           label = 'POWER';
         }
       }
-    } else if (this.boss) {
+    } else {
       // no al centro del destructor: al punto débil que toca romper
-      const b = this.boss;
       let bd = 1e9;
-      for (const pt of b.parts) {
-        if (pt.kind === 'turret' || !this.bo(b, pt)) continue;
-        const [x, y, z] = this.bw(b, pt.ox, pt.oy, pt.oz);
-        const d = HYP(x - this.pos.x, y - this.pos.y, z - this.pos.z);
-        if (d < bd) {
-          bd = d;
-          target = { x, y, z };
-          label = pt.kind === 'dome' ? 'DOME' : 'BRIDGE';
+      for (const b of [this.boss, this.boss2]) {
+        if (!b || b.hd) continue;
+        for (const pt of b.parts) {
+          if (pt.kind === 'turret' || !this.bo(b, pt)) continue;
+          const [x, y, z] = this.bw(b, pt.ox, pt.oy, pt.oz);
+          const d = HYP(x - this.pos.x, y - this.pos.y, z - this.pos.z);
+          if (d < bd) {
+            bd = d;
+            target = { x, y, z };
+            label = pt.kind === 'dome' ? 'DOME' : 'BRIDGE';
+          }
         }
       }
     }
