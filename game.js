@@ -2,16 +2,16 @@
 // Tu nave quedó varada en un sector alienígena. Encuentra las tres piezas del
 // hipersalto entre los restos, y vuelve a casa.
 //
-// Vuelo libre 3D con proyección propia: la nave siempre avanza y el stick la
-// dirige, con loops completos; la cámara va pegada a ella. Dos niveles, sin
-// tutorial (el nivel 0 arranca suave y aprieta con el tiempo y las piezas):
-// NIVEL 0 — las cuatro piezas dispersas y custodiadas; al completarlas,
-// hipersalto (túnel de estrellas). NIVEL 1 — un destructor sale del
-// hiperespacio a oscuras, suelta salvas de cohetes al cielo que caen sobre
-// ti, y salta de punto en punto al perder sus domos; derríbalo y resiste la
-// carga. Todo el sector flota sobre un agujero negro: bajar demasiado es no
-// volver. Todo el TEXTO del juego va en inglés, corto, voz arcade.
-// Wireframe luminoso; el óxido marca el peligro.
+// Vuelo libre 3D con proyección propia: la nave siempre avanza y el stick
+// la dirige, con loops completos; la cámara va pegada a ella. MODO ARCADE
+// INFINITO: sin niveles ni final — sobrevive y puntúa. El mundo no tiene
+// bordes (todo se siembra y recicla alrededor tuyo), los cazadores aprietan
+// con los minutos, hay emboscadas periódicas, torretas de la base flotando
+// sobre el disco del agujero (bajar a cazarlas paga powerup seguro), y un
+// destructor recurrente que llega del hiperespacio a oscuras — el primero
+// con toda la ceremonia, los siguientes al grano — y paga +1500. Morir es
+// el único final. Texto en inglés, corto, voz arcade. Wireframe luminoso;
+// el óxido marca el peligro.
 
 
 // DICCIONARIO DE NOMBRES CORTOS — el minificador (SWC) no acorta nombres
@@ -111,7 +111,7 @@ const CRM = 0xfff1d6; // crema caliente
 const BLU = 0xb8dbe4; // azul: escudo y recursos TUYOS
 const BLD = 0x8fb0c4; // azul apagado
 const GRY = 0x8a9099; // gris de escombro: paisaje, no equipo
-const LEVEL_CRUISE = [210, 235]; // nivel 0 (piezas), nivel 1 (destructor)
+
 const MAGNET_R = 240; // lo recogible viene hacia ti
 const FIRE_MS = 160;
 const BOLT_SPEED = 980;
@@ -136,15 +136,11 @@ const BH_Y = 3600;
 const BH_PULL = 1800;
 const BH_GRIP = 1150; // aquí ya TE TIENE: el crucero no alcanza — dash o nitro
 const BH_KILL = 900;
-const JUMP_TIME = 2; // segundos de túnel antes del flash
-const CHARGE_TIME = 12; // tras derribar al destructor, resiste mientras carga el salto
-const KILL_CHARGE = 1;
 
 const HULL_MAX = 4;
 const SCORE_KEY = 'space-explorer:scores';
 
 // Las cuatro piezas del hipersalto
-const PARTS = ['ENGINE', 'NAV CORE', 'CELL', 'REACTOR'];
 
 const HINT_MAIN = 'B1 FIRE · B2 DASH · B3 MISSILE · B4/B6 SHIELD';
 
@@ -359,8 +355,6 @@ const HUNTER_SCALE = 3; // cazadores e interceptores: grandes, fáciles de segui
 // Mina: octaedro
 
 
-// la pieza: un octaedro, en tinta y girando
-const PART_MODEL = mdl([0, -12, 0, 10, 0, 0, 0, 12, 0, -10, 0, 0, 0, 0, 10, 0, 0, -10], '011223300414243405152535');
 
 // Asteroide: icosaedro con cada vértice desplazado — cada roca es única,
 // facetada como piedra en vez de un contorno plano
@@ -635,12 +629,6 @@ class Game extends Phaser.Scene {
     super('game');
   }
 
-  // El casco, los puntos y los misiles viajan contigo entre niveles
-  init(data) {
-    this.level = data.level || 0;
-    this.carry = data;
-  }
-
   create() {
     this.events.on('postupdate', clearPressed);
     this.gfx = this.add.graphics();
@@ -653,7 +641,7 @@ class Game extends Phaser.Scene {
     this.R = { x: 1, y: 0, z: 0 };
     this.yv = 0;
     this.pv = 0;
-    this.cu = LEVEL_CRUISE[this.level] || CRUISE;
+    this.cu = 220;
     this.sp = this.cu;
     this.bz = BOOST_MAX;
     this.roll = 0; // alabeo solo visual, al girar
@@ -662,8 +650,8 @@ class Game extends Phaser.Scene {
     this.du = 0;
     this.fy = 0;
     this.iu = 0;
-    this.hull = this.carry.hull ?? HULL_MAX;
-    this.ammo = this.carry.ammo ?? 3;
+    this.hull = HULL_MAX;
+    this.ammo = 3;
     this.ar = 0;
     this.sq = 0;
 
@@ -672,22 +660,21 @@ class Game extends Phaser.Scene {
     this.camU = { ...this.U };
     this.camR = { ...this.R };
 
-    // TUTORIAL y NIVEL 0: play → jump; NIVEL 1: play → boss → charge → out
+    // ARCADE INFINITO: una sola fase — sobrevive y puntúa hasta morir.
+    // (Phaser reuses the scene instance across runs)
     this.fz = 'play';
-    this.jg = false; // Phaser reuses the scene instance across runs
-    this.jt = 0;
-    this.et = this.level ? 1 : 0; // llegando: el túnel se deshace
-    this.bq = 6; // nivel 1: el destructor tarda esto en llegar
+    this.bq = 75; // el primer destructor tarda esto en llegar
+    this.bossN = 0;
+    this.wvAt = 32; // emboscadas periódicas
+    this.baseAt = 55; // torretas de la base, sobre el disco
+    this.svT = 0; // puntos por sobrevivir
     this.wvN = 0;
     this.ht = 0;
     this.wa = 0;
-    this.ch = 0;
-    this.score = this.carry.score || 0;
-    this.pg = 0;
+    this.score = 0;
     this.ep = 0;
-    this.droneAt = 12; // al principio te dejan orientarte
+    this.droneAt = 10; // al principio te dejan orientarte
     this.sh = 0;
-    if (this.level) this.sp = 999; // sales del salto lanzado
 
     this.en = [];
     this.bl = [];
@@ -711,53 +698,19 @@ class Game extends Phaser.Scene {
 
     this.flash = this.add.rectangle(CX, CY, W, H, 0xffffff).setAlpha(0).setDepth(10);
     Music.on = true;
-    if (this.level) {
-      // el destello de salir del hiperespacio
-      this.flash.setAlpha(0.9);
-      this.tweens.add({ targets: this.flash, alpha: 0, duration: 700 });
-    }
     window.__g = this; // handle de debug — quitar antes de enviar
   }
 
-  // El sector se puebla UNA vez: todo anclado al mundo, tú te mueves
+  // El mundo se siembra alrededor TUYO y se recicla contigo: no hay
+  // bordes — el sector eres tú
   po() {
     const rnd = (a, b) => a + RND() * (b - a);
-    if (this.level === 0) {
-      // NIVEL 0: las piezas DISPERSAS por el sector, cada una en su rincón
-      // y custodiada — ningún camino fácil; la marca te lleva de una en una
-      const base = rnd(0, PI * 2);
-      for (let i = 0; i < PARTS.length; i++) {
-        const ang = base + (i * PI * 2) / PARTS.length + rnd(-0.45, 0.45);
-        const rr = 900 + i * 360 + rnd(-120, 120);
-        const px = SIN(ang) * rr;
-        const py = rnd(-600, 450);
-        const pz = COS(ang) * rr;
-        this.en.push({ k: 'part', x: px, y: py, z: pz, r: 26, idx: i, t: 0, yaw: 0 });
-        // un centinela custodia la primera pieza, dos las siguientes
-        for (let j = 0; j < 1 + MIN(i, 1); j++) {
-          this.en.push({
-            k: 'sentry',
-            x: px + rnd(-280, 280),
-            y: py + rnd(-200, 200),
-            z: pz + rnd(-280, 280),
-            r: 44,
-            hp: 3,
-            t: rnd(0, 6),
-            yaw: rnd(0, 6.3),
-            fireAt: 0,
-          });
-        }
-      }
-      for (let i = 0; i < 2; i++) {
-        const p = this.ri(SECTOR_R * 0.8);
-        this.en.push({ k: 'eel', x: p[0], y: p[1] * 0.4, z: p[2], r: 22, hp: 2, t: rnd(0, 9), yaw: rnd(0, 6.3) });
-      }
+    for (let i = 0; i < 2; i++) {
+      const p = this.ri(SECTOR_R * 0.8);
+      this.en.push({ k: 'eel', x: p[0], y: p[1] * 0.4, z: p[2], r: 22, hp: 2, t: rnd(0, 9), yaw: rnd(0, 6.3) });
     }
-    // asteroides y chatarra suelta — pocos y grandes: que se lean. El
-    // tutorial va casi vacío (los objetivos los pone la secuencia) y el
-    // nivel 1 es la arena del destructor: despejada a propósito.
-    const rocks = this.level ? 8 : 10;
-    const scraps = this.level ? 8 : 12;
+    const rocks = 10;
+    const scraps = 12;
     for (let i = 0; i < rocks; i++) {
       const p = this.ri(SECTOR_R * 0.95);
       this.en.push({
@@ -830,7 +783,7 @@ class Game extends Phaser.Scene {
     this.time.delayedCall(9000, () => this.tweens.add({ targets: this.hint, alpha: 0, duration: 800 }));
     // etiqueta del escudo, junto a su barra
 
-    this.say(this.level ? 'INCOMING.' : 'FIND THE ENGINE.');
+    this.say('SURVIVE. SCORE.');
   }
 
   say(msg) {
@@ -842,11 +795,10 @@ class Game extends Phaser.Scene {
   update(time, delta) {
     const dt = MIN(delta, 50) / 1000;
     this.ep += dt;
-    Music.boss = this.fz === 'boss' || this.fz === 'charge';
+    Music.boss = !!this.boss;
     Music.tick();
 
-    // pausa: START congela el sector — salvo que esté confirmando el salto
-    // del tutorial (B5 arma, START confirma: dos botones, sin accidentes)
+    // pausa: START congela el sector
     if (pressed.START1 && this.fz !== 'out') {
       this.pa = !this.pa;
       this.tweens.killTweensOf(this.notice);
@@ -860,72 +812,59 @@ class Game extends Phaser.Scene {
     this.mz2 -= dt;
     this.ht = MAX(0, this.ht - dt);
 
-    if (this.fz === 'play') {
-      if (this.level === 0) {
-        // sin tutorial: arranca suave y aprieta con el tiempo y las piezas
-        this.sd(dt, MIN(5, 1 + this.pg + FLR(this.ep / 45)), MAX(6, 12 - this.ep / 15));
-      } else {
-        this.sd(dt, 1, 9);
+    const cine = this.boss && this.boss.cine;
+    if (this.fz === 'play' && !cine) {
+      // el reloj del arcade: todo aprieta con los minutos
+      this.sd(dt, MIN(6, 1 + FLR(this.ep / 40)), MAX(4.5, 11 - this.ep / 40));
+      this.wvAt -= dt;
+      if (this.wvAt <= 0) {
+        this.wvAt = 34;
+        this.wave(MIN(6, 2 + FLR(this.ep / 70)));
+      }
+      // las torretas de la base, flotando sobre el disco: bajar al jalón a
+      // cazarlas paga powerup seguro
+      this.baseAt -= dt;
+      if (this.baseAt <= 0) {
+        this.baseAt = 55;
+        if (this.en.filter((e) => e.base).length < 4) {
+          this.say('TURRET RING BELOW.');
+          for (let i = 0; i < 3; i++) {
+            const ang = RND() * PI * 2;
+            this.en.push({
+              k: 'sentry', base: 1,
+              x: this.pos.x + SIN(ang) * (700 + RND() * 500),
+              y: 1500 + RND() * 250,
+              z: this.pos.z + COS(ang) * (700 + RND() * 500),
+              r: 44, hp: 3, t: RND() * 6, yaw: RND() * 6.3, fireAt: 1,
+            });
+          }
+        }
+      }
+      // el destructor vuelve siempre — y cada vez con menos ceremonia
+      if (!this.boss) {
         const was = this.bq;
         this.bq -= dt;
-        // el aviso llega antes que la nave: que se sienta venir
         if (was > 2.5 && this.bq <= 2.5) this.say('MASSIVE SIGNAL.');
         if (this.bq <= 0) {
-          this.fz = 'boss';
           this.say('HYPERSPACE RUPTURE.');
           this.spawnBoss();
         }
       }
-    } else if (this.fz === 'jump') {
-      // el hipersalto: sin control, derecho y cada vez más rápido, hasta el flash
-      this.jt += dt;
-      this.sp = MIN(999, this.sp + 800 * dt);
-      const f = this.F;
-      this.pos.x += f.x * this.sp * dt;
-      this.pos.y += f.y * this.sp * dt;
-      this.pos.z += f.z * this.sp * dt;
-      if (this.jt > JUMP_TIME && !this.jg) {
-        this.jg = true;
-        this.flash.setAlpha(1);
-        this.time.delayedCall(160, () =>
-          this.scene.restart({ level: this.level + 1, score: this.score, hull: this.hull, ammo: this.ammo })
-        );
-      }
-    } else if (this.fz === 'boss') {
-      // durante la llegada y la salva cinemática, la escena es del destructor
-      if (!(this.boss && this.boss.cine)) this.sd(dt, 1, 14);
-    } else if (this.fz === 'charge') {
-      this.ch = MIN(CHARGE_TIME, this.ch + dt);
-      this.sd(dt, 3, 6);
-      if (this.ch >= CHARGE_TIME && !this.jg) {
-        this.jg = true;
-        Sfx.jump();
-        this.flash.setAlpha(1);
-        this.tweens.add({ targets: this.flash, alpha: 0, duration: 900 });
-        this.score += 500 + this.hull * 150;
-        this.fz = 'out';
-        this.time.delayedCall(1100, () => this.scene.start('over', { win: true, score: this.score }));
+      // sobrevivir puntúa solo
+      this.svT += dt;
+      if (this.svT >= 5) {
+        this.svT -= 5;
+        this.score += 25;
       }
     }
 
-    this.et = MAX(0, this.et - dt);
-    if (this.fz !== 'out' && this.fz !== 'jump') this.up(time, dt);
+    if (this.fz !== 'out') this.up(time, dt);
     this.ue(time, dt);
     this.ux(dt);
     this.um(dt, time);
     this.uc(dt);
     this.draw(time);
     this.uh();
-  }
-
-  // El hipersalto arranca: túnel de estrellas, sin control, y al siguiente nivel
-  sj(msg) {
-    if (this.fz === 'jump') return;
-    this.fz = 'jump';
-    this.jt = 0;
-    this.iu = 1e9;
-    Sfx.jump();
-    this.say(msg);
   }
 
   // La emboscada: n naves entran A LA VEZ desde direcciones distintas —
@@ -962,7 +901,7 @@ class Game extends Phaser.Scene {
     if (this.droneAt > 0 || alive >= max) return;
     this.droneAt = every;
     const ang = RND() * PI * 2;
-    const inter = this.pg >= 1 && RND() < 0.4;
+    const inter = this.ep > 60 && RND() < 0.4;
     this.en.push({
       k: inter ? 'inter' : 'drone',
       x: this.pos.x + SIN(ang) * 1300,
@@ -985,21 +924,12 @@ class Game extends Phaser.Scene {
   // te empuja de vuelta), y al punto del anillo MÁS LEJANO de ti: la
   // entrada y la salva se ven enteras, de lejos, como una escena.
   spawnBoss() {
-    // Aparece LEJOS (fuera del anillo de pelea, al lado opuesto de ti) y a
-    // TU MISMA ALTURA: lo ves de lado, entero, imponente. Después de la
-    // escena, él solo navega hacia el anillo de batalla.
-    const ph = HYP(this.pos.x, this.pos.z);
-    let bx;
-    let bz;
-    if (ph > 300) {
-      bx = (-this.pos.x / ph) * 1900;
-      bz = (-this.pos.z / ph) * 1900;
-    } else {
-      const f = this.F;
-      const h = HYP(f.x, f.z) || 1;
-      bx = (f.x / h) * 1900;
-      bz = (f.z / h) * 1900;
-    }
+    // Aparece LEJOS, delante de ti y a TU MISMA ALTURA: lo ves de lado,
+    // entero, imponente. No hay anillo: el sector eres tú.
+    const f = this.F;
+    const h = HYP(f.x, f.z) || 1;
+    const bx = this.pos.x + (f.x / h) * 1900;
+    const bz = this.pos.z + (f.z / h) * 1900;
     this.boss = {
       k: 'boss',
       x: bx,
@@ -1017,7 +947,7 @@ class Game extends Phaser.Scene {
       hd: 1,
       cine: 1,
       cineT: 0,
-      short: 0,
+      short: this.bossN ? 1 : 0, // el primero con toda la ceremonia; después, al grano
       tpAt: 0,
       salvoAt: 0,
       parts: SD_PARTS.map(([kind, ox, oy, oz, hp]) => ({ kind, ox, oy, oz, hp, max: hp, fireAt: 1 + RND() * 3, burst: 0 })),
@@ -1168,9 +1098,9 @@ class Game extends Phaser.Scene {
             this.bm(e2);
           }
         }
-        const ph = HYP(this.pos.x, this.pos.z) || 1;
-        b.x = (-this.pos.x / ph) * 1300;
-        b.z = (-this.pos.z / ph) * 1300;
+        const ta = RND() * PI * 2;
+        b.x = this.pos.x + SIN(ta) * 1700;
+        b.z = this.pos.z + COS(ta) * 1700;
         b.y = CLP(this.pos.y, -400, 400);
         b.yaw = AT2(this.pos.x - b.x, this.pos.z - b.z);
         b.hd = 1;
@@ -1191,13 +1121,6 @@ class Game extends Phaser.Scene {
     const move = dist > 1900 ? 90 : 0;
     b.x += SIN(b.yaw) * move * dt;
     b.z += COS(b.yaw) * move * dt;
-    // navega SOLO de vuelta al anillo de batalla — sin teletransportes
-    const bh = HYP(b.x, b.z);
-    if (bh > 1300) {
-      const pull = MIN(bh - 1300, 150 * dt);
-      b.x -= (b.x / bh) * pull;
-      b.z -= (b.z / bh) * pull;
-    }
     b.y += SIN(b.t * 0.4) * 6 * dt;
 
     // torretas: ráfagas de tres, lentas y esquivables — pero son seis
@@ -1263,11 +1186,11 @@ class Game extends Phaser.Scene {
     }
     this.sy(b.x, b.y, b.z, 24);
     this.sh = 16;
-    this.ad(1000);
+    this.score += 1500;
     Sfx.boom();
-    this.fz = 'charge';
-    this.ch = 0;
-    this.say('CHARGING JUMP — SURVIVE.');
+    this.bossN++;
+    this.bq = 50; // el siguiente ya viene
+    this.say('DESTROYER DOWN. +1500');
   }
 
   ad(pts) {
@@ -1416,17 +1339,6 @@ class Game extends Phaser.Scene {
 
     // el borde del sector te devuelve, suave — pero hacia abajo no hay borde:
     // abajo está el agujero negro, y él pone el límite
-    const yc = MIN(this.pos.y, 0);
-    const rr = HYP(this.pos.x, yc * 1.6, this.pos.z);
-    if (rr > SECTOR_R) {
-      this.pos.x -= (this.pos.x / rr) * (rr - SECTOR_R) * 1.2 * dt;
-      this.pos.y -= (yc / rr) * (rr - SECTOR_R) * 1.2 * dt;
-      this.pos.z -= (this.pos.z / rr) * (rr - SECTOR_R) * 1.2 * dt;
-      if (this.ep > this.wa) {
-        this.wa = this.ep + 4;
-        this.say('SECTOR EDGE.');
-      }
-    }
 
     // el agujero negro: cuanto más bajas, más tira — y muy abajo, te traga
     const bhd = BH_Y - this.pos.y;
@@ -1521,7 +1433,7 @@ class Game extends Phaser.Scene {
     let best = null;
     let bestDot = 0.75; // solo lo que ya tienes bastante de frente
     for (const e of this.en) {
-      if (e.k === 'scrap' || e.k === 'part' || e.k === 'pow' || e.dead) continue;
+      if (e.k === 'scrap' || e.k === 'pow' || e.dead) continue;
       const dx = e.x - this.pos.x;
       const dy = e.y - this.pos.y;
       const dz = e.z - this.pos.z;
@@ -1539,7 +1451,7 @@ class Game extends Phaser.Scene {
 
   // La muerte: una sola, para todo lo que mata de un golpe
   die() {
-    if (this.fz === 'out' || this.fz === 'jump' || (this.boss && this.boss.cine)) return;
+    if (this.fz === 'out' || (this.boss && this.boss.cine)) return;
     this.fz = 'out';
     this.bx.push({ wx: this.pos.x, wy: this.pos.y, wz: this.pos.z, t: 0, big: true });
     this.sh = 14;
@@ -1651,6 +1563,7 @@ class Game extends Phaser.Scene {
         e.life -= dt;
         if (e.life <= 0) e.dead = true;
       } else if (e.k === 'sentry') {
+        if (dist > 4200) e.dead = true; // quedó atrás: el mundo viaja contigo
         e.yaw += 0.5 * dt; // gira, vigilando
         e.y += SIN(e.t * 1.1) * 8 * dt;
         e.fireAt -= dt;
@@ -1692,8 +1605,15 @@ class Game extends Phaser.Scene {
         }
       }
 
+      // la chatarra lejana se recicla delante de ti — mundo sin bordes
+      if (e.k === 'scrap' && dist > 3400) {
+        const ang2 = RND() * PI * 2;
+        e.x = P.x + SIN(ang2) * (900 + RND() * 1200);
+        e.y = P.y + (RND() - 0.5) * 900;
+        e.z = P.z + COS(ang2) * (900 + RND() * 1200);
+      }
       // lo recogible viene hacia ti cuando pasas cerca
-      if ((e.k === 'scrap' || e.k === 'pow' || e.k === 'part') && dist < MAGNET_R) {
+      if ((e.k === 'scrap' || e.k === 'pow') && dist < MAGNET_R) {
         const pull = (560 * dt) / dist;
         e.x += dx * pull;
         e.y += dy * pull;
@@ -1740,19 +1660,6 @@ class Game extends Phaser.Scene {
           else if (e.sub === 'hull') this.hull = MIN(HULL_MAX, this.hull + 1);
           else if (e.sub === 'missile') this.ammo = MIN(MISSILE_MAX, this.ammo + 2);
           else this.tl = time + 12000;
-        } else if (e.k === 'part') {
-          e.dead = true;
-          this.pg++;
-          this.score += 100;
-          Sfx.part();
-          if (this.pg >= PARTS.length) {
-            this.sj('JUMPING.');
-          } else {
-            this.say(PARTS[e.idx] + '. ' + (PARTS.length - this.pg) + ' LEFT.');
-            this.time.delayedCall(1400, () => {
-              if (this.fz === 'play') this.wave(1 + this.pg);
-            });
-          }
         } else if (
           (this.sp > RAM_SPEED || time < this.du || time < this.su) &&
           (e.k === 'drone' || e.k === 'inter' || e.k === 'emis')
@@ -1798,7 +1705,7 @@ class Game extends Phaser.Scene {
     for (const b of this.bl) {
       if (this.boss && !this.boss.hd && this.boltVsBoss(this.boss, b)) continue;
       for (const e of this.en) {
-        if (e.dead || e.k === 'scrap' || e.k === 'part' || e.k === 'pow' || e.k === 'boss') continue;
+        if (e.dead || e.k === 'scrap' || e.k === 'pow' || e.k === 'boss') continue;
         const d = HYP(b.x - e.x, b.y - e.y, b.z - e.z);
         if (d < e.r + 10) {
           b.dead = true;
@@ -1866,7 +1773,6 @@ class Game extends Phaser.Scene {
     this.sy(e.x, e.y, e.z, 6);
     this.ad(e.k === 'sentry' ? 40 : e.k === 'rock' ? 15 : 25);
     if (e.k === 'drone' || e.k === 'inter') this.dp(e.x, e.y, e.z, 0.35);
-    if (this.fz === 'charge') this.ch = MIN(CHARGE_TIME, this.ch + KILL_CHARGE);
     Sfx.boom();
     if (e.k === 'rock' && e.r > 20) {
       for (let i = 0; i < 2; i++) {
@@ -1968,7 +1874,7 @@ class Game extends Phaser.Scene {
       }
     }
     for (const e of this.en) {
-      if (e.dead || e.k === 'boss' || e.k === 'scrap' || e.k === 'part' || e.k === 'pow') continue;
+      if (e.dead || e.k === 'boss' || e.k === 'scrap' || e.k === 'pow') continue;
       const d = HYP(m.x - e.x, m.y - e.y, m.z - e.z);
       if (e === m.target || d < MISSILE_SPLASH + e.r) this.damage(e, e === m.target ? MISSILE_DMG : 2);
     }
@@ -2081,9 +1987,6 @@ class Game extends Phaser.Scene {
 
     this.dk(g, cm, time);
     this.dz(g, cm, time);
-    // el túnel: al saltar crece; al llegar al nivel 1, se deshace
-    const warp = this.fz === 'jump' ? MIN(1, this.jt / (JUMP_TIME * 0.8)) : this.et;
-    if (warp > 0.02) this.dw(g, cm, warp);
     this.dd(g, cm);
 
     this.label.setVisible(false);
@@ -2181,11 +2084,7 @@ class Game extends Phaser.Scene {
     this.di(g, cm, time);
 
     // barra de carga del hipersalto, o la vida que le queda al destructor
-    if (this.fz === 'charge') {
-      g.lineStyle(1.5, INK, 0.8);
-      g.strokeRect(CX - 110, 30, 220, 10);
-      fr(g, CX - 108, 32, 216 * (this.ch / CHARGE_TIME), 6, INK_HI, 0.9);
-    } else if (this.fz === 'boss' && this.boss) {
+    if (this.boss && !this.boss.hd) {
       let hp = 0;
       let max = 0;
       for (const pt of this.boss.parts) {
@@ -2298,7 +2197,7 @@ class Game extends Phaser.Scene {
         let prev = null;
         for (let i = 0; i <= 3; i++) {
           const a = a0 + (i / 3) * span;
-          const pt = [COS(a) * r, BH_Y, SIN(a) * r];
+          const pt = [this.pos.x + COS(a) * r, BH_Y, this.pos.z + SIN(a) * r];
           if (prev) this.wl(g, cm, prev, pt);
           prev = pt;
         }
@@ -2308,11 +2207,11 @@ class Game extends Phaser.Scene {
     for (let i = 0; i < 5; i++) {
       const rr = [760, 950, 1200, 950, 760][i];
       const a = t * (350 / rr) + i * 2.4;
-      const pp = this.pj(cm, COS(a) * rr, BH_Y, SIN(a) * rr);
+      const pp = this.pj(cm, this.pos.x + COS(a) * rr, BH_Y, this.pos.z + SIN(a) * rr);
       if (!pp) continue;
       fc(g, pp[0], pp[1], MAX(1.5, (26 * FOCAL) / pp[2]), CRM, 0.55 + 0.35 * prox);
     }
-    const p = this.pj(cm, 0, BH_Y, 0);
+    const p = this.pj(cm, this.pos.x, BH_Y, this.pos.z);
     if (p) {
       const r = (RS * FOCAL) / p[2];
       fc(g, p[0], p[1], r * 2.6, 0xe8a060, 0.05);
@@ -2323,8 +2222,8 @@ class Game extends Phaser.Scene {
     // los chorros, con pulsos que viajan hacia afuera; el de arriba es la
     // columna de luz que marca el centro del sector desde cualquier parte
     for (const dir of [-1, 1]) {
-      const base = [0, BH_Y + dir * RS * 1.15, 0];
-      const tip = [0, BH_Y + dir * RS * 5, 0];
+      const base = [this.pos.x, BH_Y + dir * RS * 1.15, this.pos.z];
+      const tip = [this.pos.x, BH_Y + dir * RS * 5, this.pos.z];
       g.lineStyle(7, BLD, 0.1);
       this.wl(g, cm, base, tip);
       g.lineStyle(2.5, BLU, 0.3);
@@ -2349,21 +2248,6 @@ class Game extends Phaser.Scene {
         g.lineTo(p[0] + 1, p[1] + 6);
         g.strokePath();
       }
-    }
-  }
-
-  // El hipersalto de las películas: cada estrella se estira en una línea
-  // radial desde el centro de la pantalla, más larga cuanto más al borde
-  dw(g, cm, k) {
-    for (const m of this.sn) {
-      const p = this.pd(cm, m.v);
-      if (!p) continue;
-      const dx = p[0] - CX;
-      const dy = p[1] - CY;
-      const d = HYP(dx, dy) + 24;
-      const len = k * k * d * 2.2;
-      g.lineStyle(m.s, INK_HI, MIN(0.9, m.a + k * 0.5));
-      ln(g, p[0], p[1], p[0] + (dx / d) * len, p[1] + (dy / d) * len);
     }
   }
 
@@ -2400,7 +2284,6 @@ class Game extends Phaser.Scene {
     const p = this.pj(cm, e.x, e.y, e.z);
     if (!p) return;
     let a = this.fg(dist);
-    if (e.k === 'part') a = MAX(a, 0.5); // la pieza brilla sola
 
     if (e.k === 'emis') {
       const F = vnorm({ x: e.vx, y: e.vy, z: e.vz });
@@ -2428,7 +2311,7 @@ class Game extends Phaser.Scene {
     const flash = e.ft > 0;
     const color = flash
       ? INK_HI
-      : e.k === 'part' ? INK_HI : e.k === 'pow' ? BLU : e.k === 'scrap' ? BLD : e.k === 'rock' ? GRY : RUST;
+      : e.k === 'pow' ? BLU : e.k === 'scrap' ? BLD : e.k === 'rock' ? GRY : RUST;
     if (e.k === 'rock' && !flash) a *= 0.7;
 
     if (e.k === 'eel') {
@@ -2450,10 +2333,10 @@ class Game extends Phaser.Scene {
 
     const model =
       e.k === 'sentry' ? SENTRY_MODEL : e.k === 'drone' ? DRONE_MODEL : e.k === 'inter' ? INTER_MODEL
-      : e.k === 'pow' ? POW_MODELS[e.sub] : e.k === 'rock' ? e.model : e.k === 'part' ? PART_MODEL : SCRAP_MODEL;
-    const scale = e.k === 'rock' ? e.r / 16 : e.k === 'part' ? 1.4 : e.k === 'sentry' ? 1.6
+      : e.k === 'pow' ? POW_MODELS[e.sub] : e.k === 'rock' ? e.model : SCRAP_MODEL;
+    const scale = e.k === 'rock' ? e.r / 16 : e.k === 'sentry' ? 1.6
       : e.k === 'drone' || e.k === 'inter' ? HUNTER_SCALE : 1;
-    const rot = e.k === 'rock' ? e.t * e.spin : e.k === 'part' || e.k === 'scrap' || e.k === 'pow' ? e.t * 1.1 : 0;
+    const rot = e.k === 'rock' ? e.t * e.spin : e.k === 'scrap' || e.k === 'pow' ? e.t * 1.1 : 0;
     this.dm(g, cm, model, e, scale, color, a, rot);
 
     if (e.k === 'drone' || e.k === 'inter') {
@@ -2475,12 +2358,6 @@ class Game extends Phaser.Scene {
       const eye = this.pj(cm, e.x, e.y - 20, e.z);
       if (eye) g.fillCircle(eye[0], eye[1], MAX(3, 1100 / p[2]));
       sk(g, p[0], p[1], (70 + pulse * 10) * (FOCAL / p[2]), 1.5, RUST, a * (0.25 + 0.3 * pulse));
-    }
-    if (e.k === 'part') {
-      sk(g, p[0], p[1], (26 + SIN(e.t * 4) * 4) * (FOCAL / p[2]), 1.5, INK_HI, a * (0.4 + 0.3 * SIN(e.t * 4)));
-      if (dist < 1500) {
-        this.label.setVisible(true).setPosition(p[0], p[1] + 34 * (FOCAL / p[2]) + 14).setText(PARTS[e.idx]);
-      }
     }
   }
 
@@ -2586,7 +2463,7 @@ class Game extends Phaser.Scene {
 
   dj(g, cm, time) {
     if (this.fz === 'out') return;
-    if (this.fz !== 'jump' && time < this.iu && FLR(time / 60) % 2 === 0) return;
+    if (time < this.iu && FLR(time / 60) % 2 === 0) return;
     const f = this.fw();
     // dash: la nave deja copias fantasma — mientras se ven, nada te toca
     if (time < this.du) {
@@ -2695,10 +2572,18 @@ class Game extends Phaser.Scene {
   dv(g, cm) {
     let target = null;
     let label = '';
-    if (this.fz === 'play') {
-      target = this.en.find((e) => e.k === 'part');
-      if (target) label = PARTS[target.idx];
-    } else if (this.fz === 'boss' && this.boss) {
+    if (!this.boss) {
+      let bd = 1e9;
+      for (const e of this.en) {
+        if (e.k !== 'pow' || e.dead) continue;
+        const d = HYP(e.x - this.pos.x, e.y - this.pos.y, e.z - this.pos.z);
+        if (d < bd) {
+          bd = d;
+          target = e;
+          label = 'POWER';
+        }
+      }
+    } else if (this.boss) {
       // no al centro del destructor: al punto débil que toca romper
       const b = this.boss;
       let bd = 1e9;
@@ -2712,10 +2597,8 @@ class Game extends Phaser.Scene {
           label = pt.kind === 'dome' ? 'DOME' : 'BRIDGE';
         }
       }
-    } else if (this.fz === 'charge') {
-      this.navText.setText('SURVIVE');
-      return;
     }
+
     if (!target) {
       this.navText.setText('');
       return;
@@ -2766,9 +2649,8 @@ class Game extends Phaser.Scene {
     this.scoreText.setText(String(this.score).padStart(6, '0') + (this.mu > 1 ? '  x' + this.mu : ''));
     this.hullText.setText('HULL ' + (GOD ? '∞' : '▸'.repeat(this.hull) + '·'.repeat(HULL_MAX - this.hull)));
     this.missileText.setText('MSL ' + '▴'.repeat(this.ammo) + '·'.repeat(MISSILE_MAX - this.ammo));
-    this.partText.setText(
-      this.level ? 'LEVEL 1' : 'LEVEL 0  ' + PARTS.map((p, i) => (i < this.pg ? p[0] : '·')).join(' ')
-    );
+    const mm = FLR(this.ep / 60);
+    this.partText.setText('T ' + mm + ':' + String(FLR(this.ep % 60)).padStart(2, '0'));
     // el bloque de recursos, junto a las vidas: DASH y SHIELD como barras
     // con nombre — llena = lista; el escudo va en SU azul
     const g = this.gfx;
@@ -2796,7 +2678,6 @@ class Over extends Phaser.Scene {
   }
 
   init(data) {
-    this.win = data.win;
     this.score = data.score || 0;
   }
 
@@ -2806,9 +2687,9 @@ class Over extends Phaser.Scene {
     this.ready = false;
     this.left = false;
     this.qualifies = false;
-    if (!this.win) Sfx.over();
+    Sfx.over();
 
-    this.add.text(CX, CY - 70, this.win ? 'YOU MADE IT HOME.' : 'GAME OVER', FONT(32)).setOrigin(0.5);
+    this.add.text(CX, CY - 70, 'GAME OVER', FONT(32)).setOrigin(0.5);
     this.add.text(CX, CY + 4, 'SCORE  ' + String(this.score).padStart(6, '0'), FONT(16)).setOrigin(0.5);
 
     loadScores().then((scores) => {
