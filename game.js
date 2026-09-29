@@ -537,19 +537,9 @@ const FONT = (size, color) => ({
   color: color || INK_CSS,
 });
 
-function typeIn(scene, textObj, full, cps) {
-  let i = 0;
-  return scene.time.addEvent({
-    delay: 1000 / cps,
-    repeat: full.length - 1,
-    callback: () => {
-      i++;
-      textObj.setText(full.slice(0, i));
-    },
-  });
-}
-
 // --------------------------------------------------------------------------
+// El título, mínimo a propósito: los bytes son para el JUEGO. Nombre, la
+// nave girando, controles, top 5, y nada más.
 class Title extends Phaser.Scene {
   constructor() {
     super('title');
@@ -560,62 +550,31 @@ class Title extends Phaser.Scene {
     this.gfx = this.add.graphics();
     this.spin = 0;
 
-    // el título también está en el espacio: estrellas que titilan
-    this.tstars = [];
-    for (let i = 0; i < 110; i++) {
-      this.tstars.push({
-        x: Math.random() * W,
-        y: Math.random() * H,
-        s: Math.random() < 0.12 ? 2 : 1,
-        a: 0.12 + Math.random() * 0.45,
-        tw: Math.random() < 0.3 ? 1 + Math.random() * 2 : 0,
-        ph: Math.random() * 6.3,
-      });
-    }
-
-    const title = this.add.text(CX, 96, 'S P A C E  E X P L O R E R', FONT(36)).setOrigin(0.5);
-    title.setShadow(0, 0, INK_CSS, 16, false, true);
-
-    // los controles, de verdad — no una sola línea
-    [
-      ['STICK', 'DIRIGE LA NAVE — LOOPS COMPLETOS'],
-      ['B1', 'CAÑÓN, CON PUNTERÍA ASISTIDA'],
-      ['B2', 'TOQUE: DASH · MANTENIDO: NITRO QUE EMBISTE'],
-      ['B3', 'MISIL TELEDIRIGIDO'],
-      ['B4/B6', 'ESCUDO'],
-      ['START', 'PAUSA'],
-    ].forEach(([k, v], i) => {
-      const y = 372 + i * 27;
-      this.add.text(160, y, k, FONT(14)).setOrigin(1, 0.5);
-      this.add.text(180, y, v, FONT(13, DIM_CSS)).setOrigin(0, 0.5);
-    });
-
-    // el top 5, a la derecha
-    this.add.text(596, 372, 'TOP 5', FONT(14)).setOrigin(0, 0.5);
-    this.scoreText = this.add.text(596, 394, '', FONT(14, DIM_CSS)).setOrigin(0, 0).setLineSpacing(9);
+    this.add.text(CX, 96, 'S P A C E  E X P L O R E R', FONT(36)).setOrigin(0.5);
+    this.add.text(160, 360, 'STICK\nB1\nB2\nB3\nB4/B6\nSTART', FONT(14)).setOrigin(1, 0).setAlign('right').setLineSpacing(13);
+    this.add
+      .text(
+        180, 360,
+        'DIRIGE LA NAVE — LOOPS COMPLETOS\nCAÑÓN, CON PUNTERÍA ASISTIDA\nTOQUE: DASH · MANTENIDO: NITRO QUE EMBISTE\nMISIL TELEDIRIGIDO\nESCUDO\nPAUSA',
+        FONT(13, DIM_CSS)
+      )
+      .setLineSpacing(14);
+    this.add.text(596, 360, 'TOP 5', FONT(14));
+    this.scoreText = this.add.text(596, 386, '', FONT(14, DIM_CSS)).setLineSpacing(9);
     loadScores().then((scores) => {
       if (!scores.length || !this.scene.isActive()) return;
       this.scoreText.setText(
         scores.map((s, i) => `${i + 1}  ${s.n.padEnd(3)}  ${String(s.s).padStart(6, '0')}`).join('\n')
       );
     });
-
     this.press = this.add.text(CX, H - 52, 'PRESIONA START', FONT(16)).setOrigin(0.5);
   }
 
   update(time, delta) {
     this.spin += delta * 0.0009;
-    const g = this.gfx;
-    g.clear();
-    for (const m of this.tstars) {
-      let a = m.a;
-      if (m.tw) a *= 0.55 + 0.45 * Math.sin(time * 0.001 * m.tw + m.ph);
-      g.fillStyle(INK, a);
-      g.fillRect(m.x, m.y, m.s, m.s);
-    }
-    // tu nave, girando en su eje como en una vitrina — vista desde ARRIBA,
-    // que se le vea el lomo: es la misma vista que tendrás en vuelo
-    drawModelAt(g, SHIP_MODEL, CX, 236, 0, 0.38, 2.4, INK, 1, 1.5, this.spin);
+    this.gfx.clear();
+    // tu nave, girando en vitrina — vista desde ARRIBA, como en vuelo
+    drawModelAt(this.gfx, SHIP_MODEL, CX, 236, 0, 0.38, 2.4, INK, 1, 1.5, this.spin);
     this.press.setAlpha(Math.floor(time / 600) % 2 ? 1 : 0.25);
     if (anyStart()) this.scene.start('game', { level: 0 });
   }
@@ -1013,7 +972,7 @@ class Game extends Phaser.Scene {
         if (was > 2.5 && this.bossAt <= 2.5) this.say('SEÑAL MASIVA DETECTADA.');
         if (this.bossAt <= 0) {
           this.phase = 'boss';
-          this.say('UN DESTRUCTOR BLOQUEA EL SALTO. DERRÍBALO.');
+          this.say('ALGO ENORME SALE DEL HIPERESPACIO.');
           this.spawnBoss();
         }
       }
@@ -1034,7 +993,7 @@ class Game extends Phaser.Scene {
       }
     } else if (this.phase === 'boss') {
       // durante la llegada y la salva cinemática, la escena es del destructor
-      if (!(this.boss && (this.boss.arrive > 0 || this.boss.cine))) this.spawnDrones(dt, 2, 14);
+      if (!(this.boss && this.boss.cine)) this.spawnDrones(dt, 1, 14);
     } else if (this.phase === 'charge') {
       this.charge = Math.min(CHARGE_TIME, this.charge + dt);
       this.spawnDrones(dt, 3, 6);
@@ -1203,11 +1162,18 @@ class Game extends Phaser.Scene {
       r: 520 * SD_SCALE,
       t: 0,
       yaw: Math.atan2(this.pos.x - bx, this.pos.z - bz), // la proa hacia ti
-      hangarAt: 6,
-      cannonAt: 9,
-      missileAt: 4,
+      hangarAt: 8,
+      cannonAt: 12,
+      missileAt: 6,
       charging: 0,
-      arrive: 2.2, // sale del hiperespacio DESPACIO: la estela se ve llegar
+      // la entrada: primero el APAGÓN y las letras — y cuando todo está
+      // negro, el destructor simplemente ESTÁ, de golpe, con el flash
+      hidden: 1,
+      cine: 1,
+      cineT: 0,
+      short: 0,
+      tpAt: 0,
+      salvoAt: 0,
       parts: SD_PARTS.map(([kind, ox, oy, oz, hp]) => ({ kind, ox, oy, oz, hp, max: hp, fireAt: 1 + Math.random() * 3, burst: 0 })),
     };
     this.ents.push(this.boss);
@@ -1280,56 +1246,77 @@ class Game extends Phaser.Scene {
     } else if (pt.kind === 'dome') {
       this.addScore(150);
       this.say(b.parts.some((q) => q.kind === 'dome' && q.hp > 0) ? 'UN DOMO MENOS.' : 'ESCUDO CAÍDO. DISPARA AL PUENTE.');
+      b.tpAt = 0.7; // perder un domo lo hace saltar a otro punto del anillo
     } else {
       this.killBoss(b);
     }
   }
 
   updateBoss(b, dx, dz, dist, dt) {
-    // mientras llega, solo es una estela: no dispara, no choca, no recibe
-    if (b.arrive > 0) {
-      b.arrive -= dt;
-      if (b.arrive <= 0) {
+    // La escena (entrada, y cada teletransporte en versión corta): el
+    // sector se APAGA con las letras contando qué pasa, el destructor
+    // aparece DE GOLPE en el negro con el flash, y suelta una lluvia de
+    // cohetes que sube alto, se abre en direcciones distintas y después
+    // se curva hacia ti mientras vuelve la luz.
+    if (b.cine) {
+      b.cineT += dt;
+      const ct = b.cineT;
+      const S = b.short ? 0.5 : 1;
+      b.cineDark = ct < 1.2 * S ? ct / (1.2 * S) : ct < 4.4 * S ? 1 : Math.max(0, 1 - (ct - 4.4 * S) / (1.8 * S));
+      if (b.hidden && ct >= 1.2 * S) {
+        b.hidden = 0;
         this.flash.setAlpha(0.7);
         this.tweens.add({ targets: this.flash, alpha: 0, duration: 700 });
         this.shake = 12;
         Sfx.boom();
-        // y entra la escena: todo se apaga, solo él — y su salva al cielo
-        b.cine = 1;
-        b.cineT = 0;
-        b.salvoAt = 0;
-        this.say('SALVA ENTRANTE — ESCUDO O ESQUIVA.');
+        this.say(b.short ? 'REAPARECIÓ — SALVA ENTRANTE.' : 'UN DESTRUCTOR BLOQUEA EL SALTO. DERRÍBALO.');
       }
-      return;
-    }
-    // La escena: quieto, el sector en negro, y una lluvia de cohetes que
-    // primero SUBE alto en columnas de óxido, se abre en direcciones
-    // distintas, y después se curva hacia ti. Lenta a propósito: es cine.
-    if (b.cine) {
-      b.cineT += dt;
-      const ct = b.cineT;
-      b.cineDark = ct < 1.4 ? ct / 1.4 : ct < 4.4 ? 1 : Math.max(0, 1 - (ct - 4.4) / 1.8);
-      if (ct > 1.2 && ct < 4.0) {
+      if (!b.hidden && ct > 1.5 * S && ct < 4.1 * S) {
         b.salvoAt -= dt;
         if (b.salvoAt <= 0) {
           b.salvoAt = 0.18;
+          if (!b.salvoSaid && !b.short) {
+            b.salvoSaid = 1;
+            this.say('SALVA ENTRANTE — ESCUDO O ESQUIVA.');
+          }
           const [wx, wy, wz] = this.bossToWorld(b, (Math.random() - 0.5) * 160, -175, -330);
           this.ents.push({
             k: 'emis', x: wx, y: wy, z: wz, r: 22, hp: 1, t: 0, yaw: 0,
             vx: (Math.random() - 0.5) * 560,
-            vy: -(650 + Math.random() * 350),
+            vy: -(650 + Math.random() * 350) * (b.short ? 0.7 : 1),
             vz: (Math.random() - 0.5) * 560,
-            rise: 1.6 + Math.random() * 1.0,
+            rise: (1.6 + Math.random() * 1.0) * (b.short ? 0.6 : 1),
             life: 16,
           });
           if (Math.random() < 0.35) Sfx.missile();
         }
       }
-      if (ct > 6.4) {
+      if (ct > 6.4 * S) {
         b.cine = 0;
         b.cineDark = 0;
       }
       return;
+    }
+
+    // cada domo que pierde lo saca del apuro: salto corto a otro punto del
+    // anillo — desaparece, letras, y reaparece al otro lado con salva
+    if (b.tpAt > 0) {
+      b.tpAt -= dt;
+      if (b.tpAt <= 0) {
+        const ph = Math.hypot(this.pos.x, this.pos.z) || 1;
+        b.x = (-this.pos.x / ph) * 1300;
+        b.z = (-this.pos.z / ph) * 1300;
+        b.y = Phaser.Math.Clamp(this.pos.y, -400, 400);
+        b.yaw = Math.atan2(this.pos.x - b.x, this.pos.z - b.z);
+        b.hidden = 1;
+        b.short = 1;
+        b.cine = 1;
+        b.cineT = 0;
+        b.salvoAt = 0;
+        Sfx.jump();
+        this.say('SALTO CORTO — LO PERDISTE DE VISTA.');
+        return;
+      }
     }
     for (const pt of b.parts) if (pt.flashT) pt.flashT -= dt;
     // gira lento para ponerte la proa — más lento que tu órbita, así ganarle
@@ -1354,16 +1341,16 @@ class Game extends Phaser.Scene {
       pt.fireAt -= dt;
       if (pt.burst > 0 && pt.fireAt <= 0) {
         pt.burst--;
-        pt.fireAt = pt.burst ? 0.18 : 3.2 + Math.random() * 1.4;
+        pt.fireAt = pt.burst ? 0.2 : 4.6 + Math.random() * 1.8;
         const [wx, wy, wz] = this.bossToWorld(b, pt.ox, pt.oy - 30, pt.oz);
         this.shootAtPlayer({ x: wx, y: wy, z: wz }, SHOT_SPEED);
-      } else if (pt.burst === 0 && pt.fireAt <= 0) pt.burst = 3;
+      } else if (pt.burst === 0 && pt.fireAt <= 0) pt.burst = 2;
     }
 
     // el hangar suelta interceptores
     b.hangarAt -= dt;
     if (b.hangarAt <= 0) {
-      b.hangarAt = 9;
+      b.hangarAt = 12;
       if (this.ents.filter((e) => e.k === 'inter').length < 4) {
         const [wx, wy, wz] = this.bossToWorld(b, 0, SD_KEEL + 30, -100);
         this.ents.push({ k: 'inter', x: wx, y: wy, z: wz, r: 22 * HUNTER_SCALE, hp: 2, t: 0, yaw: b.yaw, vx: 0, vy: 120, vz: 0 });
@@ -1373,7 +1360,7 @@ class Game extends Phaser.Scene {
     // la torre suelta una pareja de misiles que te persiguen
     b.missileAt -= dt;
     if (b.missileAt <= 0 && dist < 2600) {
-      b.missileAt = 7;
+      b.missileAt = 10;
       for (const side of [-1, 1]) {
         const [wx, wy, wz] = this.bossToWorld(b, side * 60, -170, -330);
         const [ox, , oz] = this.bossToWorld(b, side * 400, 0, -330);
@@ -1396,7 +1383,7 @@ class Game extends Phaser.Scene {
     } else {
       b.cannonAt -= dt;
       if (b.cannonAt <= 0 && dist < 2800) {
-        b.cannonAt = 11;
+        b.cannonAt = 14;
         b.charging = 1.8;
       }
     }
@@ -1463,7 +1450,7 @@ class Game extends Phaser.Scene {
     // la entrada del destructor es una escena: motores al mínimo, sin dash
     // ni nitro, y la nave se NIVELA Y ENCUADRA al destructor sola — lo ves
     // de lado, entero, y recuperas el mando cuando la luz vuelve
-    const sceneHold = this.boss && (this.boss.arrive > 0 || this.boss.cine);
+    const sceneHold = this.boss && this.boss.cine;
     if (sceneHold) {
       const b = this.boss;
       const to = vnorm({ x: b.x - this.pos.x, y: b.y - this.pos.y, z: b.z - this.pos.z });
@@ -1812,7 +1799,7 @@ class Game extends Phaser.Scene {
       // estrellarse contra un kilómetro de acero no se sobrevive: ni el
       // escudo ni el modo prueba te salvan de esa
       if (e.k === 'boss') {
-        if (!(e.arrive > 0) && this.insideBoss(e, P.x, P.y, P.z, 14) && this.phase !== 'out') {
+        if (!e.hidden && this.insideBoss(e, P.x, P.y, P.z, 14) && this.phase !== 'out') {
           this.phase = 'out';
           this.booms.push({ wx: P.x, wy: P.y, wz: P.z, t: 0, big: true });
           this.shake = 14;
@@ -1888,7 +1875,7 @@ class Game extends Phaser.Scene {
 
     // tus disparos contra el sector
     for (const b of this.bolts) {
-      if (this.boss && !(this.boss.arrive > 0) && this.boltVsBoss(this.boss, b)) continue;
+      if (this.boss && !this.boss.hidden && this.boltVsBoss(this.boss, b)) continue;
       for (const e of this.ents) {
         if (e.dead || e.k === 'scrap' || e.k === 'part' || e.k === 'pow' || e.k === 'boss' || e.k === 'ring') continue;
         const d = Math.hypot(b.x - e.x, b.y - e.y, b.z - e.z);
@@ -2023,7 +2010,7 @@ class Game extends Phaser.Scene {
         m.vz += ((dz / d) * MISSILE_SPEED - m.vz) * k;
         if (d < hitR) this.detonate(m);
       }
-      if (!m.dead && this.boss && !(this.boss.arrive > 0) && this.insideBoss(this.boss, m.x, m.y, m.z, 0)) this.detonate(m);
+      if (!m.dead && this.boss && !this.boss.hidden && this.insideBoss(this.boss, m.x, m.y, m.z, 0)) this.detonate(m);
       m.trail.push([m.x, m.y, m.z]);
       if (m.trail.length > 14) m.trail.shift();
       m.x += m.vx * dt;
@@ -2221,20 +2208,20 @@ class Game extends Phaser.Scene {
       const q = this.project(cm, s.x - s.vx * 0.35, s.y - s.vy * 0.35, s.z - s.vz * 0.35);
       const r = Phaser.Math.Clamp(((s.big ? 48 : 7) * FOCAL) / p[2], s.big ? 6 : 3, s.big ? 70 : 14);
       if (q) {
-        g.lineStyle(r * 0.9, RUST, 0.35);
+        g.lineStyle(r * 0.9, RUST, 0.45);
         g.beginPath();
         g.moveTo(p[0], p[1]);
         g.lineTo(q[0], q[1]);
         g.strokePath();
       }
-      g.fillStyle(RUST, 0.35);
-      g.fillCircle(p[0], p[1], r * 1.7);
+      // núcleo BLANCO siempre: una brasa se pierde contra el resplandor del
+      // disco; un núcleo ardiente no
+      g.fillStyle(RUST, 0.4);
+      g.fillCircle(p[0], p[1], r * 1.8);
       g.fillStyle(RUST_HI, 0.95);
       g.fillCircle(p[0], p[1], r);
-      if (s.big) {
-        g.fillStyle(0xfff1d6, 0.8);
-        g.fillCircle(p[0], p[1], r * 0.45);
-      }
+      g.fillStyle(0xfff1d6, 0.9);
+      g.fillCircle(p[0], p[1], r * 0.45);
     }
 
     // explosiones: anillos que crecen y fragmentos que vuelan
@@ -2317,9 +2304,10 @@ class Game extends Phaser.Scene {
       g.fillPoints(poly.map(([x, y]) => ({ x, y })), true);
     };
     // debajo del plano no hay neblina: hay el resplandor del disco de
-    // acreción, y arde más cuanto más bajas
+    // acreción — TENUE de lejos, para que el óxido enemigo no se pierda
+    // contra él, y encendido solo cuando de verdad estás bajando
     const prox = Phaser.Math.Clamp(1 - (BH_Y - this.pos.y - BH_KILL) / BH_PULL, 0, 1);
-    for (let i = 0; i < 10; i++) band(i * i * 7, undefined, 0x6b4030, (0.14 - i * 0.013) * (0.45 + 1.8 * prox));
+    for (let i = 0; i < 10; i++) band(i * i * 7, undefined, 0x6b4030, (0.11 - i * 0.01) * (0.2 + 2.4 * prox));
     band(-18, 18, 0x3a4452, 0.1);
     band(-6, 6, 0x5a6878, 0.1);
     band(-0.7, 0.7, INK, 0.28);
@@ -2545,23 +2533,10 @@ class Game extends Phaser.Scene {
       return;
     }
 
-    // el destructor no se apaga con la niebla: es enorme, y su llegada
-    // tiene que verse desde lejos
+    // el destructor no se apaga con la niebla: es enorme y tiene que verse
+    // desde lejos. Escondido (antes del flash de entrada) no se dibuja.
     if (e.k === 'boss') {
-      if (e.arrive > 0) {
-        // saliendo del hiperespacio: el casco estirado hacia atrás en líneas
-        const k = e.arrive / 2.2;
-        g.lineStyle(2, INK_HI, 0.9 - k * 0.5);
-        for (const [ox, oy] of [[-SD_HALF_W, 0], [SD_HALF_W, 0], [0, SD_RIDGE], [0, -150]]) {
-          this.worldLine(
-            g, cm,
-            this.bossToWorld(e, ox * (0.3 + 0.7 * (1 - k)), oy, SD_NOSE),
-            this.bossToWorld(e, ox * (0.3 + 0.7 * (1 - k)), oy, SD_REAR - 5200 * k)
-          );
-        }
-        return;
-      }
-      this.drawDestroyer(g, cm, e, Math.max(a, 0.6), e.flashT > 0);
+      if (!e.hidden) this.drawDestroyer(g, cm, e, Math.max(a, 0.6), e.flashT > 0);
       return;
     }
 
@@ -2987,8 +2962,7 @@ class Over extends Phaser.Scene {
     this.qualifies = false;
     if (!this.win) Sfx.over();
 
-    const head = this.add.text(CX, CY - 70, '', FONT(32)).setOrigin(0.5);
-    typeIn(this, head, this.win ? 'LLEGASTE A CASA.' : 'FIN DEL VIAJE', 24);
+    this.add.text(CX, CY - 70, this.win ? 'LLEGASTE A CASA.' : 'FIN DEL VIAJE', FONT(32)).setOrigin(0.5);
     this.add.text(CX, CY + 4, 'PUNTOS  ' + String(this.score).padStart(6, '0'), FONT(16)).setOrigin(0.5);
 
     loadScores().then((scores) => {
