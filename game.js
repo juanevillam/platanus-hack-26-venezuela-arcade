@@ -134,6 +134,7 @@ const SECTOR_R = 2400;
 // BH_PULL de distancia empieza a tirar, y a BH_KILL te tragó.
 const BH_Y = 3600;
 const BH_PULL = 1800;
+const BH_GRIP = 1150; // aquí ya TE TIENE: el crucero no alcanza — dash o nitro
 const BH_KILL = 900;
 const JUMP_TIME = 2; // segundos de túnel antes del flash
 const CHARGE_TIME = 12; // tras derribar al destructor, resiste mientras carga el salto
@@ -673,6 +674,7 @@ class Game extends Phaser.Scene {
     this.jt = 0;
     this.et = this.level ? 1 : 0; // llegando: el túnel se deshace
     this.bq = 6; // nivel 1: el destructor tarda esto en llegar
+    this.wvN = 0;
     this.ht = 0;
     this.wa = 0;
     this.ch = 0;
@@ -927,6 +929,7 @@ class Game extends Phaser.Scene {
   wave(n) {
     this.say('AMBUSH.');
     Sfx.turn();
+    this.wvN = n;
     for (let i = 0; i < n; i++) {
       const ang = (i / n) * PI * 2 + RND() * 0.8;
       const inter = i === 2 && n >= 4; // un solo embestidor, y no en la primera
@@ -942,6 +945,7 @@ class Game extends Phaser.Scene {
         fireAt: 2 + RND() * 2,
         orbit: RND() < 0.5 ? 1 : -1,
         vx: 0, vy: 0, vz: 0,
+        wv: 1,
       });
     }
   }
@@ -1124,6 +1128,8 @@ class Game extends Phaser.Scene {
           const ang = n * 2.4;
           const fast = n % 4 === 3;
           const [wx, wy, wz] = this.bw(b, (RND() - 0.5) * 160, -175, -330);
+          const P = this.pos;
+          const mk = 0.45 + RND() * 0.3;
           this.en.push({
             k: 'emis', x: wx, y: wy, z: wz, r: 22, hp: 1, t: 0, yaw: 0,
             vx: COS(ang) * (260 + RND() * 300),
@@ -1131,6 +1137,10 @@ class Game extends Phaser.Scene {
             vz: SIN(ang) * (260 + RND() * 300),
             rise: (fast ? 0.6 : 2.2 + RND() * 1.2) * (b.short ? 0.6 : 1),
             fast,
+            mid: fast ? 0 : 1,
+            gx: b.x + (P.x - b.x) * mk + (RND() - 0.5) * 700,
+            gy: P.y + (RND() - 0.5) * 300,
+            gz: b.z + (P.z - b.z) * mk + (RND() - 0.5) * 700,
             life: 18,
           });
           if (RND() < 0.35) Sfx.missile();
@@ -1148,6 +1158,12 @@ class Game extends Phaser.Scene {
     if (b.tpAt > 0) {
       b.tpAt -= dt;
       if (b.tpAt <= 0) {
+        for (const e2 of this.en) {
+          if (e2.k === 'emis') {
+            e2.dead = true;
+            this.bm(e2);
+          }
+        }
         const ph = HYP(this.pos.x, this.pos.z) || 1;
         b.x = (-this.pos.x / ph) * 1300;
         b.z = (-this.pos.z / ph) * 1300;
@@ -1406,7 +1422,15 @@ class Game extends Phaser.Scene {
 
     // el agujero negro: cuanto más bajas, más tira — y muy abajo, te traga
     const bhd = BH_Y - this.pos.y;
-    if (bhd < BH_PULL) {
+    if (bhd < BH_GRIP) {
+      // el agarre: un jalón que el crucero no vence — sales con dash o nitro
+      this.pos.y += 400 * dt;
+      this.sh = MAX(this.sh, 6);
+      if (this.ep > this.wa) {
+        this.wa = this.ep + 2.5;
+        this.say('IT HAS YOU — DASH.');
+      }
+    } else if (bhd < BH_PULL) {
       const k = 1 - bhd / BH_PULL;
       this.pos.y += k * k * 620 * dt;
       this.sh = MAX(this.sh, k * 4);
@@ -1507,7 +1531,7 @@ class Game extends Phaser.Scene {
 
   // La muerte: una sola, para todo lo que mata de un golpe
   die() {
-    if (this.fz === 'out' || this.fz === 'jump') return;
+    if (this.fz === 'out' || this.fz === 'jump' || (this.boss && this.boss.cine)) return;
     this.fz = 'out';
     this.bx.push({ wx: this.pos.x, wy: this.pos.y, wz: this.pos.z, t: 0, big: true });
     this.sh = 14;
@@ -1516,7 +1540,7 @@ class Game extends Phaser.Scene {
   }
 
   hy(time) {
-    if (this.fz === 'out') return;
+    if (this.fz === 'out' || (this.boss && this.boss.cine)) return;
     if (time < this.su) {
       // la burbuja se lleva el golpe: se ve dónde pegó
       this.ht = 0.3;
@@ -1586,12 +1610,24 @@ class Game extends Phaser.Scene {
           e.rise -= dt;
         } else {
           // el dardo va al doble de velocidad pero gira peor: te roza y
-          // vuelve a intentarlo — esquivarlo es el juego
+          // vuelve a intentarlo. Los de la cortina caen primero a su punto
+          // del corredor, y desde ahí sí te buscan.
+          let tx = dx;
+          let ty = dy;
+          let tz = dz;
+          let dd = dist;
+          if (e.mid) {
+            tx = e.gx - e.x;
+            ty = e.gy - e.y;
+            tz = e.gz - e.z;
+            dd = HYP(tx, ty, tz) || 1;
+            if (dd < 180) e.mid = 0;
+          }
           const spd = e.fast ? 640 : 300;
           const k = MIN(1, (e.fast ? 0.55 : 0.9) * dt);
-          e.vx += ((dx / dist) * spd - e.vx) * k;
-          e.vy += ((dy / dist) * spd - e.vy) * k;
-          e.vz += ((dz / dist) * spd - e.vz) * k;
+          e.vx += ((tx / dd) * spd - e.vx) * k;
+          e.vy += ((ty / dd) * spd - e.vy) * k;
+          e.vz += ((tz / dd) * spd - e.vz) * k;
         }
         e.x += e.vx * dt;
         e.y += e.vy * dt;
@@ -1799,6 +1835,16 @@ class Game extends Phaser.Scene {
       return;
     }
     e.dead = true;
+    // la última nave de la emboscada paga SIEMPRE: así se aprende que
+    // matarlas es lo que da los poderes
+    if (e.wv) {
+      e.wv = 0;
+      if (--this.wvN <= 0) {
+        this.say('WAVE CLEAR.');
+        this.ad(100);
+        this.dp(e.x, e.y, e.z, 1);
+      }
+    }
     this.bm(e);
     this.sy(e.x, e.y, e.z, 6);
     this.ad(e.k === 'sentry' ? 40 : e.k === 'rock' ? 15 : 25);
