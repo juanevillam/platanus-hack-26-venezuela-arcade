@@ -91,8 +91,8 @@ const KILL_CHARGE = 1;
 const HULL_MAX = 3;
 const SCORE_KEY = 'space-explorer:scores';
 
-// Las tres piezas del hipersalto
-const PARTS = ['MOTOR', 'NÚCLEO NAV', 'REACTOR'];
+// Las cuatro piezas del hipersalto
+const PARTS = ['MOTOR', 'NÚCLEO NAV', 'CELDA DE SALTO', 'REACTOR'];
 
 const HINT_MAIN = 'STICK DIRIGE · B1 DISPARA · B2 NITRO · B3 MISIL · B4/B6 ESCUDO';
 
@@ -314,13 +314,17 @@ const SHIP_MODEL = [
     [9, 1, -2], // 14 góndola der, frente
     [-11, 1, -15], // 15 góndola izq, tobera
     [11, 1, -15], // 16 góndola der, tobera
+    [-3, -1.5, 19], // 17 arista de proa izq
+    [3, -1.5, 19], // 18 arista de proa der
   ],
   [
     [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [3, 5],
     [0, 6], [0, 7], [6, 8], [7, 9], [8, 5], [9, 5],
     [8, 10], [9, 11],
     [0, 12], [12, 5], [6, 12], [7, 12],
-    [6, 13], [13, 15], [7, 14], [14, 16],
+    [6, 13], [13, 15], [7, 14], [14, 16], [15, 5], [16, 5],
+    [0, 17], [17, 6], [0, 18], [18, 7], // la proa facetada
+    [2, 6], [2, 7], // los laterales de la cabina bajan al ala
   ],
 ];
 
@@ -451,6 +455,9 @@ const DESTROYER_MODEL = [
     [-60, 38, 60], [60, 38, 60], // 24-25 hangar de la quilla, frente
     [-60, 44, -120], [60, 44, -120], // 26-27 hangar, fondo
     [-110, -180, -340], [110, -180, -340], // 28-29 mástiles de los domos
+    [-150, -6, 180], [150, -6, 180], // 30-31 quillas laterales del casco
+    [-95, -142, -338], [95, -142, -338], // 32-33 ventanas del puente
+    [-70, -110, -272], [70, -110, -272], [70, -110, SD_REAR], [-70, -110, SD_REAR], // 34-37 banda media de la torre
   ],
   [
     [0, 1], [0, 2], [0, 7], [7, 3], [0, 4], [1, 3], [2, 3], [1, 5], [2, 6], [5, 4], [6, 4],
@@ -460,6 +467,9 @@ const DESTROYER_MODEL = [
     [20, 22], [21, 23], [20, 21], // la trinchera que corre hasta la torre
     [24, 25], [25, 27], [27, 26], [26, 24], // la boca del hangar
     [12, 28], [13, 29], // los mástiles que sostienen los domos de escudo
+    [0, 30], [30, 1], [0, 31], [31, 2], // las quillas que facetan el casco
+    [32, 33], // la fila de ventanas del puente
+    [34, 35], [35, 36], [36, 37], [37, 34], // la banda media de la torre
   ],
 ];
 // Puntos débiles: torretas en la cubierta, dos domos de escudo sobre el puente,
@@ -603,9 +613,9 @@ class Title extends Phaser.Scene {
       g.fillStyle(INK, a);
       g.fillRect(m.x, m.y, m.s, m.s);
     }
-    // tu nave, girando en su eje como en una vitrina — inclinada hacia la
-    // cámara, que se le vea el lomo y se entienda la silueta
-    drawModelAt(g, SHIP_MODEL, CX, 236, 0, -0.5, 2.4, INK, 1, 1.5, this.spin);
+    // tu nave, girando en su eje como en una vitrina — vista desde ARRIBA,
+    // que se le vea el lomo: es la misma vista que tendrás en vuelo
+    drawModelAt(g, SHIP_MODEL, CX, 236, 0, 0.38, 2.4, INK, 1, 1.5, this.spin);
     this.press.setAlpha(Math.floor(time / 600) % 2 ? 1 : 0.25);
     if (anyStart()) this.scene.start('game', { level: 0 });
   }
@@ -798,6 +808,7 @@ class Game extends Phaser.Scene {
     this.tutStep = -1; // el tutorial avanza objetivo a objetivo
     this.tut = null;
     this.tutWait = 0.6;
+    this.skipArm = 0; // B5 arma el salto del tutorial; START lo confirma
     this.shieldEats = 0;
     this.shieldHitT = 0;
     this.bhWarnAt = 0;
@@ -987,11 +998,16 @@ class Game extends Phaser.Scene {
     const dt = Math.min(delta, 50) / 1000;
     this.elapsed += dt;
 
-    // pausa: START congela el sector
+    // pausa: START congela el sector — salvo que esté confirmando el salto
+    // del tutorial (B5 arma, START confirma: dos botones, sin accidentes)
     if (pressed.START1 && this.phase !== 'out') {
-      this.paused = !this.paused;
-      this.tweens.killTweensOf(this.notice);
-      this.notice.setText(this.paused ? 'PAUSA — START CONTINÚA' : '').setAlpha(this.paused ? 1 : 0);
+      if (this.level === 0 && this.phase === 'play' && this.elapsed < this.skipArm) {
+        this.startJump('TUTORIAL SALTADO.');
+      } else {
+        this.paused = !this.paused;
+        this.tweens.killTweensOf(this.notice);
+        this.notice.setText(this.paused ? 'PAUSA — START CONTINÚA' : '').setAlpha(this.paused ? 1 : 0);
+      }
     }
     if (this.paused) return;
 
@@ -1004,7 +1020,10 @@ class Game extends Phaser.Scene {
     if (this.phase === 'play') {
       if (this.level === 0) {
         this.updateTutorial(dt);
-        if (pressed.P1_5) this.startJump('TUTORIAL SALTADO.');
+        if (pressed.P1_5) {
+          this.skipArm = this.elapsed + 3.5;
+          this.say('¿SALTAR EL TUTORIAL? START CONFIRMA.');
+        }
       } else if (this.level === 1) {
         // uno al principio; uno más por cada pieza a bordo
         this.spawnDrones(dt, 1 + this.partsGot, 12);
@@ -1187,13 +1206,13 @@ class Game extends Phaser.Scene {
     let bx;
     let bz;
     if (ph > 300) {
-      bx = (-this.pos.x / ph) * 1200;
-      bz = (-this.pos.z / ph) * 1200;
+      bx = (-this.pos.x / ph) * 1300;
+      bz = (-this.pos.z / ph) * 1300;
     } else {
       const f = this.F;
       const h = Math.hypot(f.x, f.z) || 1;
-      bx = (f.x / h) * 1200;
-      bz = (f.z / h) * 1200;
+      bx = (f.x / h) * 1300;
+      bz = (f.z / h) * 1300;
     }
     this.boss = {
       k: 'boss',
@@ -1457,11 +1476,6 @@ class Game extends Phaser.Scene {
     return this.F;
   }
 
-  // Rumbo en el plano del sector, para el radar
-  heading() {
-    return Math.atan2(this.F.x, this.F.z);
-  }
-
   updatePlayer(time, dt) {
     const turn = (held.P1_R ? 1 : 0) - (held.P1_L ? 1 : 0);
     const pit = (held.P1_U ? 1 : 0) - (held.P1_D ? 1 : 0); // arriba = nariz arriba
@@ -1509,16 +1523,23 @@ class Game extends Phaser.Scene {
     this.U = U;
     this.R = R;
 
+    // la entrada del destructor es una escena: motores al mínimo — sin
+    // dash ni nitro — y recuperas el mando cuando la luz vuelve
+    const sceneHold = this.boss && (this.boss.arrive > 0 || this.boss.cine);
+
     // B2: cada toque es un dash — un tirón hacia adelante, intocable un
     // instante. Mantenido es nitro: la nave acelera sin parar mientras dure la
     // reserva, y a esa velocidad embistes a los cazadores.
-    if (pressed.P1_2 && this.boost >= DASH_COST) {
+    if (!sceneHold && pressed.P1_2 && this.boost >= DASH_COST) {
       this.boost -= DASH_COST;
       this.speed = Math.max(this.speed, this.cruise) + DASH_KICK;
       this.dashUntil = time + DASH_INVULN_MS;
       Sfx.dash();
     }
-    if (held.P1_2 && this.boost > 0) {
+    if (sceneHold) {
+      this.boost = Math.min(BOOST_MAX, this.boost + BOOST_REGEN * dt);
+      this.speed += (25 - this.speed) * Math.min(1, 4 * dt);
+    } else if (held.P1_2 && this.boost > 0) {
       this.boost = Math.max(0, this.boost - BOOST_DRAIN * dt);
       this.speed = Math.min(NITRO_MAX, this.speed + NITRO_ACCEL * dt);
     } else {
@@ -1552,15 +1573,12 @@ class Game extends Phaser.Scene {
         this.say('GRAVEDAD DEL AGUJERO NEGRO — SUBE.');
       }
     }
-    if (bhd < BH_KILL) {
-      if (GOD) {
-        this.pos.y = BH_Y - BH_KILL - 10; // modo prueba: te escupe
-      } else {
-        this.phase = 'out';
-        this.booms.push({ wx: this.pos.x, wy: this.pos.y, wz: this.pos.z, t: 0, big: true });
-        Sfx.boom();
-        this.time.delayedCall(1400, () => this.scene.start('over', { win: false, score: this.score }));
-      }
+    // el horizonte de sucesos no negocia: ni el escudo ni el modo prueba
+    if (bhd < BH_KILL && this.phase !== 'out') {
+      this.phase = 'out';
+      this.booms.push({ wx: this.pos.x, wy: this.pos.y, wz: this.pos.z, t: 0, big: true });
+      Sfx.boom();
+      this.time.delayedCall(1400, () => this.scene.start('over', { win: false, score: this.score }));
     }
 
     // alabeo con el giro
@@ -1795,15 +1813,16 @@ class Game extends Phaser.Scene {
         e.z += dz * pull;
       }
 
-      // contra el destructor chocas con su casco, no con una esfera
+      // contra el destructor chocas con su casco, no con una esfera — y
+      // estrellarse contra un kilómetro de acero no se sobrevive: ni el
+      // escudo ni el modo prueba te salvan de esa
       if (e.k === 'boss') {
-        if (!(e.arrive > 0) && this.insideBoss(e, P.x, P.y, P.z, 14)) {
-          this.hitPlayer(time);
-          // el casco te empuja afuera, por donde viniste
-          const f = this.F;
-          P.x -= f.x * 90;
-          P.y -= f.y * 90 + 40;
-          P.z -= f.z * 90;
+        if (!(e.arrive > 0) && this.insideBoss(e, P.x, P.y, P.z, 14) && this.phase !== 'out') {
+          this.phase = 'out';
+          this.booms.push({ wx: P.x, wy: P.y, wz: P.z, t: 0, big: true });
+          this.shake = 14;
+          Sfx.boom();
+          this.time.delayedCall(1400, () => this.scene.start('over', { win: false, score: this.score }));
         }
         continue;
       }
@@ -2253,6 +2272,14 @@ class Game extends Phaser.Scene {
       g.strokePath();
     }
 
+    // cerca del agujero, la pantalla entera se tiñe de acreción: no hay
+    // duda de DÓNDE estás metido
+    const bhProx = Phaser.Math.Clamp(1 - (BH_Y - this.pos.y - BH_KILL) / BH_PULL, 0, 1);
+    if (bhProx > 0.02) {
+      g.fillStyle(0xe89a5c, bhProx * (0.09 + 0.05 * Math.sin(time * 0.004)));
+      g.fillRect(0, 0, W, H);
+    }
+
     this.drawShip(g, cm, time);
     this.drawNav(g, cm);
     this.drawIncoming(g, cm, time);
@@ -2275,45 +2302,6 @@ class Game extends Phaser.Scene {
       g.strokeRect(CX - 160, 30, 320, 10);
       g.fillStyle(RUST_HI, 0.9);
       g.fillRect(CX - 158, 32, 316 * (hp / max), 6);
-    }
-
-    this.drawRadar(g);
-  }
-
-  // El radar: el sector alrededor tuyo, con tu nariz siempre hacia arriba
-  drawRadar(g) {
-    const rx = W - 66;
-    const ry = H - 92;
-    const R = 44;
-    const RANGE = 1600;
-    g.lineStyle(1, INK, 0.35);
-    g.strokeCircle(rx, ry, R);
-    g.fillStyle(INK_HI, 0.9);
-    g.fillRect(rx - 1, ry - 1, 2, 2);
-    const hd = this.heading();
-    const c = Math.cos(hd);
-    const s = Math.sin(hd);
-    for (const e of this.ents) {
-      if (e.k === 'scrap' || e.k === 'rock') continue;
-      const dx = e.x - this.pos.x;
-      const dz = e.z - this.pos.z;
-      const lx = dx * c - dz * s;
-      const lz = dx * s + dz * c;
-      const d = Math.hypot(lx, lz);
-      if (d > RANGE) continue;
-      const k = (d / RANGE) * R;
-      const px = rx + (lx / (d || 1)) * k;
-      const py = ry - (lz / (d || 1)) * k;
-      if (e.k === 'part' || e.k === 'ring') {
-        g.fillStyle(INK_HI, 0.5 + 0.5 * Math.sin(e.t * 5));
-        g.fillRect(px - 1.5, py - 1.5, 3, 3);
-      } else if (e.k === 'pow') {
-        g.fillStyle(INK, 0.8);
-        g.fillRect(px - 1, py - 1, 2, 2);
-      } else {
-        g.fillStyle(RUST_HI, 0.9);
-        g.fillRect(px - 1.5, py - 1.5, e.k === 'boss' ? 5 : 3, e.k === 'boss' ? 5 : 3);
-      }
     }
   }
 
@@ -2400,6 +2388,10 @@ class Game extends Phaser.Scene {
   drawHole(g, cm, time) {
     const t = time * 0.001;
     const RS = 380; // radio del horizonte de sucesos, en unidades de mundo
+    // cuanto más bajas, más arde el disco — el color te dice dónde estás
+    const prox = Phaser.Math.Clamp(1 - (BH_Y - this.pos.y - BH_KILL) / BH_PULL, 0, 1);
+    // el disco ORBITA: arcos con huecos girando, el anillo interior más
+    // rápido que el exterior, como cae de verdad la materia
     for (const [r, col, al, wd] of [
       [760, 0xfff1d6, 0.7, 2.5],
       [950, 0xf6c98a, 0.55, 2],
@@ -2408,14 +2400,28 @@ class Game extends Phaser.Scene {
       [1980, RUST, 0.2, 1.5],
       [2500, 0x8a5c48, 0.14, 1.5],
     ]) {
-      g.lineStyle(wd, col, al);
-      let prev = null;
-      for (let i = 0; i <= 30; i++) {
-        const a = (i / 30) * Math.PI * 2;
-        const pt = [Math.cos(a) * r, BH_Y, Math.sin(a) * r];
-        if (prev) this.worldLine(g, cm, prev, pt);
-        prev = pt;
+      g.lineStyle(wd * (1 + prox), col, Math.min(1, al * (1 + 0.9 * prox)));
+      const off = t * (260 / r);
+      for (let arc = 0; arc < 9; arc++) {
+        const a0 = off + (arc / 9) * Math.PI * 2;
+        const span = ((Math.PI * 2) / 9) * 0.7;
+        let prev = null;
+        for (let i = 0; i <= 3; i++) {
+          const a = a0 + (i / 3) * span;
+          const pt = [Math.cos(a) * r, BH_Y, Math.sin(a) * r];
+          if (prev) this.worldLine(g, cm, prev, pt);
+          prev = pt;
+        }
       }
+    }
+    // brasas sueltas orbitando el disco interno
+    for (let i = 0; i < 5; i++) {
+      const rr = [760, 950, 1200, 950, 760][i];
+      const a = t * (350 / rr) + i * 2.4;
+      const pp = this.project(cm, Math.cos(a) * rr, BH_Y, Math.sin(a) * rr);
+      if (!pp) continue;
+      g.fillStyle(0xfff1d6, 0.55 + 0.35 * prox);
+      g.fillCircle(pp[0], pp[1], Math.max(1.5, (26 * FOCAL) / pp[2]));
     }
     const p = this.project(cm, 0, BH_Y, 0);
     if (p) {
@@ -2609,6 +2615,21 @@ class Game extends Phaser.Scene {
       g.fillStyle(RUST_HI, a);
       g.fillCircle(p[0], p[1], Math.max(1.5, 300 / p[2]));
     }
+    if (e.k === 'drone' || e.k === 'inter') {
+      // el ojo de brasa en la nariz y el motor ardiendo atrás: un bicho vivo
+      const sn = Math.sin(e.yaw);
+      const cs = Math.cos(e.yaw);
+      const nose = this.project(cm, e.x + sn * 16 * HUNTER_SCALE, e.y - 4, e.z + cs * 16 * HUNTER_SCALE);
+      if (nose) {
+        g.fillStyle(RUST_HI, a * (0.6 + 0.4 * Math.sin(e.t * 6)));
+        g.fillCircle(nose[0], nose[1], Math.max(1.5, 600 / nose[2]));
+      }
+      const tail = this.project(cm, e.x - sn * 11 * HUNTER_SCALE, e.y, e.z - cs * 11 * HUNTER_SCALE);
+      if (tail) {
+        g.fillStyle(0xf6c98a, a * 0.7);
+        g.fillCircle(tail[0], tail[1], Math.max(1.5, 800 / tail[2]));
+      }
+    }
     if (e.k === 'sentry') {
       // el ojo late y su anillo de vigilancia respira: se ve venir de lejos
       const pulse = 0.5 + 0.5 * Math.sin(e.t * 3);
@@ -2629,6 +2650,17 @@ class Game extends Phaser.Scene {
 
   drawDestroyer(g, cm, b, a, flash) {
     this.drawWorldModel(g, cm, DESTROYER_MODEL, b, SD_SCALE, flash ? INK_HI : RUST, a);
+    // luces de posición parpadeando por el casco: un objeto VIVO, no un plano
+    [[0, -6, SD_NOSE], [-SD_HALF_W, -4, SD_REAR], [SD_HALF_W, -4, SD_REAR], [-130, -168, -340], [130, -168, -340], [0, -48, 80]].forEach(
+      ([lx, ly, lz], i) => {
+        if (Math.floor(b.t * 1.6 + i * 0.7) % 3 === 0) return;
+        const [wx, wy, wz] = this.bossToWorld(b, lx, ly, lz);
+        const lp = this.project(cm, wx, wy, wz);
+        if (!lp) return;
+        g.fillStyle(i < 3 ? RUST_HI : 0xb8dbe4, a * 0.9);
+        g.fillCircle(lp[0], lp[1], Math.max(1.5, 1100 / lp[2]));
+      }
+    );
     // tres motores encendidos en la popa
     for (const ox of [-130, 0, 130]) {
       const [wx, wy, wz] = this.bossToWorld(b, ox, 18, SD_REAR - 6);
@@ -2798,6 +2830,23 @@ class Game extends Phaser.Scene {
       if (mp) {
         g.fillStyle(INK_HI, 0.9);
         g.fillCircle(mp[0], mp[1], Math.max(2, 500 / mp[2]));
+      }
+    }
+    // las toberas encendidas: dos brasas que laten con la velocidad
+    const burn = 0.45 + 0.4 * (this.speed / NITRO_MAX) + 0.15 * Math.sin(time * 0.03);
+    for (const sgn of [-1, 1]) {
+      const mx = 11 * sgn;
+      const ep = this.project(
+        cm,
+        this.pos.x + this.R.x * mx - this.U.x - f.x * 15,
+        this.pos.y + this.R.y * mx - this.U.y - f.y * 15,
+        this.pos.z + this.R.z * mx - this.U.z - f.z * 15
+      );
+      if (ep) {
+        g.fillStyle(0xf6c98a, burn * 0.35);
+        g.fillCircle(ep[0], ep[1], Math.max(2, 900 / ep[2]));
+        g.fillStyle(0xfff1d6, burn);
+        g.fillCircle(ep[0], ep[1], Math.max(1.2, 420 / ep[2]));
       }
     }
     // estela del motor
