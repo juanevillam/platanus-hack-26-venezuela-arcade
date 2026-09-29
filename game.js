@@ -79,8 +79,8 @@ const RUST_HI = 0xc97b5a; // peligro, variante clara (disparos, ojos)
 const INK_CSS = '#eef2f7';
 const DIM_CSS = '#8a9099';
 
-// MODO PRUEBA: vidas infinitas mientras se ajusta el juego — apagar al enviar
-const GOD = true;
+// MODO PRUEBA: vidas infinitas para depurar — APAGADO: tres vidas de verdad
+const GOD = false;
 
 // --- Vuelo: la nave SIEMPRE avanza; el stick dirige, el turbo se recarga.
 // Arriba/abajo cabecea sin tope: mantenlo y das la vuelta completa. La cámara
@@ -1328,12 +1328,7 @@ class Game extends Phaser.Scene {
       }
     }
     // el horizonte de sucesos no negocia: ni el escudo ni el modo prueba
-    if (bhd < BH_KILL && this.fz !== 'out') {
-      this.fz = 'out';
-      this.bx.push({ wx: this.pos.x, wy: this.pos.y, wz: this.pos.z, t: 0, big: true });
-      Sfx.boom();
-      this.time.delayedCall(1400, () => this.scene.start('over', { win: false, score: this.score }));
-    }
+    if (bhd < BH_KILL) this.die();
 
     // alabeo con el giro
     const bank = this.yv * 0.34;
@@ -1422,6 +1417,16 @@ class Game extends Phaser.Scene {
     return best;
   }
 
+  // La muerte: una sola, para todo lo que mata de un golpe
+  die() {
+    if (this.fz === 'out') return;
+    this.fz = 'out';
+    this.bx.push({ wx: this.pos.x, wy: this.pos.y, wz: this.pos.z, t: 0, big: true });
+    this.sh = 14;
+    Sfx.boom();
+    this.time.delayedCall(1400, () => this.scene.start('over', { win: false, score: this.score }));
+  }
+
   hy(time) {
     if (this.fz === 'out') return;
     if (time < this.su) {
@@ -1440,12 +1445,7 @@ class Game extends Phaser.Scene {
     }
     if (GOD) return; // modo prueba: duele, pero no mata
     this.hull--;
-    if (this.hull <= 0) {
-      this.fz = 'out';
-      this.bx.push({ wx: this.pos.x, wy: this.pos.y, wz: this.pos.z, t: 0, big: true });
-      Sfx.boom();
-      this.time.delayedCall(1400, () => this.scene.start('over', { win: false, score: this.score }));
-    }
+    if (this.hull <= 0) this.die();
   }
 
   // --- el sector ---
@@ -1569,13 +1569,9 @@ class Game extends Phaser.Scene {
       // estrellarse contra un kilómetro de acero no se sobrevive: ni el
       // escudo ni el modo prueba te salvan de esa
       if (e.k === 'boss') {
-        if (!e.hd && this.ib(e, P.x, P.y, P.z, 14) && this.fz !== 'out') {
-          this.fz = 'out';
-          this.bx.push({ wx: P.x, wy: P.y, wz: P.z, t: 0, big: true });
-          this.sh = 14;
-          Sfx.boom();
-          this.time.delayedCall(1400, () => this.scene.start('over', { win: false, score: this.score }));
-        }
+        // el hitbox es más ANCHO que el casco: explotas visiblemente fuera,
+        // nunca metido dentro del modelo
+        if (!e.hd && this.ib(e, P.x, P.y, P.z, 60)) this.die();
         continue;
       }
 
@@ -1610,10 +1606,17 @@ class Game extends Phaser.Scene {
           } else {
             this.say(PARTS[e.idx] + '. ' + (PARTS.length - this.pg) + ' LEFT.');
           }
-        } else if (this.sp > RAM_SPEED && (e.k === 'drone' || e.k === 'inter' || e.k === 'emis')) {
-          // a toda velocidad, la nave es el arma
+        } else if (
+          (this.sp > RAM_SPEED || time < this.du || time < this.su) &&
+          (e.k === 'drone' || e.k === 'inter' || e.k === 'emis')
+        ) {
+          // a toda velocidad — o con dash o escudo activos — la nave es el arma
           this.damage(e, 99);
           this.sh = 7;
+        } else if (e.k === 'drone' || e.k === 'inter') {
+          // metal contra metal no perdona: chocar un caza es morir
+          this.damage(e, 99);
+          this.die();
         } else {
           if (e.k !== 'sentry' && e.k !== 'boss') e.dead = true;
           this.bm(e);
