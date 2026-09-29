@@ -106,7 +106,11 @@ const RAM_SPEED = 430; // por encima, embistes a los cazadores y los destrozas
 const SHIELD_MS = 2600;
 const SHIELD_COOLDOWN_MS = 4000;
 const SHIELD_R = 52; // radio en mundo dentro del que la burbuja come disparos
-const SHIELD_INK = 0xb8dbe4; // el azul de los domos: el color que ya dice "escudo"
+const AMB = 0xf6c98a; // ámbar del disco
+const CRM = 0xfff1d6; // crema caliente
+const BLU = 0xb8dbe4; // azul: escudo y recursos TUYOS
+const BLD = 0x8fb0c4; // azul apagado
+const GRY = 0x8a9099; // gris de escombro: paisaje, no equipo
 const LEVEL_CRUISE = [210, 235]; // nivel 0 (piezas), nivel 1 (destructor)
 const MAGNET_R = 240; // lo recogible viene hacia ti
 const FIRE_MS = 160;
@@ -274,9 +278,9 @@ const Sfx = {
     osc.stop(t + dur + 0.02);
   },
 
-  noise(dur, vol) {
+  noise(dur, vol, at) {
     if (!this.ctx) return;
-    const t = this.ctx.currentTime;
+    const t = at || this.ctx.currentTime;
     const len = FLR(this.ctx.sampleRate * dur);
     const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
     const d = buf.getChannelData(0);
@@ -449,6 +453,25 @@ function ln(g, ax, ay, bx, by) {
   g.strokePath();
 }
 
+const Music = {
+  next: 0,
+  step: 0,
+  on: false,
+  tick() {
+    if (!this.on || !Sfx.ctx) return;
+    const now = Sfx.ctx.currentTime;
+    if (this.next < now) this.next = now + 0.05;
+    while (this.next < now + 0.35) {
+      const st = this.step++ % 32;
+      const t = this.next;
+      Sfx.tone([55, 55, 65.4, 55, 73.4, 55, 65.4, 49][(st >> 2) % 8], 0.26, 'triangle', 0.09, 0, t);
+      if (st % 8 === 4) Sfx.noise(0.05, 0.04, t);
+      if (st % 16 === 14) Sfx.tone(220 * [1, 1.2, 1.5][FLR(this.step / 16) % 3], 0.6, 'sine', 0.045, 110, t);
+      this.next += 0.135;
+    }
+  },
+};
+
 // --------------------------------------------------------------------------
 // El título, mínimo a propósito: los bytes son para el JUEGO. Nombre, la
 // nave girando, controles, top 5, y nada más.
@@ -459,6 +482,7 @@ class Title extends Phaser.Scene {
 
   create() {
     this.events.on('postupdate', clearPressed);
+    Music.on = false;
     this.add.text(CX, 96, 'S P A C E  E X P L O R E R', FONT(36)).setOrigin(0.5);
     this.add.text(160, 360, 'STICK\nB1\nB2\nB3\nB4/B6\nSTART', FONT(14)).setOrigin(1, 0).setAlign('right').setLineSpacing(13);
     this.add
@@ -551,7 +575,7 @@ function drawBandedSphere(g, R, bands, night) {
 function drawGasGiant(g) {
   const R = 150;
   sk(g, 0, 0, R + 4, 6, 0x6a89a0, 0.14);
-  sk(g, 0, 0, R + 1, 2, 0x8fb0c4, 0.3);
+  sk(g, 0, 0, R + 1, 2, BLD, 0.3);
   drawBandedSphere(g, R, [0x2a4658, 0x22384a, 0x35566a, 0x1c2e3c, 0x2f4d5f, 0x22384a, 0x2a4658, 0x1a2a36], 0.3);
 }
 
@@ -580,7 +604,7 @@ function drawRingedPlanet(g) {
 
 function drawIcePlanet(g) {
   const R = 30;
-  sk(g, 0, 0, R + 2, 3, 0xb8dbe4, 0.18);
+  sk(g, 0, 0, R + 2, 3, BLU, 0.18);
   drawBandedSphere(g, R, [0x9fc2cc, 0x8fb4c0, 0xb4d4dc, 0x86aab6], 0.1);
 }
 
@@ -664,6 +688,7 @@ class Game extends Phaser.Scene {
     this.bu();
 
     this.flash = this.add.rectangle(CX, CY, W, H, 0xffffff).setAlpha(0).setDepth(10);
+    Music.on = true;
     if (this.level) {
       // el destello de salir del hiperespacio
       this.flash.setAlpha(0.9);
@@ -772,15 +797,17 @@ class Game extends Phaser.Scene {
     this.velText = this.add.text(12, 10, '', FONT(15)).setAlpha(0.9);
     this.scoreText = this.add.text(W - 12, 10, '', FONT(15)).setOrigin(1, 0).setAlpha(0.9);
     this.partText = this.add.text(W - 12, H - 28, '', FONT(15, DIM_CSS)).setOrigin(1, 0);
-    this.hullText = this.add.text(12, H - 28, '', FONT(15)).setAlpha(0.9);
-    this.missileText = this.add.text(150, H - 28, '', FONT(15)).setAlpha(0.9);
-    this.navText = this.add.text(CX, 64, '', FONT(14)).setOrigin(0.5).setAlpha(0.9);
+    this.hullText = this.add.text(12, H - 30, '', FONT(17));
+    this.missileText = this.add.text(168, H - 30, '', FONT(17));
+    this.add.text(136, H - 52, 'DASH', FONT(10, DIM_CSS)).setOrigin(0, 0.5);
+    this.add.text(136, H - 66, 'SHIELD', FONT(10, DIM_CSS)).setOrigin(0, 0.5);
+    this.navText = this.add.text(CX, 64, '', FONT(16)).setOrigin(0.5).setAlpha(0.95);
     this.label = this.add.text(0, 0, '', FONT(14)).setOrigin(0.5).setVisible(false);
     this.notice = this.add.text(CX, 168, '', FONT(16)).setOrigin(0.5).setAlpha(0);
     this.hint = this.add.text(CX, H - 58, HINT_MAIN, FONT(13, DIM_CSS)).setOrigin(0.5).setAlpha(0.6);
     this.time.delayedCall(9000, () => this.tweens.add({ targets: this.hint, alpha: 0, duration: 800 }));
     // etiqueta del escudo, junto a su barra
-    this.add.text(106, 41, 'SHIELD', FONT(9, DIM_CSS)).setAlpha(0.7);
+
     this.say(this.level ? 'INCOMING.' : 'FIND THE ENGINE.');
   }
 
@@ -793,6 +820,7 @@ class Game extends Phaser.Scene {
   update(time, delta) {
     const dt = MIN(delta, 50) / 1000;
     this.ep += dt;
+    Music.tick();
 
     // pausa: START congela el sector — salvo que esté confirmando el salto
     // del tutorial (B5 arma, START confirma: dos botones, sin accidentes)
@@ -1048,14 +1076,21 @@ class Game extends Phaser.Scene {
             b.salvoSaid = 1;
             this.say('SALVO INBOUND.');
           }
+          // la salva se abre en espiral (ángulo áureo), sube LENTA con su
+          // columna de estela — y uno de cada cuatro es un dardo: sube poco
+          // y se lanza rapidísimo, para esquivarlo en el último segundo
+          const n = (b.sN = (b.sN || 0) + 1);
+          const ang = n * 2.4;
+          const fast = n % 4 === 3;
           const [wx, wy, wz] = this.bw(b, (RND() - 0.5) * 160, -175, -330);
           this.en.push({
             k: 'emis', x: wx, y: wy, z: wz, r: 22, hp: 1, t: 0, yaw: 0,
-            vx: (RND() - 0.5) * 560,
-            vy: -(650 + RND() * 350) * (b.short ? 0.7 : 1),
-            vz: (RND() - 0.5) * 560,
-            rise: (1.6 + RND() * 1.0) * (b.short ? 0.6 : 1),
-            life: 16,
+            vx: COS(ang) * (170 + RND() * 240),
+            vy: -(fast ? 260 : (380 + RND() * 220)) * (b.short ? 0.7 : 1),
+            vz: SIN(ang) * (170 + RND() * 240),
+            rise: (fast ? 0.6 : 2.2 + RND() * 1.2) * (b.short ? 0.6 : 1),
+            fast,
+            life: 18,
           });
           if (RND() < 0.35) Sfx.missile();
         }
@@ -1419,7 +1454,7 @@ class Game extends Phaser.Scene {
 
   // La muerte: una sola, para todo lo que mata de un golpe
   die() {
-    if (this.fz === 'out') return;
+    if (this.fz === 'out' || this.fz === 'jump') return;
     this.fz = 'out';
     this.bx.push({ wx: this.pos.x, wy: this.pos.y, wz: this.pos.z, t: 0, big: true });
     this.sh = 14;
@@ -1497,10 +1532,13 @@ class Game extends Phaser.Scene {
         if (e.rise > 0) {
           e.rise -= dt;
         } else {
-          const k = MIN(1, 1.1 * dt);
-          e.vx += ((dx / dist) * 330 - e.vx) * k;
-          e.vy += ((dy / dist) * 330 - e.vy) * k;
-          e.vz += ((dz / dist) * 330 - e.vz) * k;
+          // el dardo va al doble de velocidad pero gira peor: te roza y
+          // vuelve a intentarlo — esquivarlo es el juego
+          const spd = e.fast ? 640 : 330;
+          const k = MIN(1, (e.fast ? 0.55 : 1.1) * dt);
+          e.vx += ((dx / dist) * spd - e.vx) * k;
+          e.vy += ((dy / dist) * spd - e.vy) * k;
+          e.vz += ((dz / dist) * spd - e.vz) * k;
         }
         e.x += e.vx * dt;
         e.y += e.vy * dt;
@@ -1553,7 +1591,7 @@ class Game extends Phaser.Scene {
         if (e.tt > 0.05) {
           e.tt = 0;
           (e.tr = e.tr || []).push([e.x, e.y, e.z]);
-          if (e.tr.length > 12) e.tr.shift();
+          if (e.tr.length > (e.k === 'emis' ? 26 : 12)) e.tr.shift();
         }
       }
 
@@ -1964,7 +2002,7 @@ class Game extends Phaser.Scene {
       this.db(g, cm, MISSILE_MODEL, m, F, U, 1.5, INK_HI, 1, m.life * 9);
       const p = this.pj(cm, m.x - F.x * 20, m.y - F.y * 20, m.z - F.z * 20);
       if (p) {
-        fc(g, p[0], p[1], MAX(2.5, 1400 / p[2]), 0xf6c98a, 0.9);
+        fc(g, p[0], p[1], MAX(2.5, 1400 / p[2]), AMB, 0.9);
       }
     }
 
@@ -1983,7 +2021,7 @@ class Game extends Phaser.Scene {
       // disco; un núcleo ardiente no
       fc(g, p[0], p[1], r * 1.8, RUST, 0.4);
       fc(g, p[0], p[1], r, RUST_HI, 0.95);
-      fc(g, p[0], p[1], r * 0.45, 0xfff1d6, 0.9);
+      fc(g, p[0], p[1], r * 0.45, CRM, 0.9);
     }
 
     // explosiones: anillos que crecen y fragmentos que vuelan
@@ -1998,7 +2036,7 @@ class Game extends Phaser.Scene {
       }
       const r = (4 + bm.t * (bm.r ? bm.r * 2.4 : bm.big ? 260 : 150)) * k;
       if (bm.r) {
-        fc(g, p[0], p[1], r * 0.8, 0xf6c98a, 0.35 * (1 - bm.t / 0.5));
+        fc(g, p[0], p[1], r * 0.8, AMB, 0.35 * (1 - bm.t / 0.5));
       }
       sk(g, p[0], p[1], r, bm.r ? 3 : 1.5, bm.big ? INK_HI : RUST, 1 - bm.t / 0.5);
     }
@@ -2124,8 +2162,8 @@ class Game extends Phaser.Scene {
     // el disco ORBITA: arcos con huecos girando, el anillo interior más
     // rápido que el exterior, como cae de verdad la materia
     for (const [r, col, al, wd] of [
-      [760, 0xfff1d6, 0.7, 2.5],
-      [950, 0xf6c98a, 0.55, 2],
+      [760, CRM, 0.7, 2.5],
+      [950, AMB, 0.55, 2],
       [1200, 0xe89a5c, 0.4, 2],
       [1550, RUST, 0.3, 1.5],
       [1980, RUST, 0.2, 1.5],
@@ -2151,7 +2189,7 @@ class Game extends Phaser.Scene {
       const a = t * (350 / rr) + i * 2.4;
       const pp = this.pj(cm, COS(a) * rr, BH_Y, SIN(a) * rr);
       if (!pp) continue;
-      fc(g, pp[0], pp[1], MAX(1.5, (26 * FOCAL) / pp[2]), 0xfff1d6, 0.55 + 0.35 * prox);
+      fc(g, pp[0], pp[1], MAX(1.5, (26 * FOCAL) / pp[2]), CRM, 0.55 + 0.35 * prox);
     }
     const p = this.pj(cm, 0, BH_Y, 0);
     if (p) {
@@ -2166,16 +2204,10 @@ class Game extends Phaser.Scene {
     for (const dir of [-1, 1]) {
       const base = [0, BH_Y + dir * RS * 1.15, 0];
       const tip = [0, BH_Y + dir * RS * 5, 0];
-      g.lineStyle(7, 0x8fb0c4, 0.1);
+      g.lineStyle(7, BLD, 0.1);
       this.wl(g, cm, base, tip);
-      g.lineStyle(2.5, 0xb8dbe4, 0.3);
+      g.lineStyle(2.5, BLU, 0.3);
       this.wl(g, cm, base, tip);
-      for (let i = 0; i < 3; i++) {
-        const u = (t * 0.5 + i / 3) % 1;
-        const pp = this.pj(cm, 0, BH_Y + dir * (RS * 1.15 + u * RS * 3.85), 0);
-        if (!pp) continue;
-        fc(g, pp[0], pp[1], MAX(1.5, (RS * 0.1 * (1 - u * 0.6) * FOCAL) / pp[2]), 0xeef2f7, 0.8 * (1 - u));
-      }
     }
   }
 
@@ -2275,8 +2307,8 @@ class Game extends Phaser.Scene {
     const flash = e.ft > 0;
     const color = flash
       ? INK_HI
-      : e.k === 'part' || e.k === 'pow' ? INK_HI : e.k === 'rock' || e.k === 'scrap' ? INK : RUST;
-    if (e.k === 'rock' && !flash) a *= 0.62;
+      : e.k === 'part' ? INK_HI : e.k === 'pow' ? BLU : e.k === 'scrap' ? BLD : e.k === 'rock' ? GRY : RUST;
+    if (e.k === 'rock' && !flash) a *= 0.7;
 
     if (e.k === 'eel') {
       // la serpiente del vacío: una línea sinuosa con cabeza de brasa
@@ -2340,7 +2372,7 @@ class Game extends Phaser.Scene {
         const [wx, wy, wz] = this.bw(b, lx, ly, lz);
         const lp = this.pj(cm, wx, wy, wz);
         if (!lp) return;
-        fc(g, lp[0], lp[1], MAX(1.5, 1100 / lp[2]), i < 3 ? RUST_HI : 0xb8dbe4, a * 0.9);
+        fc(g, lp[0], lp[1], MAX(1.5, 1100 / lp[2]), i < 3 ? RUST_HI : BLU, a * 0.9);
       }
     );
     // tres motores encendidos en la popa
@@ -2349,8 +2381,8 @@ class Game extends Phaser.Scene {
       const p = this.pj(cm, wx, wy, wz);
       if (!p) continue;
       const r = (34 * SD_SCALE * FOCAL) / p[2];
-      fc(g, p[0], p[1], r * 1.6, 0xf6c98a, 0.25);
-      fc(g, p[0], p[1], r * 0.7, 0xfff1d6, 0.85);
+      fc(g, p[0], p[1], r * 1.6, AMB, 0.25);
+      fc(g, p[0], p[1], r * 0.7, CRM, 0.85);
     }
     const shielded = b.parts.some((q) => q.kind === 'dome' && q.hp > 0);
     const aimed = this.ba(b, this.F);
@@ -2385,14 +2417,14 @@ class Game extends Phaser.Scene {
         fc(g, p[0], p[1] - 34 * k, MAX(2, 7 * k), hot, a);
       } else if (pt.kind === 'dome') {
         // domo de escudo: esfera en tinta, lo que protege el puente
-        sk(g, p[0], p[1], 36 * k, 1.5, pt.ft > 0 ? INK_HI : 0x8fb0c4, 0.9);
+        sk(g, p[0], p[1], 36 * k, 1.5, pt.ft > 0 ? INK_HI : BLD, 0.9);
         g.strokeEllipse(p[0], p[1], 72 * k, 26 * k);
-        fc(g, p[0], p[1], 36 * k, 0x8fb0c4, 0.12 + 0.08 * SIN(b.t * 4));
+        fc(g, p[0], p[1], 36 * k, BLD, 0.12 + 0.08 * SIN(b.t * 4));
       } else {
         // el puente: blindado mientras haya domos; expuesto, late en brasa
         const pulse = 0.5 + 0.5 * SIN(b.t * (shielded ? 2 : 7));
         if (shielded) {
-          sk(g, p[0], p[1], 90 * k, 1.5, 0x8fb0c4, 0.25 + 0.2 * pulse);
+          sk(g, p[0], p[1], 90 * k, 1.5, BLD, 0.25 + 0.2 * pulse);
         } else {
           fc(g, p[0], p[1], 30 * k, hot, 0.45 + 0.45 * pulse);
           sk(g, p[0], p[1], (50 + pulse * 20) * k, 2, RUST_HI, 0.6 * pulse);
@@ -2407,7 +2439,7 @@ class Game extends Phaser.Scene {
         const c = 1 - b.cg / 1.8;
         const k = (SD_SCALE * FOCAL) / p[2];
         fc(g, p[0], p[1], (10 + 40 * c) * k, RUST_HI, 0.3 + 0.5 * c);
-        sk(g, p[0], p[1], (60 - 40 * c) * k, 2, 0xfff1d6, c);
+        sk(g, p[0], p[1], (60 - 40 * c) * k, 2, CRM, c);
       }
     }
   }
@@ -2464,12 +2496,12 @@ class Game extends Phaser.Scene {
       const dying = left < 0.22 && FLR(time / 90) % 2 === 0;
       const r = SHIELD_R * 0.85 * (FOCAL / sp0[2]);
       if (!dying) {
-        fc(g, sp0[0], sp0[1], r, 0x8fb0c4, 0.1);
-        sk(g, sp0[0], sp0[1], r, 1.5, SHIELD_INK, 0.85);
-        sk(g, sp0[0], sp0[1], r * 1.1, 3.5, 0x8fb0c4, 0.2);
+        fc(g, sp0[0], sp0[1], r, BLD, 0.1);
+        sk(g, sp0[0], sp0[1], r, 1.5, BLU, 0.85);
+        sk(g, sp0[0], sp0[1], r * 1.1, 3.5, BLD, 0.2);
         // los meridianos: la burbuja es una esfera, no un aro
         const sp = time * 0.0021;
-        g.lineStyle(1, SHIELD_INK, 0.4);
+        g.lineStyle(1, BLU, 0.4);
         g.strokeEllipse(sp0[0], sp0[1], 2 * r * ABS(COS(sp)), 2 * r);
         g.strokeEllipse(sp0[0], sp0[1], 2 * r, 2 * r * ABS(COS(sp * 0.8 + 1.2)));
         const spin = time * 0.004;
@@ -2574,9 +2606,17 @@ class Game extends Phaser.Scene {
     const p = this.pj(cm, part.x, part.y, part.z);
     const margin = 46;
     if (p && p[0] > margin && p[0] < W - margin && p[1] > margin && p[1] < H - margin) {
-      g.lineStyle(1.5, INK_HI, 0.85);
-      const r = 16;
-      g.strokeRect(p[0] - r, p[1] - r, r * 2, r * 2);
+      // una MIRA, no un cuadrito: esquinas gruesas que respiran
+      const r = 22 + 2 * SIN(this.ep * 5);
+      const c = r * 0.45;
+      g.lineStyle(2.5, INK_HI, 0.9);
+      for (const [sx, sy2] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        g.beginPath();
+        g.moveTo(p[0] + sx * r, p[1] + sy2 * (r - c));
+        g.lineTo(p[0] + sx * r, p[1] + sy2 * r);
+        g.lineTo(p[0] + sx * (r - c), p[1] + sy2 * r);
+        g.strokePath();
+      }
       return;
     }
     let ang;
@@ -2588,39 +2628,42 @@ class Game extends Phaser.Scene {
     }
     const ex = CX + COS(ang) * (CX - 60);
     const ey = CY + SIN(ang) * (CY - 60);
-    g.lineStyle(2, INK_HI, 0.9);
-    g.beginPath();
-    g.moveTo(ex + COS(ang) * 14, ey + SIN(ang) * 14);
-    g.lineTo(ex + COS(ang + 2.5) * 10, ey + SIN(ang + 2.5) * 10);
-    g.lineTo(ex + COS(ang - 2.5) * 10, ey + SIN(ang - 2.5) * 10);
-    g.closePath();
-    g.strokePath();
+    // flecha grande con halo: se ve aunque el sector esté lleno de cosas
+    for (const [wd, al, sc] of [[7, 0.25, 1.3], [2.5, 0.95, 1]]) {
+      g.lineStyle(wd, INK_HI, al);
+      g.beginPath();
+      g.moveTo(ex + COS(ang) * 20 * sc, ey + SIN(ang) * 20 * sc);
+      g.lineTo(ex + COS(ang + 2.5) * 14 * sc, ey + SIN(ang + 2.5) * 14 * sc);
+      g.lineTo(ex + COS(ang - 2.5) * 14 * sc, ey + SIN(ang - 2.5) * 14 * sc);
+      g.closePath();
+      g.strokePath();
+    }
   }
 
   uh() {
     this.velText.setText('SPD ' + String(ABS(Math.round(this.sp))).padStart(3, '0'));
     this.scoreText.setText(String(this.score).padStart(6, '0') + (this.mu > 1 ? '  x' + this.mu : ''));
     this.hullText.setText('HULL ' + (GOD ? '∞' : '▸'.repeat(this.hull) + '·'.repeat(HULL_MAX - this.hull)));
-    this.missileText.setText('MISSILES ' + '▴'.repeat(this.ammo) + '·'.repeat(MISSILE_MAX - this.ammo));
+    this.missileText.setText('MSL ' + '▴'.repeat(this.ammo) + '·'.repeat(MISSILE_MAX - this.ammo));
     this.partText.setText(
       this.level ? 'LEVEL 1' : 'LEVEL 0  ' + PARTS.map((p, i) => (i < this.pg ? p[0] : '·')).join(' ')
     );
-    // la reserva de turbo, junto a la velocidad
+    // el bloque de recursos, junto a las vidas: DASH y SHIELD como barras
+    // con nombre — llena = lista; el escudo va en SU azul
     const g = this.gfx;
     g.lineStyle(1, INK, 0.5);
-    g.strokeRect(12, 34, 90, 6);
-    fr(g, 13, 35, 88 * (this.bz / BOOST_MAX), 4, INK_HI, 0.7);
-    // el escudo, recargándose debajo: llena = listo
+    g.strokeRect(12, H - 56, 118, 8);
+    fr(g, 13, H - 55, 116 * (this.bz / BOOST_MAX), 6, INK_HI, 0.75);
     const now = this.time.now;
     const shReady = now >= this.sw ? 1 : 1 - (this.sw - now) / (SHIELD_MS + SHIELD_COOLDOWN_MS);
-    g.lineStyle(1, INK, 0.4);
-    g.strokeRect(12, 44, 90, 4);
-    fr(g, 13, 45, 88 * MAX(0, shReady), 2, INK_HI, shReady >= 1 ? 0.8 : 0.4);
-    // el próximo misil, recargándose
+    g.lineStyle(1, INK, 0.5);
+    g.strokeRect(12, H - 70, 118, 8);
+    fr(g, 13, H - 69, 116 * MAX(0, shReady), 6, BLU, shReady >= 1 ? 0.9 : 0.35);
+    // el próximo misil, recargándose bajo su contador
     if (this.ammo < MISSILE_MAX) {
       g.lineStyle(1, INK, 0.4);
-      g.strokeRect(150, H - 8, 120, 4);
-      fr(g, 151, H - 7, 118 * (this.ar / MISSILE_REGEN), 2, INK_HI, 0.7);
+      g.strokeRect(169, H - 8, 118, 4);
+      fr(g, 170, H - 7, 116 * (this.ar / MISSILE_REGEN), 2, INK_HI, 0.7);
     }
   }
 }
@@ -2638,6 +2681,7 @@ class Over extends Phaser.Scene {
 
   create() {
     this.events.on('postupdate', clearPressed);
+    Music.on = false;
     this.ready = false;
     this.left = false;
     this.qualifies = false;
