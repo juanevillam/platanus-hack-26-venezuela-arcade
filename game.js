@@ -853,37 +853,15 @@ class Game extends Phaser.Scene {
   populate() {
     const rnd = (a, b) => a + Math.random() * (b - a);
     if (this.level === 1) {
-      // NIVEL 0, lineal: las piezas en cadena — la marca te lleva de una a la
-      // siguiente, y la chatarra marca el camino entre ellas
-      let px = this.pos.x;
-      let py = 0;
-      let pz = this.pos.z;
-      let ang = Math.atan2(-px, -pz) + rnd(-0.4, 0.4); // hacia el sector
+      // NIVEL 0: las piezas DISPERSAS por el sector, cada una en su rincón
+      // y custodiada — ningún camino fácil; la marca te lleva de una en una
+      const base = rnd(0, Math.PI * 2);
       for (let i = 0; i < PARTS.length; i++) {
-        ang += rnd(-0.5, 0.5);
-        let nx = px + Math.sin(ang) * 1250;
-        const ny = Phaser.Math.Clamp(py + rnd(-320, 320), -700, 500);
-        let nz = pz + Math.cos(ang) * 1250;
-        const h = Math.hypot(nx, nz);
-        if (h > 2000) {
-          // la cadena no se sale del sector: dobla hacia adentro
-          nx *= 2000 / h;
-          nz *= 2000 / h;
-          ang = Math.atan2(-nx, -nz) + rnd(-0.4, 0.4);
-        }
-        for (let j = 1; j <= 4; j++) {
-          const t = j / 5;
-          this.ents.push({
-            k: 'scrap',
-            x: px + (nx - px) * t + rnd(-70, 70),
-            y: py + (ny - py) * t + rnd(-70, 70),
-            z: pz + (nz - pz) * t + rnd(-70, 70),
-            r: 16, t: rnd(0, 6), yaw: 0,
-          });
-        }
-        px = nx;
-        py = ny;
-        pz = nz;
+        const ang = base + (i * Math.PI * 2) / PARTS.length + rnd(-0.45, 0.45);
+        const rr = 900 + i * 360 + rnd(-120, 120);
+        const px = Math.sin(ang) * rr;
+        const py = rnd(-600, 450);
+        const pz = Math.cos(ang) * rr;
         this.ents.push({ k: 'part', x: px, y: py, z: pz, r: 26, idx: i, t: 0, yaw: 0 });
         // un centinela custodia la primera pieza, dos las siguientes
         for (let j = 0; j < 1 + Math.min(i, 1); j++) {
@@ -909,7 +887,7 @@ class Game extends Phaser.Scene {
     // tutorial va casi vacío (los objetivos los pone la secuencia) y el
     // nivel 1 es la arena del destructor: despejada a propósito.
     const rocks = [5, 10, 8][this.level] || 8;
-    const scraps = [4, 6, 8][this.level] || 8;
+    const scraps = [4, 12, 8][this.level] || 8;
     for (let i = 0; i < rocks; i++) {
       const p = this.randIn(SECTOR_R * 0.95);
       this.ents.push({
@@ -1025,8 +1003,8 @@ class Game extends Phaser.Scene {
           this.say('¿SALTAR EL TUTORIAL? START CONFIRMA.');
         }
       } else if (this.level === 1) {
-        // uno al principio; uno más por cada pieza a bordo
-        this.spawnDrones(dt, 1 + this.partsGot, 12);
+        // dos desde el principio; uno más por cada pieza a bordo
+        this.spawnDrones(dt, Math.min(5, 2 + this.partsGot), 10);
       } else {
         this.spawnDrones(dt, 1, 9);
         const was = this.bossAt;
@@ -1202,22 +1180,25 @@ class Game extends Phaser.Scene {
   // te empuja de vuelta), y al punto del anillo MÁS LEJANO de ti: la
   // entrada y la salva se ven enteras, de lejos, como una escena.
   spawnBoss() {
+    // Aparece LEJOS (fuera del anillo de pelea, al lado opuesto de ti) y a
+    // TU MISMA ALTURA: lo ves de lado, entero, imponente. Después de la
+    // escena, él solo navega hacia el anillo de batalla.
     const ph = Math.hypot(this.pos.x, this.pos.z);
     let bx;
     let bz;
     if (ph > 300) {
-      bx = (-this.pos.x / ph) * 1300;
-      bz = (-this.pos.z / ph) * 1300;
+      bx = (-this.pos.x / ph) * 1900;
+      bz = (-this.pos.z / ph) * 1900;
     } else {
       const f = this.F;
       const h = Math.hypot(f.x, f.z) || 1;
-      bx = (f.x / h) * 1300;
-      bz = (f.z / h) * 1300;
+      bx = (f.x / h) * 1900;
+      bz = (f.z / h) * 1900;
     }
     this.boss = {
       k: 'boss',
       x: bx,
-      y: this.pos.y - 160,
+      y: Phaser.Math.Clamp(this.pos.y, -500, 500),
       z: bz,
       r: 520 * SD_SCALE,
       t: 0,
@@ -1358,10 +1339,12 @@ class Game extends Phaser.Scene {
     const move = dist > 1900 ? 90 : 0;
     b.x += Math.sin(b.yaw) * move * dt;
     b.z += Math.cos(b.yaw) * move * dt;
+    // navega SOLO de vuelta al anillo de batalla — sin teletransportes
     const bh = Math.hypot(b.x, b.z);
     if (bh > 1300) {
-      b.x *= 1300 / bh;
-      b.z *= 1300 / bh;
+      const pull = Math.min(bh - 1300, 150 * dt);
+      b.x -= (b.x / bh) * pull;
+      b.z -= (b.z / bh) * pull;
     }
     b.y += Math.sin(b.t * 0.4) * 6 * dt;
 
@@ -1477,8 +1460,24 @@ class Game extends Phaser.Scene {
   }
 
   updatePlayer(time, dt) {
-    const turn = (held.P1_R ? 1 : 0) - (held.P1_L ? 1 : 0);
-    const pit = (held.P1_U ? 1 : 0) - (held.P1_D ? 1 : 0); // arriba = nariz arriba
+    // la entrada del destructor es una escena: motores al mínimo, sin dash
+    // ni nitro, y la nave se NIVELA Y ENCUADRA al destructor sola — lo ves
+    // de lado, entero, y recuperas el mando cuando la luz vuelve
+    const sceneHold = this.boss && (this.boss.arrive > 0 || this.boss.cine);
+    if (sceneHold) {
+      const b = this.boss;
+      const to = vnorm({ x: b.x - this.pos.x, y: b.y - this.pos.y, z: b.z - this.pos.z });
+      const k = Math.min(1, 2.2 * dt);
+      const [F, U, R] = orthoBasis(vmix(this.F, 1 - k, to, k), vmix(this.U, 1 - k, WORLD_UP, k));
+      this.F = F;
+      this.U = U;
+      this.R = R;
+      this.yawVel = 0;
+      this.pitchVel = 0;
+    }
+
+    const turn = sceneHold ? 0 : (held.P1_R ? 1 : 0) - (held.P1_L ? 1 : 0);
+    const pit = sceneHold ? 0 : (held.P1_U ? 1 : 0) - (held.P1_D ? 1 : 0); // arriba = nariz arriba
 
     // B4/B6: el escudo — mientras dura, nada te toca y los disparos se
     // deshacen contra la burbuja. Se levanta en el momento, no se guarda.
@@ -1522,10 +1521,6 @@ class Game extends Phaser.Scene {
     this.F = F;
     this.U = U;
     this.R = R;
-
-    // la entrada del destructor es una escena: motores al mínimo — sin
-    // dash ni nitro — y recuperas el mando cuando la luz vuelve
-    const sceneHold = this.boss && (this.boss.arrive > 0 || this.boss.cine);
 
     // B2: cada toque es un dash — un tirón hacia adelante, intocable un
     // instante. Mantenido es nitro: la nave acelera sin parar mientras dure la
