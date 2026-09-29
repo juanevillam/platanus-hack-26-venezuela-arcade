@@ -106,7 +106,6 @@ const RAM_SPEED = 430; // por encima, embistes a los cazadores y los destrozas
 const SHIELD_MS = 2600;
 const SHIELD_COOLDOWN_MS = 4000;
 const SHIELD_R = 52; // radio en mundo dentro del que la burbuja come disparos
-const PARRY_MS = 220; // el primer instante del escudo DEVUELVE lo que toque
 const AMB = 0xf6c98a; // ámbar del disco
 const CRM = 0xfff1d6; // crema caliente
 const BLU = 0xb8dbe4; // azul: escudo y recursos TUYOS
@@ -116,7 +115,7 @@ const LEVEL_CRUISE = [210, 235]; // nivel 0 (piezas), nivel 1 (destructor)
 const MAGNET_R = 240; // lo recogible viene hacia ti
 const FIRE_MS = 160;
 const BOLT_SPEED = 980;
-const BOLT_LIFE = 1.3;
+const BOLT_LIFE = 1.9;
 const MISSILE_SPEED = 560;
 const MISSILE_TURN = 3.4; // 1/s de corrección hacia el blanco
 const MISSILE_MAX = 5;
@@ -325,10 +324,6 @@ const Sfx = {
   dash() {
     this.noise(0.3, 0.14);
     this.tone(160, 0.35, 'sine', 0.14, 50);
-  },
-  parry() {
-    this.tone(880, 0.1, 'square', 0.16, 1760);
-    this.tone(1320, 0.22, 'sine', 0.12, 0, this.ctx && this.ctx.currentTime + 0.05);
   },
   turn() {
     this.tone(330, 0.3, 'sine', 0.12, 160);
@@ -659,8 +654,6 @@ class Game extends Phaser.Scene {
     this.roll = 0; // alabeo solo visual, al girar
     this.su = 0;
     this.sw = 0;
-    this.sst = -1e9; // cuándo se levantó el escudo: define la ventana de parry
-    this.sTap = false;
     this.du = 0;
     this.fy = 0;
     this.iu = 0;
@@ -929,6 +922,30 @@ class Game extends Phaser.Scene {
     this.say(msg);
   }
 
+  // La emboscada: n naves entran A LA VEZ desde direcciones distintas —
+  // el nivel 0 se gana peleando, no solo recogiendo
+  wave(n) {
+    this.say('AMBUSH.');
+    Sfx.turn();
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * PI * 2 + RND() * 0.8;
+      const inter = i % 3 === 2;
+      this.en.push({
+        k: inter ? 'inter' : 'drone',
+        x: this.pos.x + SIN(ang) * 1500,
+        y: this.pos.y + (RND() - 0.5) * 600,
+        z: this.pos.z + COS(ang) * 1500,
+        r: 22 * HUNTER_SCALE,
+        hp: inter ? 2 : 3,
+        t: 0,
+        yaw: 0,
+        fireAt: 2 + RND() * 2,
+        orbit: RND() < 0.5 ? 1 : -1,
+        vx: 0, vy: 0, vz: 0,
+      });
+    }
+  }
+
   // Después de un rato, salen a cazarte — y más, con cada pieza a bordo.
   // Con la primera pieza aparecen también interceptores, que embisten.
   sd(dt, max, every) {
@@ -1109,9 +1126,9 @@ class Game extends Phaser.Scene {
           const [wx, wy, wz] = this.bw(b, (RND() - 0.5) * 160, -175, -330);
           this.en.push({
             k: 'emis', x: wx, y: wy, z: wz, r: 22, hp: 1, t: 0, yaw: 0,
-            vx: COS(ang) * (170 + RND() * 240),
-            vy: -(fast ? 260 : (380 + RND() * 220)) * (b.short ? 0.7 : 1),
-            vz: SIN(ang) * (170 + RND() * 240),
+            vx: COS(ang) * (260 + RND() * 300),
+            vy: -(fast ? 260 : (300 + RND() * 180)) * (b.short ? 0.7 : 1),
+            vz: SIN(ang) * (260 + RND() * 300),
             rise: (fast ? 0.6 : 2.2 + RND() * 1.2) * (b.short ? 0.6 : 1),
             fast,
             life: 18,
@@ -1178,7 +1195,7 @@ class Game extends Phaser.Scene {
     // el hangar suelta interceptores
     b.ha -= dt;
     if (b.ha <= 0) {
-      b.ha = 12;
+      b.ha = 16;
       if (this.en.filter((e) => e.k === 'inter').length < 4) {
         const [wx, wy, wz] = this.bw(b, 0, SD_KEEL + 30, -100);
         this.en.push({ k: 'inter', x: wx, y: wy, z: wz, r: 22 * HUNTER_SCALE, hp: 2, t: 0, yaw: b.yaw, vx: 0, vy: 120, vz: 0 });
@@ -1188,7 +1205,7 @@ class Game extends Phaser.Scene {
     // la torre suelta una pareja de misiles que te persiguen
     b.ma -= dt;
     if (b.ma <= 0 && dist < 2600) {
-      b.ma = 10;
+      b.ma = 12;
       for (const side of [-1, 1]) {
         const [wx, wy, wz] = this.bw(b, side * 60, -170, -330);
         const [ox, , oz] = this.bw(b, side * 400, 0, -330);
@@ -1297,23 +1314,16 @@ class Game extends Phaser.Scene {
     const turn = sceneHold ? 0 : (held.P1_R ? 1 : 0) - (held.P1_L ? 1 : 0);
     const pit = sceneHold ? 0 : (held.P1_U ? 1 : 0) - (held.P1_D ? 1 : 0); // arriba = nariz arriba
 
-    // B4/B6: el escudo — mientras dura, nada te toca y los disparos se
-    // deshacen contra la burbuja. Se levanta en el momento, no se guarda.
-    if ((pressed.P1_4 || pressed.P1_6) && time >= this.sw) {
-      this.sst = time;
-      this.su = time + SHIELD_MS;
-      this.sw = time + SHIELD_MS + SHIELD_COOLDOWN_MS;
-      Sfx.shieldUp();
-    }
-    // toque corto: solo la ventana de parry — si soltaste temprano, el
-    // escudo se pliega al cerrarse la ventana y el toque casi no cuesta
-    // recarga; mantenido, es el escudo completo
-    if (time < this.su && !held.P1_4 && !held.P1_6 && time - this.sst < PARRY_MS + 60) this.sTap = true;
-    if (this.sTap && time - this.sst >= PARRY_MS + 60) {
-      this.sTap = false;
+    // B4/B6: el escudo se QUEDA — hasta que lo apagues tú con otro toque,
+    // o hasta que se consuma solo; apagarlo temprano recarga antes
+    if (pressed.P1_4 || pressed.P1_6) {
       if (time < this.su) {
         this.su = time;
-        this.sw = time + 1200;
+        this.sw = time + SHIELD_COOLDOWN_MS;
+      } else if (time >= this.sw) {
+        this.su = time + SHIELD_MS;
+        this.sw = time + SHIELD_MS + SHIELD_COOLDOWN_MS;
+        Sfx.shieldUp();
       }
     }
 
@@ -1372,6 +1382,13 @@ class Game extends Phaser.Scene {
       this.sp += (this.cu - this.sp) * MIN(1, SPEED_EASE * dt);
     }
 
+    // cerca del destructor la pasada se frena sola (salvo con nitro):
+    // giras antes, lo pierdes de vista menos, la pelea se queda contigo
+    if (this.boss && !sceneHold && !held.P1_2 && this.sp > 150) {
+      const bd2 = HYP(this.boss.x - this.pos.x, this.boss.y - this.pos.y, this.boss.z - this.pos.z);
+      if (bd2 < 1000) this.sp += (150 - this.sp) * MIN(1, 1.4 * dt);
+    }
+
     const f = this.fw();
     this.pos.x += f.x * this.sp * dt;
     this.pos.y += f.y * this.sp * dt;
@@ -1421,7 +1438,7 @@ class Game extends Phaser.Scene {
         if (pt) {
           const [wx, wy, wz] = this.bw(this.boss, pt.ox, pt.oy, pt.oz);
           const to = vnorm({ x: wx - this.pos.x, y: wy - this.pos.y, z: wz - this.pos.z });
-          if (vdot(to, f) > 0.985) aim = to;
+          if (vdot(to, f) > 0.96) aim = to;
         }
       }
       for (const off of twin ? [-9, 9] : [0]) {
@@ -1570,8 +1587,8 @@ class Game extends Phaser.Scene {
         } else {
           // el dardo va al doble de velocidad pero gira peor: te roza y
           // vuelve a intentarlo — esquivarlo es el juego
-          const spd = e.fast ? 640 : 330;
-          const k = MIN(1, (e.fast ? 0.55 : 1.1) * dt);
+          const spd = e.fast ? 640 : 300;
+          const k = MIN(1, (e.fast ? 0.55 : 0.9) * dt);
           e.vx += ((dx / dist) * spd - e.vx) * k;
           e.vy += ((dy / dist) * spd - e.vy) * k;
           e.vz += ((dz / dist) * spd - e.vz) * k;
@@ -1679,22 +1696,17 @@ class Game extends Phaser.Scene {
             this.sj('JUMPING.');
           } else {
             this.say(PARTS[e.idx] + '. ' + (PARTS.length - this.pg) + ' LEFT.');
+            this.time.delayedCall(1400, () => {
+              if (this.fz === 'play') this.wave(2 + this.pg);
+            });
           }
         } else if (
           (this.sp > RAM_SPEED || time < this.du || time < this.su) &&
           (e.k === 'drone' || e.k === 'inter' || e.k === 'emis')
         ) {
-          if (e.k === 'emis' && time < this.su && time - this.sst < PARRY_MS) {
-            // PARRY al misil: estalla como explosión tuya, con su onda
-            e.dead = true;
-            this.dn({ x: e.x, y: e.y, z: e.z });
-            this.ad(25);
-            Sfx.parry();
-          } else {
-            // a toda velocidad — o con dash o escudo — la nave es el arma
-            this.damage(e, 99);
-            this.sh = 7;
-          }
+          // a toda velocidad — o con dash o escudo — la nave es el arma
+          this.damage(e, 99);
+          this.sh = 7;
         } else if (e.k === 'drone' || e.k === 'inter') {
           // metal contra metal no perdona: chocar un caza es morir
           this.damage(e, 99);
@@ -1718,11 +1730,7 @@ class Game extends Phaser.Scene {
       if (shieldOn && d < SHIELD_R + (s.big ? 40 : 0)) {
         s.dead = true;
         this.ht = 0.3;
-        if (time - this.sst < PARRY_MS) {
-          this.bl.push({ x: s.x, y: s.y, z: s.z, vx: -s.vx * 1.8, vy: -s.vy * 1.8, vz: -s.vz * 1.8, life: 1.6 });
-          this.ad(15);
-          Sfx.parry();
-        } else this.bx.push({ wx: s.x, wy: s.y, wz: s.z, t: 0.32 });
+        this.bx.push({ wx: s.x, wy: s.y, wz: s.z, t: 0.32 });
         continue;
       }
       if (d < (s.big ? 60 : 22)) {
