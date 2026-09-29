@@ -130,12 +130,14 @@ const DRONE_FIRE = 3.0; // segundos entre disparos de un cazador
 
 // --- El sector: una esfera de juego alrededor del origen ---
 const SECTOR_R = 3000;
-// El suelo es un agujero negro: siempre debajo de ti. Bajar lo acerca; a
-// BH_PULL de distancia empieza a tirar, y a BH_KILL te tragó.
-const BH_Y = 3600;
-const BH_PULL = 1800;
-const BH_GRIP = 1150; // aquí ya TE TIENE: el crucero no alcanza — dash o nitro
-const BH_KILL = 780;
+// El suelo es la ESTACIÓN: una esfera colosal asomando bajo el sector — no
+// infinita, pero a escala de juego siempre está. Su superficie es pared.
+const ST_R = 14000; // radio de la estación
+const ST_CY = 15800; // centro: la superficie queda a y=1800 bajo el origen
+function surfY(x, z) {
+  const q = ST_R * ST_R - x * x - z * z;
+  return q > 0 ? ST_CY - Math.sqrt(q) : 1e9;
+}
 
 const HULL_MAX = 4;
 const SCORE_KEY = 'space-explorer:scores';
@@ -835,14 +837,16 @@ class Game extends Phaser.Scene {
       if (this.baseAt <= 0) {
         this.baseAt = 55;
         if (this.en.filter((e) => e.base).length < 4) {
-          this.say('TURRET RING BELOW.');
+          this.say('SURFACE GUNS BELOW.');
           for (let i = 0; i < 3; i++) {
             const ang = RND() * PI * 2;
+            const gx2 = this.pos.x + SIN(ang) * (700 + RND() * 500);
+            const gz2 = this.pos.z + COS(ang) * (700 + RND() * 500);
             this.en.push({
               k: 'sentry', base: 1,
-              x: this.pos.x + SIN(ang) * (700 + RND() * 500),
-              y: 1500 + RND() * 250,
-              z: this.pos.z + COS(ang) * (700 + RND() * 500),
+              x: gx2,
+              y: surfY(gx2, gz2) - 70,
+              z: gz2,
               r: 44, hp: 3, t: RND() * 6, yaw: RND() * 6.3, fireAt: 1,
             });
           }
@@ -1047,7 +1051,7 @@ class Game extends Phaser.Scene {
     if (b.cine) {
       b.cineT += dt;
       const ct = b.cineT;
-      const S = b.short ? 0.5 : 1;
+      const S = b.short ? 0.8 : 1;
       b.cineDark = ct < 1.2 * S ? ct / (1.2 * S) : ct < 4.4 * S ? 1 : MAX(0, 1 - (ct - 4.4 * S) / (1.8 * S));
       if (b.hd && ct >= 1.2 * S) {
         b.hd = 0;
@@ -1097,8 +1101,15 @@ class Game extends Phaser.Scene {
       return;
     }
 
-    // cada domo que pierde lo saca del apuro: salto corto a otro punto del
-    // anillo — desaparece, letras, y reaparece al otro lado con salva
+    // si te le acercas demasiado, no pelea contigo cuerpo a cuerpo:
+    // desaparece y te castiga desde lejos
+    if (!b.tpAt && dist < 700 && this.ep > (b.tpCd || 0)) {
+      b.tpCd = this.ep + 12;
+      b.tpAt = 1.0;
+      this.say('TOO CLOSE — IT CHARGES A JUMP.');
+    }
+    // cada domo que pierde también lo saca del apuro: salto corto —
+    // desaparece, un silencio, y reaparece lejos con salva
     if (b.tpAt > 0) {
       b.tpAt -= dt;
       if (b.tpAt <= 0) {
@@ -1372,33 +1383,16 @@ class Game extends Phaser.Scene {
     // el borde del sector te devuelve, suave — pero hacia abajo no hay borde:
     // abajo está el agujero negro, y él pone el límite
 
-    // el agujero negro: cuanto más bajas, más tira — y muy abajo, te traga
-    const bhd = BH_Y - this.pos.y;
-    this.bhx = CLP(1 - (bhd - BH_KILL) / BH_PULL, 0, 1);
-    if (this.bhx > 0.25 && this.ep > (this.rmb || 0)) {
-      // el retumbo del vacío, cada vez más presente
-      this.rmb = this.ep + 0.8;
-      Sfx.tone(26 + this.bhx * 22, 0.9, 'sawtooth', 0.11 * this.bhx, 18);
-    }
-    if (bhd < BH_GRIP) {
-      // el agarre: un jalón que el crucero no vence — sales con dash o nitro
-      this.pos.y += 300 * dt;
-      this.sh = MAX(this.sh, 6);
+    // la superficie de la estación es PARED: aviso cerca, muerte al tocarla
+    const sdy = surfY(this.pos.x, this.pos.z) - this.pos.y;
+    if (sdy < 300) {
+      this.sh = MAX(this.sh, 5);
       if (this.ep > this.wa) {
-        this.wa = this.ep + 2.5;
-        this.say('IT HAS YOU — DASH.');
-      }
-    } else if (bhd < BH_PULL) {
-      const k = 1 - bhd / BH_PULL;
-      this.pos.y += k * k * 620 * dt;
-      this.sh = MAX(this.sh, k * 4);
-      if (this.ep > this.wa) {
-        this.wa = this.ep + 4;
-        this.say('BLACK HOLE — CLIMB.');
+        this.wa = this.ep + 1.5;
+        this.say('PULL UP.');
       }
     }
-    // el horizonte de sucesos no negocia: ni el escudo ni el modo prueba
-    if (bhd < BH_KILL) this.die();
+    if (sdy < 46) this.die();
 
     // alabeo con el giro
     const bank = this.yv * 0.34;
@@ -1504,7 +1498,7 @@ class Game extends Phaser.Scene {
       return;
     }
     if (time < this.iu || time < this.du) return;
-    this.iu = time + 2000;
+    this.iu = time + 2600;
     this.sh = 9;
     Sfx.hurt();
     if (this.shield) {
@@ -1536,10 +1530,15 @@ class Game extends Phaser.Scene {
         let gx = P.x;
         let gy = P.y;
         let gz = P.z;
-        if (e.k === 'drone' && dist < 430) {
-          // ya está encima: apunta a un costado tuyo y pasa de largo
-          gx += (dz / dist) * 600 * e.orbit;
-          gz += (-dx / dist) * 600 * e.orbit;
+        if (e.fl > 0) {
+          e.fl -= dt;
+          // huyendo: lejos de ti, con un quiebre lateral
+          gx = e.x - (dx / dist) * 1500 + (dz / dist) * 500 * e.orbit;
+          gy = e.y - (dy / dist) * 600;
+          gz = e.z - (dz / dist) * 1500 - (dx / dist) * 500 * e.orbit;
+        } else if (dist < 400) {
+          // te tuvo demasiado cerca: rompe y ESCAPA — la pasada terminó
+          e.fl = (e.k === 'ace' ? 1.3 : 2.2) + RND();
         }
         let m = HYP(e.vx, e.vy, e.vz);
         if (m < 40) {
@@ -1568,7 +1567,7 @@ class Game extends Phaser.Scene {
         // el alabeo visual sale del propio viraje
         e.bank = (e.bank || 0) + (CLP(AWR(e.yaw - oy) * 14, -0.9, 0.9) - (e.bank || 0)) * MIN(1, 6 * dt);
         e.fireAt -= dt;
-        if (e.fireAt <= 0 && dist < (e.k === 'ace' ? 1300 : 1000)) {
+        if (e.fireAt <= 0 && !(e.fl > 0) && dist < (e.k === 'ace' ? 1300 : 1000)) {
           e.fireAt = e.k === 'ace' ? 2.2 : DRONE_FIRE;
           this.sa(e, SHOT_SPEED);
         }
@@ -2137,13 +2136,6 @@ class Game extends Phaser.Scene {
       ln(g, p1[0], p1[1], p2[0], p2[1]);
     }
 
-    // cerca del agujero, la pantalla entera se tiñe de acreción: no hay
-    // duda de DÓNDE estás metido
-    const bhProx = CLP(1 - (BH_Y - this.pos.y - BH_KILL) / BH_PULL, 0, 1);
-    if (bhProx > 0.02) {
-      fr(g, 0, 0, W, H, 0xe89a5c, bhProx * (0.09 + 0.05 * SIN(time * 0.004)));
-    }
-
     this.dj(g, cm, time);
     this.dv(g, cm);
     this.di(g, cm, time);
@@ -2179,11 +2171,8 @@ class Game extends Phaser.Scene {
       g.fillStyle(color, alpha);
       g.fillPoints(poly.map(([x, y]) => ({ x, y })), true);
     };
-    // debajo del plano no hay neblina: hay el resplandor del disco de
-    // acreción — TENUE de lejos, para que el óxido enemigo no se pierda
-    // contra él, y encendido solo cuando de verdad estás bajando
-    const prox = CLP(1 - (BH_Y - this.pos.y - BH_KILL) / BH_PULL, 0, 1);
-    for (let i = 0; i < 10; i++) band(i * i * 7, undefined, 0x6b4030, (0.11 - i * 0.01) * (0.2 + 2.4 * prox));
+    // bajo el horizonte: el resplandor frío de la estación, tenue
+    for (let i = 0; i < 10; i++) band(i * i * 7, undefined, 0x2c3a46, 0.1 - i * 0.009);
     band(-18, 18, 0x3a4452, 0.1);
     band(-6, 6, 0x5a6878, 0.1);
     band(-0.7, 0.7, INK, 0.28);
@@ -2235,64 +2224,47 @@ class Game extends Phaser.Scene {
     this.dl(g, cm, time);
   }
 
-  // El agujero negro es el SUELO, y está ANCLADO AL MUNDO bajo el centro del
-  // sector: no gira con tu vista ni te sigue — tú te mueves sobre él. El
-  // disco son anillos fijos en el plano, la sombra es una esfera (igual desde
-  // cualquier ángulo) y los chorros son la vertical del mundo.
+  // LA ESTACIÓN: la superficie de la esfera, dibujada como cuadrícula
+  // local alrededor tuyo — celdas fijas del MUNDO (no te siguen), con
+  // estructuras generadas por hash de celda y luces de posición. Tron abajo.
   dl(g, cm, time) {
-    const t = time * 0.001;
-    const RS = 380; // radio del horizonte de sucesos, en unidades de mundo
-    // cuanto más bajas, más arde el disco — el color te dice dónde estás
-    const prox = CLP(1 - (BH_Y - this.pos.y - BH_KILL) / BH_PULL, 0, 1);
-    // el disco ORBITA: arcos con huecos girando, el anillo interior más
-    // rápido que el exterior, como cae de verdad la materia
-    for (const [r, col, al, wd] of [
-      [760, CRM, 0.7, 2.5],
-      [950, AMB, 0.55, 2],
-      [1200, 0xe89a5c, 0.4, 2],
-      [1550, RUST, 0.3, 1.5],
-      [1980, RUST, 0.2, 1.5],
-      [2500, 0x8a5c48, 0.14, 1.5],
-    ]) {
-      g.lineStyle(wd * (1 + prox), col, MIN(1, al * (1 + 0.9 * prox)));
-      const off = t * (260 / r);
-      for (let arc = 0; arc < 9; arc++) {
-        const a0 = off + (arc / 9) * PI * 2;
-        const span = ((PI * 2) / 9) * 0.7;
-        let prev = null;
-        for (let i = 0; i <= 3; i++) {
-          const a = a0 + (i / 3) * span;
-          const pt = [this.pos.x + COS(a) * r, BH_Y, this.pos.z + SIN(a) * r];
-          if (prev) this.wl(g, cm, prev, pt);
-          prev = pt;
+    const cs = 700;
+    const cx0 = FLR(this.pos.x / cs);
+    const cz0 = FLR(this.pos.z / cs);
+    for (let i = -4; i <= 4; i++) {
+      for (let j = -4; j <= 4; j++) {
+        const x0 = (cx0 + i) * cs;
+        const z0 = (cz0 + j) * cs;
+        const y00 = surfY(x0, z0);
+        if (y00 > 9e8) continue;
+        const al = MAX(0, 1 - HYP(x0 - this.pos.x, z0 - this.pos.z) / 3200) * 0.5 + 0.06;
+        // los dos bordes de la celda: compartidos, forman la malla completa
+        g.lineStyle(1.5, BLD, al);
+        this.wl(g, cm, [x0, y00, z0], [x0 + cs, surfY(x0 + cs, z0), z0]);
+        this.wl(g, cm, [x0, y00, z0], [x0, surfY(x0, z0 + cs), z0 + cs]);
+        // el hash decide qué celda lleva estructura, y de qué altura
+        const hsh = ((x0 * 1103 + z0 * 12793) % 97 + 97) % 97;
+        if (hsh < 22) {
+          const hh = 90 + (hsh % 5) * 70;
+          const bx0 = x0 + cs * 0.3;
+          const bz0 = z0 + cs * 0.3;
+          const bw2 = cs * 0.4;
+          const yb = surfY(bx0 + bw2 / 2, bz0 + bw2 / 2);
+          g.lineStyle(1.5, GRY, al * 1.3);
+          for (const [ox, oz] of [[0, 0], [bw2, 0], [bw2, bw2], [0, bw2]]) {
+            this.wl(g, cm, [bx0 + ox, yb, bz0 + oz], [bx0 + ox, yb - hh, bz0 + oz]);
+          }
+          this.wl(g, cm, [bx0, yb - hh, bz0], [bx0 + bw2, yb - hh, bz0]);
+          this.wl(g, cm, [bx0 + bw2, yb - hh, bz0], [bx0 + bw2, yb - hh, bz0 + bw2]);
+          this.wl(g, cm, [bx0 + bw2, yb - hh, bz0 + bw2], [bx0, yb - hh, bz0 + bw2]);
+          this.wl(g, cm, [bx0, yb - hh, bz0 + bw2], [bx0, yb - hh, bz0]);
+          // la torre alta lleva luz de posición
+          if (hsh < 8 && FLR(time / 500 + hsh) % 3) {
+            const lp = this.pj(cm, bx0 + bw2 / 2, yb - hh - 14, bz0 + bw2 / 2);
+            if (lp) fc(g, lp[0], lp[1], MAX(1.2, 700 / lp[2]), RUST_HI, al * 1.6);
+          }
         }
       }
-    }
-    // brasas sueltas orbitando el disco interno
-    for (let i = 0; i < 5; i++) {
-      const rr = [760, 950, 1200, 950, 760][i];
-      const a = t * (350 / rr) + i * 2.4;
-      const pp = this.pj(cm, this.pos.x + COS(a) * rr, BH_Y, this.pos.z + SIN(a) * rr);
-      if (!pp) continue;
-      fc(g, pp[0], pp[1], MAX(1.5, (26 * FOCAL) / pp[2]), CRM, 0.55 + 0.35 * prox);
-    }
-    const p = this.pj(cm, this.pos.x, BH_Y, this.pos.z);
-    if (p) {
-      const r = (RS * FOCAL) / p[2];
-      fc(g, p[0], p[1], r * 2.6, 0xe8a060, 0.05);
-      fc(g, p[0], p[1], r * 1.7, 0xe8a060, 0.07);
-      fc(g, p[0], p[1], r, 0x000000, 1);
-      sk(g, p[0], p[1], r * 1.04, 2, 0xfff8ea, 0.6 + 0.3 * SIN(t * 3));
-    }
-    // los chorros, con pulsos que viajan hacia afuera; el de arriba es la
-    // columna de luz que marca el centro del sector desde cualquier parte
-    for (const dir of [-1, 1]) {
-      const base = [this.pos.x, BH_Y + dir * RS * 1.15, this.pos.z];
-      const tip = [this.pos.x, BH_Y + dir * RS * 5, this.pos.z];
-      g.lineStyle(7, BLD, 0.1);
-      this.wl(g, cm, base, tip);
-      g.lineStyle(2.5, BLU, 0.3);
-      this.wl(g, cm, base, tip);
     }
   }
 
@@ -2326,12 +2298,7 @@ class Game extends Phaser.Scene {
       const wy = this.pos.y + WRP(m.y - this.pos.y, -L / 2, L / 2);
       const wz = this.pos.z + WRP(m.z - this.pos.z, -L / 2, L / 2);
       const p1 = this.pj(cm, wx, wy, wz);
-      const p2 = this.pj(
-        cm,
-        wx + f.x * this.sp * trail,
-        wy + f.y * this.sp * trail + (this.bhx || 0) * 70,
-        wz + f.z * this.sp * trail
-      );
+      const p2 = this.pj(cm, wx + f.x * this.sp * trail, wy + f.y * this.sp * trail, wz + f.z * this.sp * trail);
       if (!p1 || !p2) continue;
       const dist = HYP(wx - this.pos.x, wy - this.pos.y, wz - this.pos.z);
       const a = CLP(1 - dist / 420, 0, 1) * 0.5 * (this.sp / TURBO_SPEED + 0.3);
@@ -2516,7 +2483,7 @@ class Game extends Phaser.Scene {
 
   dj(g, cm, time) {
     if (this.fz === 'out') return;
-    if (time < this.iu && FLR(time / 60) % 2 === 0) return;
+    if (time < this.iu && FLR(time / 95) % 2 === 0) return;
     const f = this.fw();
     // dash: la nave deja copias fantasma — mientras se ven, nada te toca
     if (time < this.du) {
