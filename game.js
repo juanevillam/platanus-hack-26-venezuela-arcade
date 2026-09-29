@@ -2611,18 +2611,16 @@ class Game extends Phaser.Scene {
       g.fillCircle(p[0], p[1], Math.max(1.5, 300 / p[2]));
     }
     if (e.k === 'drone' || e.k === 'inter') {
-      // el ojo de brasa en la nariz y el motor ardiendo atrás: un bicho vivo
-      const sn = Math.sin(e.yaw);
-      const cs = Math.cos(e.yaw);
-      const nose = this.project(cm, e.x + sn * 16 * HUNTER_SCALE, e.y - 4, e.z + cs * 16 * HUNTER_SCALE);
+      // el ojo de brasa en la nariz: se lee quién te está mirando
+      const nose = this.project(
+        cm,
+        e.x + Math.sin(e.yaw) * 16 * HUNTER_SCALE,
+        e.y - 4,
+        e.z + Math.cos(e.yaw) * 16 * HUNTER_SCALE
+      );
       if (nose) {
         g.fillStyle(RUST_HI, a * (0.6 + 0.4 * Math.sin(e.t * 6)));
         g.fillCircle(nose[0], nose[1], Math.max(1.5, 600 / nose[2]));
-      }
-      const tail = this.project(cm, e.x - sn * 11 * HUNTER_SCALE, e.y, e.z - cs * 11 * HUNTER_SCALE);
-      if (tail) {
-        g.fillStyle(0xf6c98a, a * 0.7);
-        g.fillCircle(tail[0], tail[1], Math.max(1.5, 800 / tail[2]));
       }
     }
     if (e.k === 'sentry') {
@@ -2825,23 +2823,6 @@ class Game extends Phaser.Scene {
       if (mp) {
         g.fillStyle(INK_HI, 0.9);
         g.fillCircle(mp[0], mp[1], Math.max(2, 500 / mp[2]));
-      }
-    }
-    // las toberas encendidas: dos brasas que laten con la velocidad
-    const burn = 0.45 + 0.4 * (this.speed / NITRO_MAX) + 0.15 * Math.sin(time * 0.03);
-    for (const sgn of [-1, 1]) {
-      const mx = 11 * sgn;
-      const ep = this.project(
-        cm,
-        this.pos.x + this.R.x * mx - this.U.x - f.x * 15,
-        this.pos.y + this.R.y * mx - this.U.y - f.y * 15,
-        this.pos.z + this.R.z * mx - this.U.z - f.z * 15
-      );
-      if (ep) {
-        g.fillStyle(0xf6c98a, burn * 0.35);
-        g.fillCircle(ep[0], ep[1], Math.max(2, 900 / ep[2]));
-        g.fillStyle(0xfff1d6, burn);
-        g.fillCircle(ep[0], ep[1], Math.max(1.2, 420 / ep[2]));
       }
     }
     // estela del motor
