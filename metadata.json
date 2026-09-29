@@ -1,5 +1,5 @@
 {
   "game_name": "Space Explorer",
-  "description": "Vuelo libre 3D en wireframe, sobre un agujero negro. Nivel 0: recupera las tres piezas del hipersalto. Nivel 1: un destructor bloquea el salto — derríbalo y vuelve a casa.",
+  "description": "Free-flight 3D wireframe shooter over a black hole. Level 0: recover the four jump-drive parts. Level 1: a destroyer blocks your jump — bring it down and make it home.",
   "player_mode": "single_player"
 }
