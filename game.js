@@ -19,7 +19,13 @@
 // pj=project pd=projectDir wl=worldLine sg=strokeEdges bw=bossToWorld
 // wb=worldToBoss bo=bossPartOpen ba=bossAimPart bp=bossHitPart ib=insideBoss
 // db=drawBasisModel dm=drawWorldModel de=drawEnt dr=drawDestroyer
-// so=skyObject sd=spawnDrones sa=shootAtPlayer bt=bestTarget
+// so=skyObject sd=spawnDrones sa=shootAtPlayer bt=bestTarget up=updatePlayer
+// ue=updateEnts ux=updateBolts um=updateMissiles uc=updateCamera uh=updateHud
+// ub=updateBoss bs=buildStars bu=buildHud po=populate ri=randIn sj=startJump
+// kb=killBoss hy=hitPlayer ad=addScore dp=dropPow sy=spray bm=boomAt
+// dn=detonate fg=fogAlpha kr=skyRoll dh=drawHorizon dl=drawHole dk=drawSky
+// dz=drawStars dd=drawDust dw=drawWarp dj=drawShip dv=drawNav di=drawIncoming
+// fw=forward
 // Estado: sp=speed cu=cruise fz=phase en=ents sh=shake bx=booms tr=trail
 // ft=flashT bz=boost hd=hidden ss=shots bl=bolts ms=missiles sz=shards
 // sn=stars yv=yawVel pv=pitchVel su=shieldUntil sw=shieldReady ht=shieldHitT
@@ -42,6 +48,16 @@ const PI = Math.PI;
 const CLP = Phaser.Math.Clamp;
 const WRP = Phaser.Math.Wrap;
 const AWR = Phaser.Math.Angle.Wrap;
+
+// Modelos comprimidos: vértices planos de a 3, y las aristas como un string
+// (cada char es un índice + 48) — el minificador no comprime arrays de pares
+function mdl(flat, es) {
+  const V = [];
+  for (let i = 0; i < flat.length; i += 3) V.push(flat.slice(i, i + 3));
+  const E = [];
+  for (let i = 0; i < es.length; i += 2) E.push([es.charCodeAt(i) - 48, es.charCodeAt(i + 1) - 48]);
+  return [V, E];
+}
 
 // --- Resolución nativa 800x600: líneas y texto nítidos ---
 const W = 800;
@@ -325,88 +341,21 @@ const Sfx = {
 
 // La nave: caza esbelto — parabrisas marcado, alas en flecha con winglets,
 // timón alto y dos góndolas de motor bajo las alas
-const SHIP_MODEL = [
-  [
-    [0, 0, 26], // 0 nariz
-    [0, -3.5, 14], // 1 parabrisas
-    [0, -5.5, 2], // 2 techo de cabina
-    [0, -4, -8], // 3 lomo
-    [0, -11, -17], // 4 timón, punta
-    [0, 0, -16], // 5 cola
-    [-5, -1, 8], // 6 raíz ala izq
-    [5, -1, 8], // 7 raíz ala der
-    [-22, 1, -13], // 8 punta ala izq
-    [22, 1, -13], // 9 punta ala der
-    [-22, -4, -15], // 10 winglet izq
-    [22, -4, -15], // 11 winglet der
-    [0, 3, -6], // 12 panza
-    [-9, 1, -2], // 13 góndola izq, frente
-    [9, 1, -2], // 14 góndola der, frente
-    [-11, 1, -15], // 15 góndola izq, tobera
-    [11, 1, -15], // 16 góndola der, tobera
-    [-3, -1.5, 19], // 17 arista de proa izq
-    [3, -1.5, 19], // 18 arista de proa der
-  ],
-  [
-    [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [3, 5],
-    [0, 6], [0, 7], [6, 8], [7, 9], [8, 5], [9, 5],
-    [8, 10], [9, 11],
-    [0, 12], [12, 5], [6, 12], [7, 12],
-    [6, 13], [13, 15], [7, 14], [14, 16], [15, 5], [16, 5],
-    [0, 17], [17, 6], [0, 18], [18, 7], // la proa facetada
-    [2, 6], [2, 7], // los laterales de la cabina bajan al ala
-  ],
-];
+const SHIP_MODEL = mdl([0, 0, 26, 0, -3.5, 14, 0, -5.5, 2, 0, -4, -8, 0, -11, -17, 0, 0, -16, -5, -1, 8, 5, -1, 8, -22, 1, -13, 22, 1, -13, -22, -4, -15, 22, -4, -15, 0, 3, -6, -9, 1, -2, 9, 1, -2, -11, 1, -15, 11, 1, -15, -3, -1.5, 19, 3, -1.5, 19], '0112233445350607687985958:9;0<<56<7<6==?7>>@?5@50AA60BB72627');
 
 // Centinela: pirámide vigilante, con ojo
-const SENTRY_MODEL = [
-  [
-    [-22, 14, -22], [22, 14, -22], [22, 14, 22], [-22, 14, 22], [0, -26, 0],
-  ],
-  [
-    [0, 1], [1, 2], [2, 3], [3, 0], [0, 4], [1, 4], [2, 4], [3, 4], [0, 2], [1, 3],
-  ],
-];
+const SENTRY_MODEL = mdl([-22, 14, -22, 22, 14, -22, 22, 14, 22, -22, 14, 22, 0, -26, 0], '01122330041424340213');
 
 // Dron cazador: alas quebradas en codo con garras hacia adelante — una
 // silueta agresiva que no se confunde con la tuya
-const DRONE_MODEL = [
-  [
-    [0, 0, 18], // 0 nariz
-    [0, -6, 4], // 1 cabina
-    [0, -3, -8], // 2 lomo trasero
-    [0, 0, -12], // 3 cola
-    [-6, 0, 2], // 4 raíz izq
-    [6, 0, 2], // 5 raíz der
-    [-18, 1, -6], // 6 codo ala izq
-    [18, 1, -6], // 7 codo der
-    [-24, 0, 8], // 8 garra izq, hacia adelante
-    [24, 0, 8], // 9 garra der
-    [-18, -8, -9], // 10 aleta izq
-    [18, -8, -9], // 11 aleta der
-    [0, 5, -4], // 12 panza
-  ],
-  [
-    [0, 1], [1, 2], [2, 3],
-    [0, 4], [0, 5], [4, 6], [5, 7], [6, 3], [7, 3],
-    [6, 8], [7, 9],
-    [6, 10], [7, 11],
-    [0, 12], [12, 3], [4, 12], [5, 12],
-  ],
-];
+const DRONE_MODEL = mdl([0, 0, 18, 0, -6, 4, 0, -3, -8, 0, 0, -12, -6, 0, 2, 6, 0, 2, -18, 1, -6, 18, 1, -6, -24, 0, 8, 24, 0, 8, -18, -8, -9, 18, -8, -9, 0, 5, -4], '01122304054657637368796:7;0<<34<5<');
 const HUNTER_SCALE = 3; // cazadores e interceptores: grandes, fáciles de seguir
 
 // Mina: octaedro
-const MINE_MODEL = [
-  [
-    [0, -12, 0], [10, 0, 0], [0, 12, 0], [-10, 0, 0], [0, 0, 10], [0, 0, -10],
-  ],
-  [
-    [0, 1], [1, 2], [2, 3], [3, 0], [0, 4], [1, 4], [2, 4], [3, 4], [0, 5], [1, 5], [2, 5], [3, 5],
-  ],
-];
 
-const PART_MODEL = MINE_MODEL; // la pieza: el mismo octaedro, en tinta y girando
+
+// la pieza: un octaedro, en tinta y girando
+const PART_MODEL = mdl([0, -12, 0, 10, 0, 0, 0, 12, 0, -10, 0, 0, 0, 0, 10, 0, 0, -10], '011223300414243405152535');
 
 // Asteroide: icosaedro con cada vértice desplazado — cada roca es única,
 // facetada como piedra en vez de un contorno plano
@@ -436,27 +385,7 @@ function makeRockModel() {
 
 // Interceptor: aguja con cuchillas hacia adelante, canards junto a la nariz
 // y una aleta dorsal — un dardo con filo
-const INTER_MODEL = [
-  [
-    [0, 0, 24], // 0 nariz
-    [0, -4, -4], // 1 lomo
-    [0, 4, -4], // 2 quilla
-    [-4, 0, -4], // 3 flanco izq
-    [4, 0, -4], // 4 flanco der
-    [0, 0, -14], // 5 cola
-    [-15, 0, 7], // 6 cuchilla izq
-    [15, 0, 7], // 7 cuchilla der
-    [-9, -1, 14], // 8 canard izq
-    [9, -1, 14], // 9 canard der
-    [0, -8, -12], // 10 aleta dorsal
-  ],
-  [
-    [0, 1], [0, 2], [0, 3], [0, 4], [1, 5], [2, 5], [3, 5], [4, 5],
-    [3, 6], [6, 5], [4, 7], [7, 5],
-    [0, 8], [8, 3], [0, 9], [9, 4],
-    [1, 10], [10, 5],
-  ],
-];
+const INTER_MODEL = mdl([0, 0, 24, 0, -4, -4, 0, 4, -4, -4, 0, -4, 4, 0, -4, 0, 0, -14, -15, 0, 7, 15, 0, 7, -9, -1, 14, 9, -1, 14, 0, -8, -12], '010203041525354536654775088309941::5');
 
 // El destructor: una cuña de casi mil unidades con su torre de mando atrás.
 // Local: x derecha, y abajo, z hacia la proa.
@@ -466,42 +395,7 @@ const SD_REAR = -400;
 const SD_HALF_W = 300; // media manga en la popa
 const SD_RIDGE = -80; // altura del lomo en la popa
 const SD_KEEL = 70;
-const DESTROYER_MODEL = [
-  [
-    [0, 0, SD_NOSE], // 0 proa
-    [-SD_HALF_W, 0, SD_REAR], // 1 popa, borde babor
-    [SD_HALF_W, 0, SD_REAR], // 2 popa, borde estribor
-    [0, SD_RIDGE, SD_REAR], // 3 lomo en popa
-    [0, SD_KEEL, SD_REAR], // 4 quilla en popa
-    [-280, 24, SD_REAR], // 5 babor bajo
-    [280, 24, SD_REAR], // 6 estribor bajo
-    [0, -45, 80], // 7 lomo a media eslora
-    [-80, -70, -250], [80, -70, -250], [80, -70, SD_REAR], [-80, -70, SD_REAR], // 8-11 base de la torre
-    [-60, -150, -290], [60, -150, -290], [60, -150, SD_REAR], [-60, -150, SD_REAR], // 12-15 techo de la torre
-    [-130, -165, -340], [130, -165, -340], // 16-17 puente
-    [-150, -40, SD_REAR], [150, -40, SD_REAR], // 18-19 líneas de paneles
-    [-36, -30, 420], [36, -30, 420], // 20-21 trinchera dorsal, proa
-    [-56, -56, -250], [56, -56, -250], // 22-23 trinchera dorsal, popa
-    [-60, 38, 60], [60, 38, 60], // 24-25 hangar de la quilla, frente
-    [-60, 44, -120], [60, 44, -120], // 26-27 hangar, fondo
-    [-110, -180, -340], [110, -180, -340], // 28-29 mástiles de los domos
-    [-150, -6, 180], [150, -6, 180], // 30-31 quillas laterales del casco
-    [-95, -142, -338], [95, -142, -338], // 32-33 ventanas del puente
-    [-70, -110, -272], [70, -110, -272], [70, -110, SD_REAR], [-70, -110, SD_REAR], // 34-37 banda media de la torre
-  ],
-  [
-    [0, 1], [0, 2], [0, 7], [7, 3], [0, 4], [1, 3], [2, 3], [1, 5], [2, 6], [5, 4], [6, 4],
-    [0, 5], [0, 6], [0, 18], [0, 19],
-    [8, 9], [9, 10], [10, 11], [11, 8], [12, 13], [13, 14], [14, 15], [15, 12],
-    [8, 12], [9, 13], [10, 14], [11, 15], [16, 17], [12, 16], [13, 17],
-    [20, 22], [21, 23], [20, 21], // la trinchera que corre hasta la torre
-    [24, 25], [25, 27], [27, 26], [26, 24], // la boca del hangar
-    [12, 28], [13, 29], // los mástiles que sostienen los domos de escudo
-    [0, 30], [30, 1], [0, 31], [31, 2], // las quillas que facetan el casco
-    [32, 33], // la fila de ventanas del puente
-    [34, 35], [35, 36], [36, 37], [37, 34], // la banda media de la torre
-  ],
-];
+const DESTROYER_MODEL = mdl([0, 0, 560, -300, 0, -400, 300, 0, -400, 0, -80, -400, 0, 70, -400, -280, 24, -400, 280, 24, -400, 0, -45, 80, -80, -70, -250, 80, -70, -250, 80, -70, -400, -80, -70, -400, -60, -150, -290, 60, -150, -290, 60, -150, -400, -60, -150, -400, -130, -165, -340, 130, -165, -340, -150, -40, -400, 150, -40, -400, -36, -30, 420, 36, -30, 420, -56, -56, -250, 56, -56, -250, -60, 38, 60, 60, 38, 60, -60, 44, -120, 60, 44, -120, -110, -180, -340, 110, -180, -340, -150, -6, 180, 150, -6, 180, -95, -142, -338, 95, -142, -338, -70, -110, -272, 70, -110, -272, 70, -110, -400, -70, -110, -400], '010207730413231526546405060B0C899::;;8<==>>??<8<9=:>;?@A<@=ADFEGDEHIIKKJJH<L=M0NN10OO2PQRSSTTUUR');
 // Puntos débiles: torretas en la cubierta, dos domos de escudo sobre el puente,
 // y el puente mismo, que solo recibe daño con los domos caídos
 const SD_PARTS = [
@@ -514,52 +408,19 @@ const SD_PARTS = [
 const SD_PART_R = { turret: 42 * SD_SCALE, dome: 46 * SD_SCALE, bridge: 72 * SD_SCALE };
 
 // Misil: cuerpo largo con cuatro aletas atrás — se tiene que ver como poder
-const MISSILE_MODEL = [
-  [
-    [0, 0, 16], [0, 0, -12], // 0-1 eje
-    [-3, 0, 8], [3, 0, 8], [0, -3, 8], [0, 3, 8], // 2-5 hombros
-    [-8, 0, -14], [8, 0, -14], [0, -8, -14], [0, 8, -14], // 6-9 aletas
-    [-3, 0, -6], [3, 0, -6], [0, -3, -6], [0, 3, -6], // 10-13 raíz de aletas
-  ],
-  [
-    [0, 2], [0, 3], [0, 4], [0, 5], [2, 10], [3, 11], [4, 12], [5, 13],
-    [10, 6], [11, 7], [12, 8], [13, 9], [6, 1], [7, 1], [8, 1], [9, 1],
-  ],
-];
+const MISSILE_MODEL = mdl([0, 0, 16, 0, 0, -12, -3, 0, 8, 3, 0, 8, 0, -3, 8, 0, 3, 8, -8, 0, -14, 8, 0, -14, 0, -8, -14, 0, 8, -14, -3, 0, -6, 3, 0, -6, 0, -3, -6, 0, 3, -6], '020304052:3;4<5=:6;7<8=961718191');
 
 // Mejoras: escudo (anillo), reparación (cruz), cañón doble (dos rayas)
 const POW_MODELS = {
-  shield: [
-    [[0, -10, 0], [9, 0, 0], [0, 10, 0], [-9, 0, 0], [0, 0, 0]],
-    [[0, 1], [1, 2], [2, 3], [3, 0]],
-  ],
-  hull: [
-    [[0, -9, 0], [0, 9, 0], [-9, 0, 0], [9, 0, 0]],
-    [[0, 1], [2, 3]],
-  ],
-  twin: [
-    [[-5, -9, 0], [-5, 9, 0], [5, -9, 0], [5, 9, 0]],
-    [[0, 1], [2, 3]],
-  ],
-  missile: [
-    [[0, -12, 0], [0, 10, 0], [-6, 10, 0], [6, 10, 0], [-3, -6, 0], [3, -6, 0]],
-    [[0, 1], [1, 2], [1, 3], [0, 4], [0, 5]],
-  ],
+  shield: mdl([0, -10, 0, 9, 0, 0, 0, 10, 0, -9, 0, 0, 0, 0, 0], '01122330'),
+  hull: mdl([0, -9, 0, 0, 9, 0, -9, 0, 0, 9, 0, 0], '0123'),
+  twin: mdl([-5, -9, 0, -5, 9, 0, 5, -9, 0, 5, 9, 0], '0123'),
+  missile: mdl([0, -12, 0, 0, 10, 0, -6, 10, 0, 6, 10, 0, -3, -6, 0, 3, -6, 0], '0112130405'),
 };
 const POW_NAMES = { shield: 'SHIELD UP', hull: 'HULL +1', twin: 'TWIN CANNON', missile: '+2 MISSILES' };
 
 // Chatarra: un trozo de casco — placa con borde, puntal y una solapa doblada
-const SCRAP_MODEL = [
-  [
-    [-8, -6, 0], [7, -7, 0], [9, 4, 0], [-6, 6, 0], // 0-3 placa
-    [13, 8, -6], [-2, 11, -6], // 4-5 solapa doblada
-    [-8, -6, -4], [7, -7, -4], // 6-7 borde
-  ],
-  [
-    [0, 1], [1, 2], [2, 3], [3, 0], [2, 4], [4, 5], [5, 3],
-    [0, 6], [1, 7], [6, 7], [0, 2],
-  ],
-];
+const SCRAP_MODEL = mdl([-8, -6, 0, 7, -7, 0, 9, 4, 0, -6, 6, 0, 13, 8, -6, -2, 11, -6, -8, -6, -4, 7, -7, -4], '0112233024455306176702');
 
 const FONT = (size, color) => ({
   fontFamily: 'monospace',
@@ -598,9 +459,6 @@ class Title extends Phaser.Scene {
 
   create() {
     this.events.on('postupdate', clearPressed);
-    this.gfx = this.add.graphics();
-    this.spin = 0;
-
     this.add.text(CX, 96, 'S P A C E  E X P L O R E R', FONT(36)).setOrigin(0.5);
     this.add.text(160, 360, 'STICK\nB1\nB2\nB3\nB4/B6\nSTART', FONT(14)).setOrigin(1, 0).setAlign('right').setLineSpacing(13);
     this.add
@@ -621,40 +479,9 @@ class Title extends Phaser.Scene {
     this.press = this.add.text(CX, H - 52, 'PRESS START', FONT(16)).setOrigin(0.5);
   }
 
-  update(time, delta) {
-    this.spin += delta * 0.0009;
-    this.gfx.clear();
-    // tu nave, girando en vitrina — vista desde ARRIBA, como en vuelo
-    drawModelAt(this.gfx, SHIP_MODEL, CX, 236, 0, 0.38, 2.4, INK, 1, 1.5, this.spin);
+  update(time) {
     this.press.setAlpha(FLR(time / 600) % 2 ? 1 : 0.25);
     if (anyStart()) this.scene.start('game', { level: 0 });
-  }
-}
-
-// Dibuja un modelo suelto en pantalla (título): yaw + roll + pitch, sin cámara
-function drawModelAt(g, model, sx, sy, roll, pitch, size, color, alpha, width, yaw) {
-  const [verts, edges] = model;
-  const cr = COS(roll);
-  const sr = SIN(roll);
-  const cp = COS(pitch);
-  const sp = SIN(pitch);
-  const cy = COS(yaw || 0);
-  const sy2 = SIN(yaw || 0);
-  const pts = verts.map(([mx0, my, mz0]) => {
-    const mx = mx0 * cy + mz0 * sy2;
-    const mz = -mx0 * sy2 + mz0 * cy;
-    let x = mx * cr - my * sr;
-    let y = mx * sr + my * cr;
-    let z = mz;
-    const y2 = y * cp - z * sp;
-    z = y * sp + z * cp;
-    y = y2;
-    const p = (FOCAL / (FOCAL + z * size)) * size;
-    return [sx + x * p, sy + y * p];
-  });
-  g.lineStyle(width || 1.5, color, alpha);
-  for (const [a, b] of edges) {
-    ln(g, pts[a][0], pts[a][1], pts[b][0], pts[b][1]);
   }
 }
 
@@ -832,9 +659,9 @@ class Game extends Phaser.Scene {
     this.mz2 = 0;
     this.boss = null;
 
-    this.populate();
-    this.buildStars();
-    this.buildHud();
+    this.po();
+    this.bs();
+    this.bu();
 
     this.flash = this.add.rectangle(CX, CY, W, H, 0xffffff).setAlpha(0).setDepth(10);
     if (this.level) {
@@ -846,7 +673,7 @@ class Game extends Phaser.Scene {
   }
 
   // El sector se puebla UNA vez: todo anclado al mundo, tú te mueves
-  populate() {
+  po() {
     const rnd = (a, b) => a + RND() * (b - a);
     if (this.level === 0) {
       // NIVEL 0: las piezas DISPERSAS por el sector, cada una en su rincón
@@ -875,7 +702,7 @@ class Game extends Phaser.Scene {
         }
       }
       for (let i = 0; i < 2; i++) {
-        const p = this.randIn(SECTOR_R * 0.8);
+        const p = this.ri(SECTOR_R * 0.8);
         this.en.push({ k: 'eel', x: p[0], y: p[1] * 0.4, z: p[2], r: 22, hp: 2, t: rnd(0, 9), yaw: rnd(0, 6.3) });
       }
     }
@@ -885,26 +712,26 @@ class Game extends Phaser.Scene {
     const rocks = this.level ? 8 : 10;
     const scraps = this.level ? 8 : 12;
     for (let i = 0; i < rocks; i++) {
-      const p = this.randIn(SECTOR_R * 0.95);
+      const p = this.ri(SECTOR_R * 0.95);
       this.en.push({
         k: 'rock', x: p[0], y: p[1] * 0.5, z: p[2], r: 42, hp: 2, t: rnd(0, 9), model: makeRockModel(),
         spin: rnd(-0.5, 0.5), vx: rnd(-16, 16), vy: rnd(-10, 10), vz: rnd(-16, 16), yaw: 0,
       });
     }
     for (let i = 0; i < scraps; i++) {
-      const p = this.randIn(SECTOR_R * 0.9);
+      const p = this.ri(SECTOR_R * 0.9);
       this.en.push({ k: 'scrap', x: p[0], y: p[1] * 0.5, z: p[2], r: 16, t: rnd(0, 6), yaw: 0 });
     }
   }
 
-  randIn(r) {
+  ri(r) {
     const ang = RND() * PI * 2;
     const rr = 300 + RND() * (r - 300);
     return [SIN(ang) * rr, (RND() - 0.5) * 2 * r * 0.5, COS(ang) * rr];
   }
 
   // Estrellas: puntos fijos del mundo, envueltos en una caja alrededor tuyo
-  buildStars() {
+  bs() {
     // Stars sit at infinity: they only turn with the view and never slide
     // past, so the one thing moving through the sector is you
     this.sn = [];
@@ -941,7 +768,7 @@ class Game extends Phaser.Scene {
     }
   }
 
-  buildHud() {
+  bu() {
     this.velText = this.add.text(12, 10, '', FONT(15)).setAlpha(0.9);
     this.scoreText = this.add.text(W - 12, 10, '', FONT(15)).setOrigin(1, 0).setAlpha(0.9);
     this.partText = this.add.text(W - 12, H - 28, '', FONT(15, DIM_CSS)).setOrigin(1, 0);
@@ -1031,17 +858,17 @@ class Game extends Phaser.Scene {
     }
 
     this.et = MAX(0, this.et - dt);
-    if (this.fz !== 'out' && this.fz !== 'jump') this.updatePlayer(time, dt);
-    this.updateEnts(time, dt);
-    this.updateBolts(dt);
-    this.updateMissiles(dt, time);
-    this.updateCamera(dt);
+    if (this.fz !== 'out' && this.fz !== 'jump') this.up(time, dt);
+    this.ue(time, dt);
+    this.ux(dt);
+    this.um(dt, time);
+    this.uc(dt);
     this.draw(time);
-    this.updateHud();
+    this.uh();
   }
 
   // El hipersalto arranca: túnel de estrellas, sin control, y al siguiente nivel
-  startJump(msg) {
+  sj(msg) {
     if (this.fz === 'jump') return;
     this.fz = 'jump';
     this.jt = 0;
@@ -1180,21 +1007,21 @@ class Game extends Phaser.Scene {
       return;
     }
     this.bx.push({ wx, wy, wz, t: 0, big: true });
-    this.spray(wx, wy, wz, 8);
+    this.sy(wx, wy, wz, 8);
     Sfx.boom();
     if (pt.kind === 'turret') {
-      this.addScore(60);
-      this.dropPow(wx, wy, wz, 0.5);
+      this.ad(60);
+      this.dp(wx, wy, wz, 0.5);
     } else if (pt.kind === 'dome') {
-      this.addScore(150);
+      this.ad(150);
       this.say(b.parts.some((q) => q.kind === 'dome' && q.hp > 0) ? 'DOME DOWN.' : 'SHIELDS DOWN — HIT THE BRIDGE.');
       b.tpAt = 0.7; // perder un domo lo hace saltar a otro punto del anillo
     } else {
-      this.killBoss(b);
+      this.kb(b);
     }
   }
 
-  updateBoss(b, dx, dz, dist, dt) {
+  ub(b, dx, dz, dist, dt) {
     // La escena (entrada, y cada teletransporte en versión corta): el
     // sector se APAGA con las letras contando qué pasa, el destructor
     // aparece DE GOLPE en el negro con el flash, y suelta una lluvia de
@@ -1331,30 +1158,30 @@ class Game extends Phaser.Scene {
     }
   }
 
-  killBoss(b) {
+  kb(b) {
     b.dead = true;
     this.boss = null;
     for (let i = 0; i < 9; i++) {
       const [wx, wy, wz] = this.bw(b, (RND() - 0.5) * 400, (RND() - 0.7) * 150, SD_REAR + RND() * 900);
       this.bx.push({ wx, wy, wz, t: -i * 0.12, big: true });
     }
-    this.spray(b.x, b.y, b.z, 24);
+    this.sy(b.x, b.y, b.z, 24);
     this.sh = 16;
-    this.addScore(1000);
+    this.ad(1000);
     Sfx.boom();
     this.fz = 'charge';
     this.ch = 0;
     this.say('DESTROYER DOWN. CHARGING JUMP — SURVIVE.');
   }
 
-  addScore(pts) {
+  ad(pts) {
     this.score += pts * this.mu;
     if (this.mt > 0) this.mu = MIN(5, this.mu + 1);
     else this.mu = 2;
     this.mt = 4;
   }
 
-  dropPow(x, y, z, chance) {
+  dp(x, y, z, chance) {
     if (RND() > chance) return;
     const subs = ['shield', 'hull', 'twin', 'missile', 'missile'];
     this.en.push({
@@ -1368,7 +1195,7 @@ class Game extends Phaser.Scene {
     });
   }
 
-  spray(x, y, z, n) {
+  sy(x, y, z, n) {
     for (let i = 0; i < n; i++) {
       const a1 = RND() * PI * 2;
       const a2 = (RND() - 0.5) * PI;
@@ -1384,11 +1211,11 @@ class Game extends Phaser.Scene {
   }
 
   // --- la nave: tuya, libre ---
-  forward() {
+  fw() {
     return this.F;
   }
 
-  updatePlayer(time, dt) {
+  up(time, dt) {
     // la entrada del destructor es una escena: motores al mínimo, sin dash
     // ni nitro, y la nave se NIVELA Y ENCUADRA al destructor sola — lo ves
     // de lado, entero, y recuperas el mando cuando la luz vuelve
@@ -1474,7 +1301,7 @@ class Game extends Phaser.Scene {
       this.sp += (this.cu - this.sp) * MIN(1, SPEED_EASE * dt);
     }
 
-    const f = this.forward();
+    const f = this.fw();
     this.pos.x += f.x * this.sp * dt;
     this.pos.y += f.y * this.sp * dt;
     this.pos.z += f.z * this.sp * dt;
@@ -1595,7 +1422,7 @@ class Game extends Phaser.Scene {
     return best;
   }
 
-  hitPlayer(time) {
+  hy(time) {
     if (this.fz === 'out') return;
     if (time < this.su) {
       // la burbuja se lleva el golpe: se ve dónde pegó
@@ -1622,7 +1449,7 @@ class Game extends Phaser.Scene {
   }
 
   // --- el sector ---
-  updateEnts(time, dt) {
+  ue(time, dt) {
     const P = this.pos;
 
     for (const e of this.en) {
@@ -1681,10 +1508,10 @@ class Game extends Phaser.Scene {
         e.life -= dt;
         if (e.life <= 0) {
           e.dead = true;
-          this.boomAt(e);
+          this.bm(e);
         }
       } else if (e.k === 'boss') {
-        this.updateBoss(e, dx, dz, dist, dt);
+        this.ub(e, dx, dz, dist, dt);
       } else if (e.k === 'pow') {
         e.life -= dt;
         if (e.life <= 0) e.dead = true;
@@ -1779,7 +1606,7 @@ class Game extends Phaser.Scene {
           this.score += 100;
           Sfx.part();
           if (this.pg >= PARTS.length) {
-            this.startJump('ALL PARTS — JUMPING.');
+            this.sj('ALL PARTS — JUMPING.');
           } else {
             this.say(PARTS[e.idx] + ' SECURED. ' + (PARTS.length - this.pg) + ' LEFT.');
           }
@@ -1789,8 +1616,8 @@ class Game extends Phaser.Scene {
           this.sh = 7;
         } else {
           if (e.k !== 'sentry' && e.k !== 'boss') e.dead = true;
-          this.boomAt(e);
-          this.hitPlayer(time);
+          this.bm(e);
+          this.hy(time);
         }
       }
     }
@@ -1811,7 +1638,7 @@ class Game extends Phaser.Scene {
       }
       if (d < (s.big ? 60 : 22)) {
         s.dead = true;
-        this.hitPlayer(time);
+        this.hy(time);
       }
     }
 
@@ -1873,10 +1700,10 @@ class Game extends Phaser.Scene {
       return;
     }
     e.dead = true;
-    this.boomAt(e);
-    this.spray(e.x, e.y, e.z, 6);
-    this.addScore(e.k === 'sentry' ? 40 : e.k === 'rock' ? 15 : 25);
-    if (e.k === 'drone' || e.k === 'inter') this.dropPow(e.x, e.y, e.z, 0.35);
+    this.bm(e);
+    this.sy(e.x, e.y, e.z, 6);
+    this.ad(e.k === 'sentry' ? 40 : e.k === 'rock' ? 15 : 25);
+    if (e.k === 'drone' || e.k === 'inter') this.dp(e.x, e.y, e.z, 0.35);
     if (this.fz === 'charge') this.ch = MIN(CHARGE_TIME, this.ch + KILL_CHARGE);
     Sfx.boom();
     if (e.k === 'rock' && e.r > 20) {
@@ -1897,7 +1724,7 @@ class Game extends Phaser.Scene {
     this.bx.push({ wx: e.x, wy: e.y, wz: e.z, t: 0.28, muzzle: true });
     // apunta a donde VAS a estar, no a donde estás
     const t = HYP(this.pos.x - e.x, this.pos.y - e.y, this.pos.z - e.z) / sp;
-    const f = this.forward();
+    const f = this.fw();
     const tx = this.pos.x + f.x * this.sp * t * 0.7;
     const ty = this.pos.y + f.y * this.sp * t * 0.7;
     const tz = this.pos.z + f.z * this.sp * t * 0.7;
@@ -1917,11 +1744,11 @@ class Game extends Phaser.Scene {
     });
   }
 
-  boomAt(e) {
+  bm(e) {
     this.bx.push({ wx: e.x, wy: e.y, wz: e.z, t: 0 });
   }
 
-  updateBolts(dt) {
+  ux(dt) {
     for (const b of this.bl) {
       b.x += b.vx * dt;
       b.y += b.vy * dt;
@@ -1931,7 +1758,7 @@ class Game extends Phaser.Scene {
     this.bl = this.bl.filter((b) => !b.dead && b.life > 0);
   }
 
-  updateMissiles(dt) {
+  um(dt) {
     for (const m of this.ms) {
       const t = m.target;
       if (t && !t.dead) {
@@ -1950,9 +1777,9 @@ class Game extends Phaser.Scene {
         m.vx += ((dx / d) * MISSILE_SPEED - m.vx) * k;
         m.vy += ((dy / d) * MISSILE_SPEED - m.vy) * k;
         m.vz += ((dz / d) * MISSILE_SPEED - m.vz) * k;
-        if (d < hitR) this.detonate(m);
+        if (d < hitR) this.dn(m);
       }
-      if (!m.dead && this.boss && !this.boss.hd && this.ib(this.boss, m.x, m.y, m.z, 0)) this.detonate(m);
+      if (!m.dead && this.boss && !this.boss.hd && this.ib(this.boss, m.x, m.y, m.z, 0)) this.dn(m);
       m.tr.push([m.x, m.y, m.z]);
       if (m.tr.length > 14) m.tr.shift();
       m.x += m.vx * dt;
@@ -1964,7 +1791,7 @@ class Game extends Phaser.Scene {
   }
 
   // El misil estalla: golpe fuerte al blanco y a todo lo que esté cerca
-  detonate(m) {
+  dn(m) {
     m.dead = true;
     this.bx.push({ wx: m.x, wy: m.y, wz: m.z, t: 0, big: true, r: MISSILE_SPLASH });
     this.sh = MAX(this.sh, 5);
@@ -1987,7 +1814,7 @@ class Game extends Phaser.Scene {
 
   // La cámara hereda la base de la nave con un pelo de retraso — incluida la
   // inclinación, así la pantalla siempre coincide con el stick
-  updateCamera(dt) {
+  uc(dt) {
     const k = MIN(1, 8 * dt);
     [this.camF, this.camU, this.camR] = orthoBasis(vmix(this.camF, 1 - k, this.F, k), vmix(this.camU, 1 - k, this.U, k));
     if (this.sh > 0) this.sh = MAX(0, this.sh - 34 * dt);
@@ -2047,7 +1874,7 @@ class Game extends Phaser.Scene {
     ln(g, pa[0], pa[1], pb[0], pb[1]);
   }
 
-  fogAlpha(dist) {
+  fg(dist) {
     return CLP(1.25 - dist / 2600, 0, 1);
   }
 
@@ -2090,12 +1917,12 @@ class Game extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(0x070709);
     const cm = this.cam();
 
-    this.drawSky(g, cm, time);
-    this.drawStars(g, cm, time);
+    this.dk(g, cm, time);
+    this.dz(g, cm, time);
     // el túnel: al saltar crece; al llegar al nivel 1, se deshace
     const warp = this.fz === 'jump' ? MIN(1, this.jt / (JUMP_TIME * 0.8)) : this.et;
-    if (warp > 0.02) this.drawWarp(g, cm, warp);
-    this.drawDust(g, cm);
+    if (warp > 0.02) this.dw(g, cm, warp);
+    this.dd(g, cm);
 
     this.label.setVisible(false);
     // la escena de la salva: el sector entero se apaga y solo quedan el
@@ -2187,9 +2014,9 @@ class Game extends Phaser.Scene {
       fr(g, 0, 0, W, H, 0xe89a5c, bhProx * (0.09 + 0.05 * SIN(time * 0.004)));
     }
 
-    this.drawShip(g, cm, time);
-    this.drawNav(g, cm);
-    this.drawIncoming(g, cm, time);
+    this.dj(g, cm, time);
+    this.dv(g, cm);
+    this.di(g, cm, time);
 
     // barra de carga del hipersalto, o la vida que le queda al destructor
     if (this.fz === 'charge') {
@@ -2214,7 +2041,7 @@ class Game extends Phaser.Scene {
   // plane and the galaxy's band along the horizon. The camera rolls with the
   // ship, so the horizon is a line at any angle — found per pixel as the
   // screen points whose view ray is level.
-  drawHorizon(g, cm) {
+  dh(g, cm) {
     const { R, U, F } = cm;
     const n = HYP(R.y, U.y);
     if (n < 0.02) return;
@@ -2243,7 +2070,7 @@ class Game extends Phaser.Scene {
 
   // Cuánto rota la pantalla respecto del "arriba" del sector: el arte del
   // cielo se dibuja derecho y se gira con esto
-  skyRoll(cm) {
+  kr(cm) {
     return AT2(-cm.R.y, -cm.U.y);
   }
 
@@ -2253,13 +2080,13 @@ class Game extends Phaser.Scene {
     if (!p || p[0] < -reach || p[0] > W + reach || p[1] < -reach || p[1] > H + reach) return;
     g.save();
     g.translateCanvas(p[0], p[1]);
-    g.rotateCanvas(this.skyRoll(cm));
+    g.rotateCanvas(this.kr(cm));
     paint(g);
     g.restore();
   }
 
-  drawSky(g, cm, time) {
-    this.drawHorizon(g, cm);
+  dk(g, cm, time) {
+    this.dh(g, cm);
     // nebulosas: manchas apenas visibles que dan fondo al negro
     for (const [yw, el, r, col, al] of [
       [0.25, 0.5, 280, 0x4a3560, 0.06],
@@ -2279,14 +2106,14 @@ class Game extends Phaser.Scene {
       fc(g, 7, 0, 17, 0x05060a, 0.7);
     });
     this.so(g, cm, 2.4, 0.44, 170, (g) => drawGasGiant(g));
-    this.drawHole(g, cm, time);
+    this.dl(g, cm, time);
   }
 
   // El agujero negro es el SUELO, y está ANCLADO AL MUNDO bajo el centro del
   // sector: no gira con tu vista ni te sigue — tú te mueves sobre él. El
   // disco son anillos fijos en el plano, la sombra es una esfera (igual desde
   // cualquier ángulo) y los chorros son la vertical del mundo.
-  drawHole(g, cm, time) {
+  dl(g, cm, time) {
     const t = time * 0.001;
     const RS = 380; // radio del horizonte de sucesos, en unidades de mundo
     // cuanto más bajas, más arde el disco — el color te dice dónde estás
@@ -2349,7 +2176,7 @@ class Game extends Phaser.Scene {
     }
   }
 
-  drawStars(g, cm, time) {
+  dz(g, cm, time) {
     for (const m of this.sn) {
       const p = this.pd(cm, m.v);
       if (!p || p[0] < -4 || p[0] > W + 4 || p[1] < -4 || p[1] > H + 4) continue;
@@ -2371,7 +2198,7 @@ class Game extends Phaser.Scene {
 
   // El hipersalto de las películas: cada estrella se estira en una línea
   // radial desde el centro de la pantalla, más larga cuanto más al borde
-  drawWarp(g, cm, k) {
+  dw(g, cm, k) {
     for (const m of this.sn) {
       const p = this.pd(cm, m.v);
       if (!p) continue;
@@ -2385,9 +2212,9 @@ class Game extends Phaser.Scene {
   }
 
   // El polvo convierte tu velocidad en estelas: se SIENTE volar
-  drawDust(g, cm) {
+  dd(g, cm) {
     const L = 560;
-    const f = this.forward();
+    const f = this.fw();
     const trail = 0.016 + (this.sp / TURBO_SPEED) * 0.065;
     for (const m of this.dust) {
       const wx = this.pos.x + WRP(m.x - this.pos.x, -L / 2, L / 2);
@@ -2416,7 +2243,7 @@ class Game extends Phaser.Scene {
     }
     const p = this.pj(cm, e.x, e.y, e.z);
     if (!p) return;
-    let a = this.fogAlpha(dist);
+    let a = this.fg(dist);
     if (e.k === 'part') a = MAX(a, 0.5); // la pieza brilla sola
 
     if (e.k === 'emis') {
@@ -2601,10 +2428,10 @@ class Game extends Phaser.Scene {
     this.sg(g, cm, pts, model[1], color, alpha);
   }
 
-  drawShip(g, cm, time) {
+  dj(g, cm, time) {
     if (this.fz === 'out') return;
     if (this.fz !== 'jump' && time < this.iu && FLR(time / 60) % 2 === 0) return;
-    const f = this.forward();
+    const f = this.fw();
     // dash: la nave deja copias fantasma — mientras se ven, nada te toca
     if (time < this.du) {
       for (let i = 1; i <= 3; i++) {
@@ -2686,7 +2513,7 @@ class Game extends Phaser.Scene {
 
   // Lo que viene hacia ti desde fuera de la pantalla se anuncia en el borde,
   // del lado por el que llega
-  drawIncoming(g, cm, time) {
+  di(g, cm, time) {
     const threats = this.ss.concat(this.en.filter((e) => e.k === 'emis' || e.k === 'inter'));
     for (const s of threats) {
       const d = { x: this.pos.x - s.x, y: this.pos.y - s.y, z: this.pos.z - s.z };
@@ -2709,7 +2536,7 @@ class Game extends Phaser.Scene {
   }
 
   // La marca de navegación: hacia la pieza que falta
-  drawNav(g, cm) {
+  dv(g, cm) {
     let target = null;
     let label = '';
     if (this.fz === 'play') {
@@ -2767,7 +2594,7 @@ class Game extends Phaser.Scene {
     g.strokePath();
   }
 
-  updateHud() {
+  uh() {
     this.velText.setText('SPD ' + String(ABS(Math.round(this.sp))).padStart(3, '0'));
     this.scoreText.setText(String(this.score).padStart(6, '0') + (this.mu > 1 ? '  x' + this.mu : ''));
     this.hullText.setText('HULL ' + (GOD ? '∞' : '▸'.repeat(this.hull) + '·'.repeat(HULL_MAX - this.hull)));
