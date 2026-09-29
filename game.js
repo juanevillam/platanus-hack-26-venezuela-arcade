@@ -126,7 +126,6 @@ const SCRAP_PER_MISSILE = 3;
 
 // --- Enemigos: pocos, grandes, disparos lentos que se pueden esquivar ---
 const SHOT_SPEED = 250;
-const DRONE_FIRE = 3.0; // segundos entre disparos de un cazador
 
 // --- El sector: una esfera de juego alrededor del origen ---
 const SECTOR_R = 3000;
@@ -349,9 +348,6 @@ const SHIP_MODEL = mdl([0, 0, 26, 0, -3.5, 14, 0, -5.5, 2, 0, -4, -8, 0, -11, -1
 // Centinela: pirámide vigilante, con ojo
 const SENTRY_MODEL = mdl([-22, 14, -22, 22, 14, -22, 22, 14, 22, -22, 14, 22, 0, -26, 0], '01122330041424340213');
 
-// Dron cazador: alas quebradas en codo con garras hacia adelante — una
-// silueta agresiva que no se confunde con la tuya
-const DRONE_MODEL = mdl([0, 0, 18, 0, -6, 4, 0, -3, -8, 0, 0, -12, -6, 0, 2, 6, 0, 2, -18, 1, -6, 18, 1, -6, -24, 0, 8, 24, 0, 8, -18, -8, -9, 18, -8, -9, 0, 5, -4], '01122304054657637368796:7;0<<34<5<');
 const HUNTER_SCALE = 3; // cazadores e interceptores: grandes, fáciles de seguir
 
 // Mina: octaedro
@@ -388,9 +384,9 @@ function makeRockModel() {
 
 const ROCK_POOL = [makeRockModel(), makeRockModel(), makeRockModel(), makeRockModel()];
 
-// Interceptor: aguja con cuchillas hacia adelante, canards junto a la nariz
-// y una aleta dorsal — un dardo con filo
-const INTER_MODEL = mdl([0, 0, 24, 0, -4, -4, 0, 4, -4, -4, 0, -4, 4, 0, -4, 0, 0, -14, -15, 0, 7, 15, 0, 7, -9, -1, 14, 9, -1, 14, 0, -8, -12], '010203041525354536654775088309941::5');
+// La CORBETA: a medio camino entre el ace y el destructor — casco largo,
+// puente alto y dos nacelas; ladra ráfagas manteniendo distancia
+const GUN_MODEL = mdl([0, -2, 70, -16, -8, 30, 16, -8, 30, -20, 8, 24, 20, 8, 24, -22, 0, -20, 22, 0, -20, -14, -6, -64, 14, -6, -64, -16, 8, -58, 16, 8, -58, 0, -16, -14, 0, -12, -44, -30, 2, -48, 30, 2, -48], '01020304152635465768596:789:798:1;2;;<<7<85==96>>:');
 
 // El destructor: una cuña de casi mil unidades con su torre de mando atrás.
 // Local: x derecha, y abajo, z hacia la proa.
@@ -679,7 +675,7 @@ class Game extends Phaser.Scene {
     this.bq = 75; // el primer destructor tarda esto en llegar
     this.bossN = 0;
     this.wvAt = 32; // emboscadas periódicas
-    this.baseAt = 55; // torretas de la base, sobre el disco
+    this.baseAt = 20; // torretas de la superficie: constantes
     this.svT = 0; // puntos por sobrevivir
     this.wvN = 0;
     this.ht = 0;
@@ -839,9 +835,12 @@ class Game extends Phaser.Scene {
       // cazarlas paga powerup seguro
       this.baseAt -= dt;
       if (this.baseAt <= 0) {
-        this.baseAt = 55;
-        if (this.en.filter((e) => e.base).length < 4) {
-          this.say('SURFACE GUNS BELOW.');
+        this.baseAt = 16;
+        if (this.en.filter((e) => e.base).length < 6) {
+          if (!this.bgSaid) {
+            this.bgSaid = 1;
+            this.say('SURFACE GUNS BELOW.');
+          }
           for (let i = 0; i < 3; i++) {
             const ang = RND() * PI * 2;
             const gx2 = this.pos.x + SIN(ang) * (700 + RND() * 500);
@@ -892,15 +891,14 @@ class Game extends Phaser.Scene {
     this.wvN = n;
     for (let i = 0; i < n; i++) {
       const ang = (i / n) * PI * 2 + RND() * 0.8;
-      const inter = i === 2 && n >= 4; // un solo embestidor, y no en la primera
-      const ace = i === 1 && n >= 5; // y en las grandes, un mercenario como tú
+      const gun = i === 2 && n >= 4; // las oleadas grandes traen una corbeta
       this.en.push({
-        k: ace ? 'ace' : inter ? 'inter' : 'drone',
+        k: gun ? 'gun' : 'ace',
         x: this.pos.x + SIN(ang) * 1500,
         y: this.pos.y + (RND() - 0.5) * 600,
         z: this.pos.z + COS(ang) * 1500,
-        r: 22 * HUNTER_SCALE,
-        hp: ace ? 4 : inter ? 2 : 3,
+        r: gun ? 130 : 22 * HUNTER_SCALE,
+        hp: gun ? 8 : 4,
         t: 0,
         yaw: 0,
         fireAt: 2 + RND() * 2,
@@ -915,19 +913,18 @@ class Game extends Phaser.Scene {
   // Con la primera pieza aparecen también interceptores, que embisten.
   sd(dt, max, every) {
     this.droneAt -= dt;
-    const alive = this.en.filter((e) => e.k === 'drone' || e.k === 'inter' || e.k === 'ace').length;
+    const alive = this.en.filter((e) => e.k === 'ace' || e.k === 'gun').length;
     if (this.droneAt > 0 || alive >= max) return;
     this.droneAt = every;
     const ang = RND() * PI * 2;
-    const ace = this.ep > 90 && RND() < 0.25;
-    const inter = !ace && this.ep > 60 && RND() < 0.4;
+    const gun = this.ep > 50 && RND() < 0.25;
     this.en.push({
-      k: ace ? 'ace' : inter ? 'inter' : 'drone',
+      k: gun ? 'gun' : 'ace',
       x: this.pos.x + SIN(ang) * 1300,
       y: this.pos.y + (RND() - 0.5) * 500,
       z: this.pos.z + COS(ang) * 1300,
-      r: 22 * HUNTER_SCALE,
-      hp: ace ? 4 : inter ? 2 : 3,
+      r: gun ? 130 : 22 * HUNTER_SCALE,
+      hp: gun ? 8 : 4,
       t: 0,
       yaw: 0,
       fireAt: 2,
@@ -1051,7 +1048,7 @@ class Game extends Phaser.Scene {
       this.say(domesLeft ? 'DOME DOWN.' : 'HIT THE BRIDGE.');
       b.tpAt = 0.7; // perder un domo lo hace saltar
       // sin escudos, no pelea limpio: llama a su escolta — ahora son DOS
-      if (!domesLeft && !this.boss2 && !b.mini) {
+      if (!domesLeft && !this.boss2 && !b.mini && this.bossN >= 1) {
         this.say('IT CALLS FOR BACKUP.');
         this.spawnBoss(1);
       }
@@ -1187,7 +1184,7 @@ class Game extends Phaser.Scene {
         let prey = null;
         if (RND() < 0.5) {
           for (const q of this.en) {
-            if ((q.k === 'drone' || q.k === 'inter' || q.k === 'ace') && !q.dead && HYP(q.x - wx, q.y - wy, q.z - wz) < 2000) {
+            if ((q.k === 'ace' || q.k === 'gun') && !q.dead && HYP(q.x - wx, q.y - wy, q.z - wz) < 2000) {
               prey = q;
               break;
             }
@@ -1212,9 +1209,9 @@ class Game extends Phaser.Scene {
     b.ha -= dt;
     if (b.ha <= 0) {
       b.ha = 16;
-      if (this.en.filter((e) => e.k === 'inter').length < 4) {
+      if (this.en.filter((e) => e.k === 'ace').length < 3) {
         const [wx, wy, wz] = this.bw(b, 0, SD_KEEL + 30, -100);
-        this.en.push({ k: 'inter', x: wx, y: wy, z: wz, r: 22 * HUNTER_SCALE, hp: 2, t: 0, yaw: b.yaw, vx: 0, vy: 120, vz: 0 });
+        this.en.push({ k: 'ace', x: wx, y: wy, z: wz, r: 22 * HUNTER_SCALE, hp: 4, t: 0, yaw: b.yaw, fireAt: 2, orbit: 1, vx: 0, vy: 120, vz: 0 });
       }
     }
 
@@ -1418,12 +1415,9 @@ class Game extends Phaser.Scene {
 
     // la superficie de la estación es PARED: aviso cerca, muerte al tocarla
     const sdy = surfY(this.pos.x, this.pos.z) - this.pos.y;
-    if (sdy < 300) {
-      this.sh = MAX(this.sh, 5);
-      if (this.ep > this.wa) {
-        this.wa = this.ep + 1.5;
-        this.say('PULL UP.');
-      }
+    if (sdy < 260 && this.ep > this.wa) {
+      this.wa = this.ep + 1.5;
+      this.say('PULL UP.');
     }
     if (sdy < 46) this.die();
     // las torres de la superficie son SÓLIDAS: rozarlas cuesta casco
@@ -1445,6 +1439,19 @@ class Game extends Phaser.Scene {
         ) {
           this.hy(time);
           this.pos.y = yb - hh - 70; // la torre te escupe hacia arriba
+        }
+      } else if (hsh >= 22 && hsh < 30) {
+        // el travesaño del arco es sólido: o por debajo, o te duele
+        const zm = cz0 + cs / 2;
+        const hA = 230 + (hsh % 4) * 40;
+        const yT = surfY(cx0 + cs / 2, zm) - hA;
+        if (
+          ABS(this.pos.z - zm) < 40 &&
+          this.pos.x > cx0 + 60 && this.pos.x < cx0 + cs - 60 &&
+          this.pos.y > yT - 20 && this.pos.y < yT + 60
+        ) {
+          this.hy(time);
+          this.pos.y = yT - 90;
         }
       }
     }
@@ -1582,14 +1589,26 @@ class Game extends Phaser.Scene {
       const dz = P.z - e.z;
       const dist = HYP(dx, dy, dz);
 
-      if (e.k === 'drone' || e.k === 'ace') {
-        // vuela como TÚ: siempre hacia adelante, virando con alabeo — nada
-        // de flotar. El dron rodea; el ace te caza de frente.
-        const spd2 = e.k === 'ace' ? 320 : 265;
+      if (e.k === 'ace' || e.k === 'gun') {
+        // vuelan como TÚ: siempre hacia adelante, virando con alabeo. El
+        // ACE hace pasadas y rompe cerca; la CORBETA guarda su anillo y
+        // ladra ráfagas — grande, lenta, nunca huye.
+        const gun2 = e.k === 'gun';
+        const spd2 = gun2 ? 165 : 320;
         let gx = P.x;
         let gy = P.y;
         let gz = P.z;
-        if (e.fl > 0) {
+        if (gun2) {
+          if (dist < 620) {
+            gx = e.x - (dx / dist) * 1200;
+            gy = e.y - (dy / dist) * 400;
+            gz = e.z - (dz / dist) * 1200;
+          } else if (dist < 1100) {
+            gx = e.x + (dz / dist) * 900 * e.orbit;
+            gz = e.z - (dx / dist) * 900 * e.orbit;
+            gy = P.y;
+          }
+        } else if (e.fl > 0) {
           e.fl -= dt;
           // huyendo: lejos de ti, con un quiebre lateral
           gx = e.x - (dx / dist) * 1500 + (dz / dist) * 500 * e.orbit;
@@ -1597,7 +1616,7 @@ class Game extends Phaser.Scene {
           gz = e.z - (dz / dist) * 1500 - (dx / dist) * 500 * e.orbit;
         } else if (dist < 320) {
           // te tuvo demasiado cerca: rompe y ESCAPA — la pasada terminó
-          e.fl = (e.k === 'ace' ? 0.7 : 1.3) + RND() * 0.6;
+          e.fl = 0.7 + RND() * 0.6;
         }
         let m = HYP(e.vx, e.vy, e.vz);
         if (m < 40) {
@@ -1610,7 +1629,7 @@ class Game extends Phaser.Scene {
         const ddy = gy - e.y;
         const ddz = gz - e.z;
         const dd = HYP(ddx, ddy, ddz) || 1;
-        const k2 = MIN(1, 2.3 * dt);
+        const k2 = MIN(1, (gun2 ? 0.9 : 2.3) * dt);
         const oy = AT2(e.vx, e.vz);
         let nx = e.vx / m + (ddx / dd - e.vx / m) * k2;
         let ny = e.vy / m + (ddy / dd - e.vy / m) * k2;
@@ -1626,22 +1645,10 @@ class Game extends Phaser.Scene {
         // el alabeo visual sale del propio viraje
         e.bank = (e.bank || 0) + (CLP(AWR(e.yaw - oy) * 14, -0.9, 0.9) - (e.bank || 0)) * MIN(1, 6 * dt);
         e.fireAt -= dt;
-        if (e.fireAt <= 0 && dist < (e.k === 'ace' ? 1300 : 1000)) {
-          e.fireAt = e.k === 'ace' ? 2.2 : DRONE_FIRE;
+        if (e.fireAt <= 0 && dist < (gun2 ? 1500 : 1300)) {
+          e.fireAt = gun2 ? 1.6 : 2.2;
           this.sa(e, SHOT_SPEED);
         }
-      } else if (e.k === 'inter') {
-        // el interceptor toma carrerilla, embiste y pasa de largo
-        if (dist > 420 || e.t < 0.5) {
-          const k = MIN(1, 2.2 * dt);
-          e.vx += ((dx / dist) * 430 - e.vx) * k;
-          e.vy += ((dy / dist) * 430 - e.vy) * k;
-          e.vz += ((dz / dist) * 430 - e.vz) * k;
-        }
-        e.x += e.vx * dt;
-        e.y += e.vy * dt;
-        e.z += e.vz * dt;
-        e.yaw = AT2(e.vx, e.vz);
       } else if (e.k === 'emis') {
         // misil del destructor: te sigue, pero gira mal — un giro cerrado,
         // el escudo o el nitro lo dejan atrás; también se puede derribar.
@@ -1775,12 +1782,13 @@ class Game extends Phaser.Scene {
 
         } else if (
           (this.sp > RAM_SPEED || time < this.du || time < this.su) &&
-          (e.k === 'drone' || e.k === 'inter' || e.k === 'emis')
+          (e.k === 'ace' || e.k === 'gun' || e.k === 'emis')
         ) {
-          // a toda velocidad — o con dash o escudo — la nave es el arma
-          this.damage(e, 99);
+          // a toda velocidad — o con dash o escudo — la nave es el arma;
+          // a la corbeta solo la abolla
+          this.damage(e, e.k === 'gun' ? 3 : 99);
           this.sh = 7;
-        } else if (e.k === 'drone' || e.k === 'inter') {
+        } else if (e.k === 'ace' || e.k === 'gun') {
           // metal contra metal: el caza estalla y tú pierdes UN casco —
           // morir de un toque contra algo tan pequeño no era justo, y las
           // emboscadas lo convertían en ejecución
@@ -1814,7 +1822,7 @@ class Game extends Phaser.Scene {
       }
       if (s.sd && !s.dead) {
         for (const q of this.en) {
-          if ((q.k === 'drone' || q.k === 'inter' || q.k === 'ace') && !q.dead && HYP(q.x - s.x, q.y - s.y, q.z - s.z) < 60) {
+          if ((q.k === 'ace' || q.k === 'gun') && !q.dead && HYP(q.x - s.x, q.y - s.y, q.z - s.z) < 60) {
             s.dead = true;
             this.damage(q, 1);
             break;
@@ -1900,8 +1908,8 @@ class Game extends Phaser.Scene {
     }
     this.bm(e);
     this.sy(e.x, e.y, e.z, 6);
-    this.ad(e.k === 'sentry' ? (e.base ? 80 : 40) : e.k === 'rock' ? 15 : e.k === 'ace' ? 60 : 25);
-    if (e.k === 'drone' || e.k === 'inter' || e.k === 'ace') this.dp(e.x, e.y, e.z, e.k === 'ace' ? 0.7 : 0.35);
+    this.ad(e.k === 'sentry' ? (e.base ? 80 : 40) : e.k === 'rock' ? 15 : e.k === 'gun' ? 150 : e.k === 'ace' ? 60 : 25);
+    if (e.k === 'ace' || e.k === 'gun') this.dp(e.x, e.y, e.z, e.k === 'gun' ? 1 : 0.5);
     if (e.base) this.dp(e.x, e.y, e.z, 0.8); // la torreta de la base paga casi siempre
     Sfx.boom();
     if (e.k === 'rock' && e.r > 20) {
@@ -2316,6 +2324,18 @@ class Game extends Phaser.Scene {
         this.wl(g, cm, [x0, y00, z0], [x0, surfY(x0, z0 + cs), z0 + cs]);
         // el hash decide qué celda lleva estructura, y de qué altura
         const hsh = ((x0 * 1103 + z0 * 12793) % 97 + 97) % 97;
+        if (hsh >= 22 && hsh < 30) {
+          // un ARCO: dos pilones y un travesaño — pásale por debajo
+          const zm = z0 + cs / 2;
+          const yA = surfY(x0 + 90, zm);
+          const yB = surfY(x0 + cs - 90, zm);
+          const hA = 230 + (hsh % 4) * 40;
+          g.lineStyle(1.5, GRY, al * 1.4);
+          this.wl(g, cm, [x0 + 90, yA, zm], [x0 + 90, yA - hA, zm]);
+          this.wl(g, cm, [x0 + cs - 90, yB, zm], [x0 + cs - 90, yB - hA, zm]);
+          this.wl(g, cm, [x0 + 90, yA - hA, zm], [x0 + cs - 90, yB - hA, zm]);
+          this.wl(g, cm, [x0 + 90, yA - hA + 26, zm], [x0 + cs - 90, yB - hA + 26, zm]);
+        }
         if (hsh < 22) {
           const hh = (hsh < 8 ? 300 : 90) + (hsh % 5) * 70;
           const bx0 = x0 + cs * 0.3;
@@ -2410,7 +2430,7 @@ class Game extends Phaser.Scene {
     }
 
     if (a <= 0.03) {
-      if ((e.k === 'drone' || e.k === 'inter' || e.k === 'sentry') && dist < 3200) {
+      if ((e.k === 'ace' || e.k === 'gun' || e.k === 'sentry') && dist < 3200) {
         fr(g, p[0], p[1], 2.5, 2.5, RUST_HI, 0.6);
       }
       return;
@@ -2424,21 +2444,16 @@ class Game extends Phaser.Scene {
     if (e.k === 'rock' && !flash) a *= 0.7;
 
     const model =
-      e.k === 'sentry' ? SENTRY_MODEL : e.k === 'drone' ? DRONE_MODEL : e.k === 'inter' ? INTER_MODEL
+      e.k === 'sentry' ? SENTRY_MODEL : e.k === 'ace' ? SHIP_MODEL : e.k === 'gun' ? GUN_MODEL
       : e.k === 'pow' ? POW_MODELS[e.sub] : e.k === 'rock' ? e.model : SCRAP_MODEL;
-    const scale = e.k === 'rock' ? e.r / 16 : e.k === 'sentry' ? 1.6
-      : e.k === 'drone' || e.k === 'inter' ? HUNTER_SCALE : 1;
-    const rot = e.k === 'rock' ? e.t * e.spin : e.k === 'scrap' || e.k === 'pow' ? e.t * 1.1 : 0;
+    const scale = e.k === 'rock' ? e.r / 16 : e.k === 'sentry' ? 1.6 : e.k === 'ace' ? 2.2 : e.k === 'gun' ? 3 : 1;
+    const rot = e.k === 'rock' ? e.t * e.spin : e.k === 'scrap' || e.k === 'pow' ? e.t * 1.1 : e.bank || 0;
     this.dm(g, cm, model, e, scale, color, a, rot);
 
-    if (e.k === 'drone' || e.k === 'inter') {
+    if (e.k === 'ace' || e.k === 'gun') {
       // el ojo de brasa en la nariz: se lee quién te está mirando
-      const nose = this.pj(
-        cm,
-        e.x + SIN(e.yaw) * 16 * HUNTER_SCALE,
-        e.y - 4,
-        e.z + COS(e.yaw) * 16 * HUNTER_SCALE
-      );
+      const nr = e.k === 'gun' ? 200 : 50;
+      const nose = this.pj(cm, e.x + SIN(e.yaw) * nr, e.y - 4, e.z + COS(e.yaw) * nr);
       if (nose) {
         fc(g, nose[0], nose[1], MAX(1.5, 600 / nose[2]), RUST_HI, a * (0.6 + 0.4 * SIN(e.t * 6)));
       }
@@ -2642,7 +2657,7 @@ class Game extends Phaser.Scene {
     // las naves cercanas SIEMPRE se anuncian en el borde — aunque no se
     // estén acercando; los proyectiles, desde más lejos que antes
     for (const e of this.en) {
-      if ((e.k !== 'drone' && e.k !== 'inter') || e.dead) continue;
+      if ((e.k !== 'ace' && e.k !== 'gun') || e.dead) continue;
       const d = { x: e.x - this.pos.x, y: e.y - this.pos.y, z: e.z - this.pos.z };
       const dist = HYP(d.x, d.y, d.z);
       if (dist > 1900) continue;
@@ -2658,7 +2673,7 @@ class Game extends Phaser.Scene {
       g.lineTo(ex - COS(ang - 0.5) * 11, ey - SIN(ang - 0.5) * 11);
       g.strokePath();
     }
-    const threats = this.ss.concat(this.en.filter((e) => e.k === 'emis' || e.k === 'inter'));
+    const threats = this.ss.concat(this.en.filter((e) => e.k === 'emis'));
     for (const s of threats) {
       const d = { x: this.pos.x - s.x, y: this.pos.y - s.y, z: this.pos.z - s.z };
       const dist = HYP(d.x, d.y, d.z);
