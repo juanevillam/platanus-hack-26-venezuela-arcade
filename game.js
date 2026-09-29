@@ -106,6 +106,7 @@ const RAM_SPEED = 430; // por encima, embistes a los cazadores y los destrozas
 const SHIELD_MS = 2600;
 const SHIELD_COOLDOWN_MS = 4000;
 const SHIELD_R = 52; // radio en mundo dentro del que la burbuja come disparos
+const PARRY_MS = 220; // el primer instante del escudo DEVUELVE lo que toque
 const AMB = 0xf6c98a; // ámbar del disco
 const CRM = 0xfff1d6; // crema caliente
 const BLU = 0xb8dbe4; // azul: escudo y recursos TUYOS
@@ -139,7 +140,7 @@ const JUMP_TIME = 2; // segundos de túnel antes del flash
 const CHARGE_TIME = 12; // tras derribar al destructor, resiste mientras carga el salto
 const KILL_CHARGE = 1;
 
-const HULL_MAX = 3;
+const HULL_MAX = 4;
 const SCORE_KEY = 'space-explorer:scores';
 
 // Las cuatro piezas del hipersalto
@@ -322,8 +323,12 @@ const Sfx = {
     [440, 554, 659, 880].forEach((f, i) => this.tone(f, 0.5, 'triangle', 0.15, 0, t + i * 0.09));
   },
   dash() {
-    this.noise(0.18, 0.18);
-    this.tone(220, 0.25, 'sawtooth', 0.12, 880);
+    this.noise(0.3, 0.14);
+    this.tone(160, 0.35, 'sine', 0.14, 50);
+  },
+  parry() {
+    this.tone(880, 0.1, 'square', 0.16, 1760);
+    this.tone(1320, 0.22, 'sine', 0.12, 0, this.ctx && this.ctx.currentTime + 0.05);
   },
   turn() {
     this.tone(330, 0.3, 'sine', 0.12, 160);
@@ -403,11 +408,11 @@ const DESTROYER_MODEL = mdl([0, 0, 560, -300, 0, -400, 300, 0, -400, 0, -80, -40
 // Puntos débiles: torretas en la cubierta, dos domos de escudo sobre el puente,
 // y el puente mismo, que solo recibe daño con los domos caídos
 const SD_PARTS = [
-  ['turret', 90, -14, 150, 3], ['turret', -90, -14, 150, 3],
-  ['turret', 140, -20, -80, 3], ['turret', -140, -20, -80, 3],
-  ['turret', 190, -25, -300, 3], ['turret', -190, -25, -300, 3],
-  ['dome', 110, -185, -340, 8], ['dome', -110, -185, -340, 8],
-  ['bridge', 0, -150, -345, 20],
+  ['turret', 90, -14, 150, 2], ['turret', -90, -14, 150, 2],
+  ['turret', 140, -20, -80, 2], ['turret', -140, -20, -80, 2],
+  ['turret', 190, -25, -300, 2], ['turret', -190, -25, -300, 2],
+  ['dome', 110, -185, -340, 6], ['dome', -110, -185, -340, 6],
+  ['bridge', 0, -150, -345, 14],
 ];
 const SD_PART_R = { turret: 42 * SD_SCALE, dome: 46 * SD_SCALE, bridge: 72 * SD_SCALE };
 
@@ -457,17 +462,33 @@ const Music = {
   next: 0,
   step: 0,
   on: false,
+  boss: false,
   tick() {
     if (!this.on || !Sfx.ctx) return;
     const now = Sfx.ctx.currentTime;
     if (this.next < now) this.next = now + 0.05;
-    while (this.next < now + 0.35) {
-      const st = this.step++ % 32;
+    while (this.next < now + 0.4) {
       const t = this.next;
-      Sfx.tone([55, 55, 65.4, 55, 73.4, 55, 65.4, 49][(st >> 2) % 8], 0.26, 'triangle', 0.09, 0, t);
-      if (st % 8 === 4) Sfx.noise(0.05, 0.04, t);
-      if (st % 16 === 14) Sfx.tone(220 * [1, 1.2, 1.5][FLR(this.step / 16) % 3], 0.6, 'sine', 0.045, 110, t);
-      this.next += 0.135;
+      const st = this.step++;
+      if (this.boss) {
+        // EL DESTRUCTOR: dos graves que se rozan a un semitono y una
+        // campana baja — una flota entrando al sistema
+        const s8 = st % 8;
+        Sfx.tone([36.7, 36.7, 38.9, 36.7][s8 % 4], 0.55, 'sawtooth', 0.085, 0, t);
+        Sfx.tone(73.4, 0.55, 'triangle', 0.055, 0, t);
+        if (s8 === 0 || s8 === 3) Sfx.tone(110, 1, 'triangle', 0.06, 0, t);
+        if (s8 === 6) Sfx.tone(58.3, 1, 'sawtooth', 0.07, 0, t);
+        this.next += 0.34;
+      } else {
+        // el vacío: un dron en quintas que respira y, cada tanto, una
+        // estrella que suena — sombrío, no alegre
+        const s16 = st % 16;
+        Sfx.tone(55, 1.5, 'triangle', 0.065, 0, t);
+        Sfx.tone(82.4, 1.5, 'sine', 0.045, 0, t);
+        if (s16 === 4) Sfx.tone(220, 2.4, 'sine', 0.03, 164.8, t);
+        if (s16 === 12) Sfx.tone([330, 392, 294][FLR(st / 16) % 3], 2.6, 'sine', 0.028, 0, t);
+        this.next += 0.7;
+      }
     }
   },
 };
@@ -638,6 +659,8 @@ class Game extends Phaser.Scene {
     this.roll = 0; // alabeo solo visual, al girar
     this.su = 0;
     this.sw = 0;
+    this.sst = -1e9; // cuándo se levantó el escudo: define la ventana de parry
+    this.sTap = false;
     this.du = 0;
     this.fy = 0;
     this.iu = 0;
@@ -820,6 +843,7 @@ class Game extends Phaser.Scene {
   update(time, delta) {
     const dt = MIN(delta, 50) / 1000;
     this.ep += dt;
+    Music.boss = this.fz === 'boss' || this.fz === 'charge';
     Music.tick();
 
     // pausa: START congela el sector — salvo que esté confirmando el salto
@@ -1039,7 +1063,7 @@ class Game extends Phaser.Scene {
     Sfx.boom();
     if (pt.kind === 'turret') {
       this.ad(60);
-      this.dp(wx, wy, wz, 0.5);
+      this.dp(wx, wy, wz, 0.6);
     } else if (pt.kind === 'dome') {
       this.ad(150);
       this.say(b.parts.some((q) => q.kind === 'dome' && q.hp > 0) ? 'DOME DOWN.' : 'HIT THE BRIDGE.');
@@ -1071,7 +1095,7 @@ class Game extends Phaser.Scene {
       if (!b.hd && ct > 1.5 * S && ct < 4.1 * S) {
         b.salvoAt -= dt;
         if (b.salvoAt <= 0) {
-          b.salvoAt = 0.18;
+          b.salvoAt = 0.26;
           if (!b.salvoSaid && !b.short) {
             b.salvoSaid = 1;
             this.say('SALVO INBOUND.');
@@ -1218,7 +1242,7 @@ class Game extends Phaser.Scene {
 
   dp(x, y, z, chance) {
     if (RND() > chance) return;
-    const subs = ['shield', 'hull', 'twin', 'missile', 'missile'];
+    const subs = ['shield', 'hull', 'hull', 'twin', 'missile', 'missile'];
     this.en.push({
       k: 'pow',
       sub: subs[FLR(RND() * subs.length)],
@@ -1276,9 +1300,21 @@ class Game extends Phaser.Scene {
     // B4/B6: el escudo — mientras dura, nada te toca y los disparos se
     // deshacen contra la burbuja. Se levanta en el momento, no se guarda.
     if ((pressed.P1_4 || pressed.P1_6) && time >= this.sw) {
+      this.sst = time;
       this.su = time + SHIELD_MS;
       this.sw = time + SHIELD_MS + SHIELD_COOLDOWN_MS;
       Sfx.shieldUp();
+    }
+    // toque corto: solo la ventana de parry — si soltaste temprano, el
+    // escudo se pliega al cerrarse la ventana y el toque casi no cuesta
+    // recarga; mantenido, es el escudo completo
+    if (time < this.su && !held.P1_4 && !held.P1_6 && time - this.sst < PARRY_MS + 60) this.sTap = true;
+    if (this.sTap && time - this.sst >= PARRY_MS + 60) {
+      this.sTap = false;
+      if (time < this.su) {
+        this.su = time;
+        this.sw = time + 1200;
+      }
     }
 
     // cabeceo sobre el ala de la nave: arriba es arriba de la pantalla aun de cabeza
@@ -1470,7 +1506,7 @@ class Game extends Phaser.Scene {
       return;
     }
     if (time < this.iu || time < this.du) return;
-    this.iu = time + 1300;
+    this.iu = time + 2000;
     this.sh = 9;
     Sfx.hurt();
     if (this.shield) {
@@ -1648,9 +1684,17 @@ class Game extends Phaser.Scene {
           (this.sp > RAM_SPEED || time < this.du || time < this.su) &&
           (e.k === 'drone' || e.k === 'inter' || e.k === 'emis')
         ) {
-          // a toda velocidad — o con dash o escudo activos — la nave es el arma
-          this.damage(e, 99);
-          this.sh = 7;
+          if (e.k === 'emis' && time < this.su && time - this.sst < PARRY_MS) {
+            // PARRY al misil: estalla como explosión tuya, con su onda
+            e.dead = true;
+            this.dn({ x: e.x, y: e.y, z: e.z });
+            this.ad(25);
+            Sfx.parry();
+          } else {
+            // a toda velocidad — o con dash o escudo — la nave es el arma
+            this.damage(e, 99);
+            this.sh = 7;
+          }
         } else if (e.k === 'drone' || e.k === 'inter') {
           // metal contra metal no perdona: chocar un caza es morir
           this.damage(e, 99);
@@ -1674,7 +1718,11 @@ class Game extends Phaser.Scene {
       if (shieldOn && d < SHIELD_R + (s.big ? 40 : 0)) {
         s.dead = true;
         this.ht = 0.3;
-        this.bx.push({ wx: s.x, wy: s.y, wz: s.z, t: 0.32 });
+        if (time - this.sst < PARRY_MS) {
+          this.bl.push({ x: s.x, y: s.y, z: s.z, vx: -s.vx * 1.8, vy: -s.vy * 1.8, vz: -s.vz * 1.8, life: 1.6 });
+          this.ad(15);
+          Sfx.parry();
+        } else this.bx.push({ wx: s.x, wy: s.y, wz: s.z, t: 0.32 });
         continue;
       }
       if (d < (s.big ? 60 : 22)) {
