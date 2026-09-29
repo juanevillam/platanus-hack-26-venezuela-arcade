@@ -141,7 +141,7 @@ const SCORE_KEY = 'space-explorer:scores';
 // Las cuatro piezas del hipersalto
 const PARTS = ['ENGINE', 'NAV CORE', 'CELL', 'REACTOR'];
 
-const HINT_MAIN = 'STICK STEER · B1 FIRE · B2 BOOST · B3 MISSILE · B4/B6 SHIELD';
+const HINT_MAIN = 'B1 FIRE · B2 DASH · B3 MISSILE · B4/B6 SHIELD';
 
 // --------------------------------------------------------------------------
 // Arcade cabinet button → keyboard key mapping.
@@ -417,7 +417,7 @@ const POW_MODELS = {
   twin: mdl([-5, -9, 0, -5, 9, 0, 5, -9, 0, 5, 9, 0], '0123'),
   missile: mdl([0, -12, 0, 0, 10, 0, -6, 10, 0, 6, 10, 0, -3, -6, 0, 3, -6, 0], '0112130405'),
 };
-const POW_NAMES = { shield: 'SHIELD UP', hull: 'HULL +1', twin: 'TWIN CANNON', missile: '+2 MISSILES' };
+const POW_NAMES = { shield: 'SHIELD +1', hull: 'HULL +1', twin: 'TWIN SHOT', missile: '+2 MISSILES' };
 
 // Chatarra: un trozo de casco — placa con borde, puntal y una solapa doblada
 const SCRAP_MODEL = mdl([-8, -6, 0, 7, -7, 0, 9, 4, 0, -6, 6, 0, 13, 8, -6, -2, 11, -6, -8, -6, -4, 7, -7, -4], '0112233024455306176702');
@@ -464,7 +464,7 @@ class Title extends Phaser.Scene {
     this.add
       .text(
         180, 360,
-        'STEER — FULL LOOPS\nCANNON, AIM ASSISTED\nTAP: DASH · HOLD: BOOST (RAMS)\nHOMING MISSILE\nSHIELD\nPAUSE',
+        'STEER\nFIRE\nDASH\nMISSILE\nSHIELD\nPAUSE',
         FONT(13, DIM_CSS)
       )
       .setLineSpacing(14);
@@ -781,7 +781,7 @@ class Game extends Phaser.Scene {
     this.time.delayedCall(9000, () => this.tweens.add({ targets: this.hint, alpha: 0, duration: 800 }));
     // etiqueta del escudo, junto a su barra
     this.add.text(106, 41, 'SHIELD', FONT(9, DIM_CSS)).setAlpha(0.7);
-    this.say(this.level ? 'LEVEL 1 — INBOUND.' : 'FIND THE ENGINE — FOLLOW THE MARKER.');
+    this.say(this.level ? 'INCOMING.' : 'FIND THE ENGINE.');
   }
 
   say(msg) {
@@ -818,7 +818,7 @@ class Game extends Phaser.Scene {
         const was = this.bq;
         this.bq -= dt;
         // el aviso llega antes que la nave: que se sienta venir
-        if (was > 2.5 && this.bq <= 2.5) this.say('MASSIVE SIGNAL INBOUND.');
+        if (was > 2.5 && this.bq <= 2.5) this.say('MASSIVE SIGNAL.');
         if (this.bq <= 0) {
           this.fz = 'boss';
           this.say('HYPERSPACE RUPTURE.');
@@ -1014,7 +1014,7 @@ class Game extends Phaser.Scene {
       this.dp(wx, wy, wz, 0.5);
     } else if (pt.kind === 'dome') {
       this.ad(150);
-      this.say(b.parts.some((q) => q.kind === 'dome' && q.hp > 0) ? 'DOME DOWN.' : 'SHIELDS DOWN — HIT THE BRIDGE.');
+      this.say(b.parts.some((q) => q.kind === 'dome' && q.hp > 0) ? 'DOME DOWN.' : 'HIT THE BRIDGE.');
       b.tpAt = 0.7; // perder un domo lo hace saltar a otro punto del anillo
     } else {
       this.kb(b);
@@ -1038,7 +1038,7 @@ class Game extends Phaser.Scene {
         this.tweens.add({ targets: this.flash, alpha: 0, duration: 700 });
         this.sh = 12;
         Sfx.boom();
-        this.say(b.short ? 'BACK — SALVO INBOUND.' : 'A DESTROYER BLOCKS YOUR JUMP.');
+        this.say(b.short ? "IT'S BACK." : 'DESTROYER AHEAD.');
       }
       if (!b.hd && ct > 1.5 * S && ct < 4.1 * S) {
         b.salvoAt -= dt;
@@ -1046,7 +1046,7 @@ class Game extends Phaser.Scene {
           b.salvoAt = 0.18;
           if (!b.salvoSaid && !b.short) {
             b.salvoSaid = 1;
-            this.say('SALVO INBOUND — SHIELD OR DODGE.');
+            this.say('SALVO INBOUND.');
           }
           const [wx, wy, wz] = this.bw(b, (RND() - 0.5) * 160, -175, -330);
           this.en.push({
@@ -1171,7 +1171,7 @@ class Game extends Phaser.Scene {
     Sfx.boom();
     this.fz = 'charge';
     this.ch = 0;
-    this.say('DESTROYER DOWN. CHARGING JUMP — SURVIVE.');
+    this.say('CHARGING JUMP — SURVIVE.');
   }
 
   ad(pts) {
@@ -1324,7 +1324,7 @@ class Game extends Phaser.Scene {
       this.sh = MAX(this.sh, k * 4);
       if (this.ep > this.wa) {
         this.wa = this.ep + 4;
-        this.say('BLACK HOLE PULL — CLIMB.');
+        this.say('BLACK HOLE — CLIMB.');
       }
     }
     // el horizonte de sucesos no negocia: ni el escudo ni el modo prueba
@@ -1606,9 +1606,9 @@ class Game extends Phaser.Scene {
           this.score += 100;
           Sfx.part();
           if (this.pg >= PARTS.length) {
-            this.sj('ALL PARTS — JUMPING.');
+            this.sj('JUMPING.');
           } else {
-            this.say(PARTS[e.idx] + ' SECURED. ' + (PARTS.length - this.pg) + ' LEFT.');
+            this.say(PARTS[e.idx] + '. ' + (PARTS.length - this.pg) + ' LEFT.');
           }
         } else if (this.sp > RAM_SPEED && (e.k === 'drone' || e.k === 'inter' || e.k === 'emis')) {
           // a toda velocidad, la nave es el arma
