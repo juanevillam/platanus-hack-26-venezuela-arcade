@@ -478,20 +478,22 @@ const Music = {
         if (s16 % 2 === 0) Sfx.noise(0.03, 0.028, t);
         this.next += 0.21;
       } else {
-        // el vacío: acordes menores que respiran (Am → Gm → Bbm → Am/E),
-        // un arpegio perdido y, cada tanto, una estrella que cae
-        const s32 = st % 32;
+        // EXPLORACIÓN: mayor y con pulso — C → G → Am → F, bajo que camina,
+        // arpegio brillante y un tic de batería; aventura, no terror
+        const s16 = st % 16;
         const ch = [
+          [65.4, 98, 164.8],
+          [49, 73.4, 123.5],
           [55, 82.4, 130.8],
-          [49, 73.4, 116.5],
-          [58.3, 87.3, 138.6],
-          [41.2, 82.4, 130.8],
-        ][FLR(st / 32) % 4];
-        if (s32 % 8 === 0) for (const f2 of ch) Sfx.tone(f2, 3.6, 'triangle', 0.05, 0, t);
-        if (s32 % 8 === 4) Sfx.tone(ch[FLR(RND() * 3)] * 4, 1.8, 'sine', 0.032, 0, t);
-        if (s32 === 14) Sfx.tone(ch[2] * 3, 2.2, 'sine', 0.03, ch[2] * 2.5, t);
-        if (s32 === 22) Sfx.tone(ch[0] * 6, 3, 'sine', 0.026, ch[0] * 5.6, t);
-        this.next += 0.42;
+          [43.7, 65.4, 110],
+        ][FLR(st / 16) % 4];
+        Sfx.tone(s16 % 4 === 2 ? ch[0] * 2 : ch[0], 0.22, 'triangle', 0.085, 0, t);
+        if (s16 % 8 === 0) for (const f2 of ch) Sfx.tone(f2 * 2, 1.9, 'triangle', 0.035, 0, t);
+        if (s16 % 2 === 1) Sfx.tone(ch[(s16 >> 1) % 3] * 4, 0.3, 'square', 0.022, 0, t);
+        if (s16 === 10) Sfx.tone(ch[2] * 4, 0.9, 'sine', 0.04, ch[2] * 3, t);
+        if (s16 % 4 === 0) Sfx.noise(0.03, 0.026, t);
+        if (s16 % 8 === 4) Sfx.noise(0.07, 0.045, t);
+        this.next += 0.24;
       }
     }
   },
@@ -947,7 +949,7 @@ class Game extends Phaser.Scene {
     this.boss = {
       k: 'boss',
       x: bx,
-      y: CLP(this.pos.y, -500, 500),
+      y: MIN(this.pos.y, surfY(bx, bz) - 380),
       z: bz,
       r: 520 * SD_SCALE,
       t: 0,
@@ -1103,8 +1105,8 @@ class Game extends Phaser.Scene {
 
     // si te le acercas demasiado, no pelea contigo cuerpo a cuerpo:
     // desaparece y te castiga desde lejos
-    if (!b.tpAt && dist < 700 && this.ep > (b.tpCd || 0)) {
-      b.tpCd = this.ep + 12;
+    if (!b.tpAt && dist < 420 && this.ep > (b.tpCd || 0)) {
+      b.tpCd = this.ep + 20;
       b.tpAt = 1.0;
       this.say('TOO CLOSE — IT CHARGES A JUMP.');
     }
@@ -1119,10 +1121,22 @@ class Game extends Phaser.Scene {
             this.bm(e2);
           }
         }
+        // tus misiles en vuelo hacia él vuelven al tubo: el salto no roba
+        let back = 0;
+        for (const m2 of this.ms) {
+          if (m2.target === b && !m2.dead) {
+            m2.dead = true;
+            back++;
+          }
+        }
+        if (back) {
+          this.ammo = MIN(MISSILE_MAX, this.ammo + back);
+          this.say('MISSILES RECALLED.');
+        }
         const ta = RND() * PI * 2;
         b.x = this.pos.x + SIN(ta) * 1700;
         b.z = this.pos.z + COS(ta) * 1700;
-        b.y = CLP(this.pos.y, -400, 400);
+        b.y = MIN(this.pos.y, surfY(b.x, b.z) - 380);
         b.yaw = AT2(this.pos.x - b.x, this.pos.z - b.z);
         b.hd = 1;
         b.short = 1;
@@ -1393,6 +1407,28 @@ class Game extends Phaser.Scene {
       }
     }
     if (sdy < 46) this.die();
+    // las torres de la superficie son SÓLIDAS: rozarlas cuesta casco
+    if (sdy < 620) {
+      const cs = 700;
+      const cx0 = FLR(this.pos.x / cs) * cs;
+      const cz0 = FLR(this.pos.z / cs) * cs;
+      const hsh = ((cx0 * 1103 + cz0 * 12793) % 97 + 97) % 97;
+      if (hsh < 22) {
+        const hh = (hsh < 8 ? 300 : 90) + (hsh % 5) * 70;
+        const bx0 = cx0 + cs * 0.3;
+        const bz0 = cz0 + cs * 0.3;
+        const bw2 = cs * 0.4;
+        const yb = surfY(bx0 + bw2 / 2, bz0 + bw2 / 2);
+        if (
+          this.pos.y > yb - hh &&
+          this.pos.x > bx0 && this.pos.x < bx0 + bw2 &&
+          this.pos.z > bz0 && this.pos.z < bz0 + bw2
+        ) {
+          this.hy(time);
+          this.pos.y = yb - hh - 70; // la torre te escupe hacia arriba
+        }
+      }
+    }
 
     // alabeo con el giro
     const bank = this.yv * 0.34;
@@ -1536,9 +1572,9 @@ class Game extends Phaser.Scene {
           gx = e.x - (dx / dist) * 1500 + (dz / dist) * 500 * e.orbit;
           gy = e.y - (dy / dist) * 600;
           gz = e.z - (dz / dist) * 1500 - (dx / dist) * 500 * e.orbit;
-        } else if (dist < 400) {
+        } else if (dist < 320) {
           // te tuvo demasiado cerca: rompe y ESCAPA — la pasada terminó
-          e.fl = (e.k === 'ace' ? 1.3 : 2.2) + RND();
+          e.fl = (e.k === 'ace' ? 0.7 : 1.3) + RND() * 0.6;
         }
         let m = HYP(e.vx, e.vy, e.vz);
         if (m < 40) {
@@ -1567,7 +1603,7 @@ class Game extends Phaser.Scene {
         // el alabeo visual sale del propio viraje
         e.bank = (e.bank || 0) + (CLP(AWR(e.yaw - oy) * 14, -0.9, 0.9) - (e.bank || 0)) * MIN(1, 6 * dt);
         e.fireAt -= dt;
-        if (e.fireAt <= 0 && !(e.fl > 0) && dist < (e.k === 'ace' ? 1300 : 1000)) {
+        if (e.fireAt <= 0 && dist < (e.k === 'ace' ? 1300 : 1000)) {
           e.fireAt = e.k === 'ace' ? 2.2 : DRONE_FIRE;
           this.sa(e, SHOT_SPEED);
         }
@@ -1629,7 +1665,7 @@ class Game extends Phaser.Scene {
         e.y += SIN(e.t * 1.1) * 8 * dt;
         e.fireAt -= dt;
         if (dist < 1000 && e.fireAt <= 0) {
-          e.fireAt = 3.2;
+          e.fireAt = e.base ? 2.1 : 3.2; // las de superficie pican más rápido
           this.sa(e, SHOT_SPEED);
         }
       } else if (e.k === 'rock') {
@@ -2245,7 +2281,7 @@ class Game extends Phaser.Scene {
         // el hash decide qué celda lleva estructura, y de qué altura
         const hsh = ((x0 * 1103 + z0 * 12793) % 97 + 97) % 97;
         if (hsh < 22) {
-          const hh = 90 + (hsh % 5) * 70;
+          const hh = (hsh < 8 ? 300 : 90) + (hsh % 5) * 70;
           const bx0 = x0 + cs * 0.3;
           const bz0 = z0 + cs * 0.3;
           const bw2 = cs * 0.4;
