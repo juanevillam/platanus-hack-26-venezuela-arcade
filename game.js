@@ -129,7 +129,7 @@ const SHOT_SPEED = 250;
 const DRONE_FIRE = 3.0; // segundos entre disparos de un cazador
 
 // --- El sector: una esfera de juego alrededor del origen ---
-const SECTOR_R = 2400;
+const SECTOR_R = 3000;
 // El suelo es un agujero negro: siempre debajo de ti. Bajar lo acerca; a
 // BH_PULL de distancia empieza a tirar, y a BH_KILL te tragó.
 const BH_Y = 3600;
@@ -377,6 +377,8 @@ for (let i = 0; i < 12; i++) {
     if (ABS(HYP(a[0] - b[0], a[1] - b[1], a[2] - b[2]) - 2) < 0.01) ICO_EDGES.push([i, j]);
   }
 }
+// El pool: CUATRO formas de roca generadas una vez y compartidas por
+// todas — una instancia, muchas repeticiones
 function makeRockModel() {
   const k = 16 / HYP(1, ICO_PHI);
   return [
@@ -387,6 +389,8 @@ function makeRockModel() {
     ICO_EDGES,
   ];
 }
+
+const ROCK_POOL = [makeRockModel(), makeRockModel(), makeRockModel(), makeRockModel()];
 
 // Interceptor: aguja con cuchillas hacia adelante, canards junto a la nariz
 // y una aleta dorsal — un dardo con filo
@@ -757,7 +761,7 @@ class Game extends Phaser.Scene {
     for (let i = 0; i < rocks; i++) {
       const p = this.ri(SECTOR_R * 0.95);
       this.en.push({
-        k: 'rock', x: p[0], y: p[1] * 0.5, z: p[2], r: 42, hp: 2, t: rnd(0, 9), model: makeRockModel(),
+        k: 'rock', x: p[0], y: p[1] * 0.5, z: p[2], r: 42, hp: 2, t: rnd(0, 9), model: ROCK_POOL[FLR(RND() * 4)],
         spin: rnd(-0.5, 0.5), vx: rnd(-16, 16), vy: rnd(-10, 10), vz: rnd(-16, 16), yaw: 0,
       });
     }
@@ -1183,7 +1187,7 @@ class Game extends Phaser.Scene {
     // gira lento para ponerte la proa — más lento que tu órbita, así ganarle
     // la espalda es cuestión de volar. Avanza si te alejas, nunca retrocede,
     // y no se deja arrastrar lejos del centro del sector.
-    b.yaw += AWR(AT2(dx, dz) - b.yaw) * MIN(1, 0.14 * dt);
+    b.yaw += AWR(AT2(dx, dz) - b.yaw) * MIN(1, 0.11 * dt);
     const move = dist > 1900 ? 90 : 0;
     b.x += SIN(b.yaw) * move * dt;
     b.z += COS(b.yaw) * move * dt;
@@ -1400,9 +1404,9 @@ class Game extends Phaser.Scene {
 
     // cerca del destructor la pasada se frena sola (salvo con nitro):
     // giras antes, lo pierdes de vista menos, la pelea se queda contigo
-    if (this.boss && !sceneHold && !held.P1_2 && this.sp > 150) {
+    if (this.boss && !sceneHold && !held.P1_2 && this.sp > 190) {
       const bd2 = HYP(this.boss.x - this.pos.x, this.boss.y - this.pos.y, this.boss.z - this.pos.z);
-      if (bd2 < 1000) this.sp += (150 - this.sp) * MIN(1, 1.4 * dt);
+      if (bd2 < 700) this.sp += (190 - this.sp) * MIN(1, 1 * dt);
     }
 
     const f = this.fw();
@@ -1415,9 +1419,13 @@ class Game extends Phaser.Scene {
     const yc = MIN(this.pos.y, 0);
     const rr = HYP(this.pos.x, yc * 1.6, this.pos.z);
     if (rr > SECTOR_R) {
-      this.pos.x -= (this.pos.x / rr) * (rr - SECTOR_R) * 2 * dt;
-      this.pos.y -= (yc / rr) * (rr - SECTOR_R) * 2 * dt;
-      this.pos.z -= (this.pos.z / rr) * (rr - SECTOR_R) * 2 * dt;
+      this.pos.x -= (this.pos.x / rr) * (rr - SECTOR_R) * 1.2 * dt;
+      this.pos.y -= (yc / rr) * (rr - SECTOR_R) * 1.2 * dt;
+      this.pos.z -= (this.pos.z / rr) * (rr - SECTOR_R) * 1.2 * dt;
+      if (this.ep > this.wa) {
+        this.wa = this.ep + 4;
+        this.say('SECTOR EDGE.');
+      }
     }
 
     // el agujero negro: cuanto más bajas, más tira — y muy abajo, te traga
@@ -1696,9 +1704,18 @@ class Game extends Phaser.Scene {
       // estrellarse contra un kilómetro de acero no se sobrevive: ni el
       // escudo ni el modo prueba te salvan de esa
       if (e.k === 'boss') {
-        // el hitbox es más ANCHO que el casco: explotas visiblemente fuera,
-        // nunca metido dentro del modelo
-        if (!e.hd && this.ib(e, P.x, P.y, P.z, 60)) this.die();
+        // primero el AVISO — rozar el casco grita PULL UP.; morir queda
+        // para incrustarse de verdad, no para pasar cerca
+        if (!e.hd && this.ib(e, P.x, P.y, P.z, 150)) {
+          if (this.ib(e, P.x, P.y, P.z, 16)) this.die();
+          else {
+            this.sh = MAX(this.sh, 5);
+            if (this.ep > this.wa) {
+              this.wa = this.ep + 1.5;
+              this.say('PULL UP.');
+            }
+          }
+        }
         continue;
       }
 
@@ -1854,7 +1871,7 @@ class Game extends Phaser.Scene {
     if (e.k === 'rock' && e.r > 20) {
       for (let i = 0; i < 2; i++) {
         this.en.push({
-          k: 'rock', x: e.x, y: e.y, z: e.z, r: 18, hp: 1, t: 0, yaw: 0, model: makeRockModel(),
+          k: 'rock', x: e.x, y: e.y, z: e.z, r: 18, hp: 1, t: 0, yaw: 0, model: ROCK_POOL[FLR(RND() * 4)],
           spin: (RND() - 0.5) * 3,
           vx: (RND() - 0.5) * 120,
           vy: (RND() - 0.5) * 80,
