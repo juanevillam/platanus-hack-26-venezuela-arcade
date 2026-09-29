@@ -1,5 +1,5 @@
 {
   "game_name": "Space Explorer",
-  "description": "Varado en un sector alienígena. Encuentra las tres piezas del hipersalto, derriba la nave capital y vuelve a casa.",
+  "description": "Vuelo libre 3D en wireframe, sobre un agujero negro. Nivel 0: recupera las tres piezas del hipersalto. Nivel 1: un destructor bloquea el salto — derríbalo y vuelve a casa.",
   "player_mode": "single_player"
 }

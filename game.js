@@ -52,11 +52,11 @@ const DASH_COST = 22; // cada toque de B2: un dash, intocable un instante
 const DASH_KICK = 260;
 const DASH_INVULN_MS = 450;
 const RAM_SPEED = 430; // por encima, embistes a los cazadores y los destrozas
-// B4/B6: esquive lateral — un salto corto e intocable hacia ese lado,
-// para sacar la nave de una ráfaga del destructor sin perder el rumbo
-const BLINK_DIST = 240;
-const BLINK_COOLDOWN_MS = 800;
-const BLINK_SAFE_MS = 420;
+// B4/B6: ESCUDO — una burbuja que come todo lo que te llega mientras dura.
+// La respuesta a las ráfagas del destructor: levantarlo en el momento justo.
+const SHIELD_MS = 1100;
+const SHIELD_COOLDOWN_MS = 3500;
+const SHIELD_R = 52; // radio en mundo dentro del que la burbuja come disparos
 const TUTORIAL_CRUISE = 180; // nivel 0: más lento, para aprender a volar
 const MAGNET_R = 240; // lo recogible viene hacia ti
 const FIRE_MS = 160;
@@ -91,7 +91,7 @@ const SCORE_KEY = 'space-explorer:scores';
 // Las tres piezas del hipersalto
 const PARTS = ['MOTOR', 'NÚCLEO NAV', 'REACTOR'];
 
-const HINT_MAIN = 'STICK DIRIGE · B1 DISPARA · B2 NITRO · B3 MISIL · B4/B6 ESQUIVE';
+const HINT_MAIN = 'STICK DIRIGE · B1 DISPARA · B2 NITRO · B3 MISIL · B4/B6 ESCUDO';
 
 // --------------------------------------------------------------------------
 // Arcade cabinet button → keyboard key mapping.
@@ -274,6 +274,9 @@ const Sfx = {
   },
   turn() {
     this.tone(330, 0.3, 'sine', 0.12, 160);
+  },
+  shieldUp() {
+    this.tone(240, 0.28, 'sine', 0.15, 520);
   },
   jump() {
     const t = this.ctx && this.ctx.currentTime;
@@ -544,41 +547,82 @@ class Title extends Phaser.Scene {
     this.gfx = this.add.graphics();
     this.spin = 0;
 
-    this.add.text(CX, 140, 'S P A C E  E X P L O R E R', FONT(36)).setOrigin(0.5);
-    this.add
-      .text(CX, 186, 'Encuentra las tres piezas. Y vuelve a casa.', FONT(15, DIM_CSS))
-      .setOrigin(0.5)
-      .setAlpha(0.9);
-    this.press = this.add.text(CX, H - 130, 'PRESIONA START', FONT(16)).setOrigin(0.5);
-    this.add.text(CX, H - 44, HINT_MAIN, FONT(13, DIM_CSS)).setOrigin(0.5).setAlpha(0.8);
+    // el título también está en el espacio: estrellas que titilan
+    this.tstars = [];
+    for (let i = 0; i < 110; i++) {
+      this.tstars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        s: Math.random() < 0.12 ? 2 : 1,
+        a: 0.12 + Math.random() * 0.45,
+        tw: Math.random() < 0.3 ? 1 + Math.random() * 2 : 0,
+        ph: Math.random() * 6.3,
+      });
+    }
 
-    this.scoreText = this.add.text(CX, 330, '', FONT(15, DIM_CSS)).setOrigin(0.5, 0).setLineSpacing(7);
+    const title = this.add.text(CX, 88, 'S P A C E  E X P L O R E R', FONT(36)).setOrigin(0.5);
+    title.setShadow(0, 0, INK_CSS, 16, false, true);
+    this.add.text(CX, 124, 'UN JUGADOR', FONT(13, DIM_CSS)).setOrigin(0.5);
+    this.sub = this.add.text(CX, 156, '', FONT(15, DIM_CSS)).setOrigin(0.5);
+    typeIn(this, this.sub, 'Varado sobre un agujero negro. Recupera las piezas. Vuelve a casa.', 30);
+
+    // los controles, de verdad — no una sola línea
+    [
+      ['STICK', 'DIRIGE LA NAVE — LOOPS COMPLETOS'],
+      ['B1', 'CAÑÓN, CON PUNTERÍA ASISTIDA'],
+      ['B2', 'TOQUE: DASH · MANTENIDO: NITRO QUE EMBISTE'],
+      ['B3', 'MISIL TELEDIRIGIDO'],
+      ['B4/B6', 'ESCUDO'],
+      ['START', 'PAUSA'],
+    ].forEach(([k, v], i) => {
+      const y = 330 + i * 27;
+      this.add.text(160, y, k, FONT(14)).setOrigin(1, 0.5);
+      this.add.text(180, y, v, FONT(13, DIM_CSS)).setOrigin(0, 0.5);
+    });
+
+    // el top 5, a la derecha
+    this.add.text(596, 330, 'TOP 5', FONT(14)).setOrigin(0, 0.5);
+    this.scoreText = this.add.text(596, 352, '', FONT(14, DIM_CSS)).setOrigin(0, 0).setLineSpacing(9);
     loadScores().then((scores) => {
       if (!scores.length || !this.scene.isActive()) return;
       this.scoreText.setText(
         scores.map((s, i) => `${i + 1}  ${s.n.padEnd(3)}  ${String(s.s).padStart(6, '0')}`).join('\n')
       );
     });
+
+    this.press = this.add.text(CX, H - 52, 'PRESIONA START', FONT(16)).setOrigin(0.5);
   }
 
   update(time, delta) {
-    // la nave girando sobre el nombre — el único adorno
     this.spin += delta * 0.0009;
-    this.gfx.clear();
-    drawModelAt(this.gfx, SHIP_MODEL, CX, 254, this.spin, -0.2, 2.6, INK, 1, 1.5);
+    const g = this.gfx;
+    g.clear();
+    for (const m of this.tstars) {
+      let a = m.a;
+      if (m.tw) a *= 0.55 + 0.45 * Math.sin(time * 0.001 * m.tw + m.ph);
+      g.fillStyle(INK, a);
+      g.fillRect(m.x, m.y, m.s, m.s);
+    }
+    // el destructor acecha al fondo, en óxido; tu nave gira al frente
+    drawModelAt(g, DESTROYER_MODEL, 612, 208, 0, -0.1, 0.13, RUST, 0.5, 1, 2.2 + this.spin * 0.3);
+    drawModelAt(g, SHIP_MODEL, CX, 244, this.spin, -0.2, 2.4, INK, 1, 1.5);
     this.press.setAlpha(Math.floor(time / 600) % 2 ? 1 : 0.25);
     if (anyStart()) this.scene.start('game', { level: 0 });
   }
 }
 
-// Dibuja un modelo suelto en pantalla (título): roll + pitch, sin cámara
-function drawModelAt(g, model, sx, sy, roll, pitch, size, color, alpha, width) {
+// Dibuja un modelo suelto en pantalla (título): yaw + roll + pitch, sin cámara
+function drawModelAt(g, model, sx, sy, roll, pitch, size, color, alpha, width, yaw) {
   const [verts, edges] = model;
   const cr = Math.cos(roll);
   const sr = Math.sin(roll);
   const cp = Math.cos(pitch);
   const sp = Math.sin(pitch);
-  const pts = verts.map(([mx, my, mz]) => {
+  const cy = Math.cos(yaw || 0);
+  const sy2 = Math.sin(yaw || 0);
+  const pts = verts.map(([mx0, my, mz0]) => {
+    const mx = mx0 * cy + mz0 * sy2;
+    const mz = -mx0 * sy2 + mz0 * cy;
     let x = mx * cr - my * sr;
     let y = mx * sr + my * cr;
     let z = mz;
@@ -730,10 +774,8 @@ class Game extends Phaser.Scene {
     this.speed = this.cruise;
     this.boost = BOOST_MAX;
     this.roll = 0; // alabeo solo visual, al girar
-    this.blinkReady = 0;
-    this.blinkSafe = 0;
-    this.blinkUntil = 0;
-    this.blinkFrom = null;
+    this.shieldUntil = 0;
+    this.shieldReady = 0;
     this.dashUntil = 0;
     this.fireReadyAt = 0;
     this.invulnUntil = 0;
@@ -1025,15 +1067,24 @@ class Game extends Phaser.Scene {
     });
   }
 
-  // El destructor sale del hiperespacio delante de ti y bloquea el salto
+  // El destructor sale del hiperespacio delante de ti y bloquea el salto.
+  // Llega ANCLADO CERCA DEL CENTRO del sector: la pelea vive donde hay
+  // espacio para rodearlo — nunca contra el borde, que te empuja de vuelta.
   spawnBoss() {
     const f = this.F;
     const h = Math.hypot(f.x, f.z) || 1;
+    let bx = this.pos.x + (f.x / h) * 3400;
+    let bz = this.pos.z + (f.z / h) * 3400;
+    const bd = Math.hypot(bx, bz);
+    if (bd > 1100) {
+      bx *= 1100 / bd;
+      bz *= 1100 / bd;
+    }
     this.boss = {
       k: 'boss',
-      x: this.pos.x + (f.x / h) * 3400,
+      x: bx,
       y: this.pos.y - 160,
-      z: this.pos.z + (f.z / h) * 3400,
+      z: bz,
       r: 520 * SD_SCALE,
       t: 0,
       yaw: Math.atan2(-f.x, -f.z), // la proa hacia ti
@@ -1132,11 +1183,18 @@ class Game extends Phaser.Scene {
       return;
     }
     for (const pt of b.parts) if (pt.flashT) pt.flashT -= dt;
-    // gira lento para ponerte la proa y aguanta a distancia de batalla
-    b.yaw += Phaser.Math.Angle.Wrap(Math.atan2(dx, dz) - b.yaw) * Math.min(1, 0.25 * dt);
-    const move = dist > 1900 ? 90 : dist < 1200 ? -60 : 0;
+    // gira lento para ponerte la proa — más lento que tu órbita, así ganarle
+    // la espalda es cuestión de volar. Avanza si te alejas, nunca retrocede,
+    // y no se deja arrastrar lejos del centro del sector.
+    b.yaw += Phaser.Math.Angle.Wrap(Math.atan2(dx, dz) - b.yaw) * Math.min(1, 0.14 * dt);
+    const move = dist > 1900 ? 90 : 0;
     b.x += Math.sin(b.yaw) * move * dt;
     b.z += Math.cos(b.yaw) * move * dt;
+    const bh = Math.hypot(b.x, b.z);
+    if (bh > 1300) {
+      b.x *= 1300 / bh;
+      b.z *= 1300 / bh;
+    }
     b.y += Math.sin(b.t * 0.4) * 6 * dt;
 
     // torretas: ráfagas de tres, lentas y esquivables — pero son seis
@@ -1259,19 +1317,12 @@ class Game extends Phaser.Scene {
     const turn = (held.P1_R ? 1 : 0) - (held.P1_L ? 1 : 0);
     const pit = (held.P1_U ? 1 : 0) - (held.P1_D ? 1 : 0); // arriba = nariz arriba
 
-    // B4/B6: esquive lateral — un salto corto hacia ese lado, intocable un
-    // instante. El rumbo no cambia: es para salirte de una ráfaga y seguir.
-    if ((pressed.P1_4 || pressed.P1_6) && time >= this.blinkReady) {
-      const dir = pressed.P1_4 ? -1 : 1;
-      this.blinkReady = time + BLINK_COOLDOWN_MS;
-      this.blinkSafe = time + BLINK_SAFE_MS;
-      this.blinkUntil = time + 260;
-      this.blinkFrom = { ...this.pos };
-      this.pos.x += this.R.x * BLINK_DIST * dir;
-      this.pos.y += this.R.y * BLINK_DIST * dir;
-      this.pos.z += this.R.z * BLINK_DIST * dir;
-      this.roll -= dir * 0.9; // la sacudida de alabeo, se endereza sola
-      Sfx.dash();
+    // B4/B6: el escudo — mientras dura, nada te toca y los disparos se
+    // deshacen contra la burbuja. Se levanta en el momento, no se guarda.
+    if ((pressed.P1_4 || pressed.P1_6) && time >= this.shieldReady) {
+      this.shieldUntil = time + SHIELD_MS;
+      this.shieldReady = time + SHIELD_MS + SHIELD_COOLDOWN_MS;
+      Sfx.shieldUp();
     }
 
     // cabeceo sobre el ala de la nave: arriba es arriba de la pantalla aun de cabeza
@@ -1451,7 +1502,7 @@ class Game extends Phaser.Scene {
   }
 
   hitPlayer(time) {
-    if (time < this.invulnUntil || time < this.dashUntil || time < this.blinkSafe || this.phase === 'out') return;
+    if (time < this.invulnUntil || time < this.dashUntil || time < this.shieldUntil || this.phase === 'out') return;
     this.invulnUntil = time + 1300;
     this.shake = 9;
     Sfx.hurt();
@@ -1645,13 +1696,19 @@ class Game extends Phaser.Scene {
       }
     }
 
-    // disparos enemigos
+    // disparos enemigos — el escudo activo los deshace contra la burbuja
+    const shieldOn = time < this.shieldUntil;
     for (const s of this.shots) {
       s.x += s.vx * dt;
       s.y += s.vy * dt;
       s.z += s.vz * dt;
       s.life -= dt;
       const d = Math.hypot(P.x - s.x, P.y - s.y, P.z - s.z);
+      if (shieldOn && d < SHIELD_R + (s.big ? 40 : 0)) {
+        s.dead = true;
+        this.booms.push({ wx: s.x, wy: s.y, wz: s.z, t: 0.32 });
+        continue;
+      }
       if (d < (s.big ? 60 : 22)) {
         s.dead = true;
         this.hitPlayer(time);
@@ -2504,18 +2561,6 @@ class Game extends Phaser.Scene {
         this.drawBasisModel(g, cm, SHIP_MODEL, gp, this.F, this.U, 1, INK_HI, 0.4 / i, this.roll);
       }
     }
-    // esquive: los fantasmas quedan por donde saltaste, de lado
-    if (time < this.blinkUntil && this.blinkFrom) {
-      for (let i = 1; i <= 3; i++) {
-        const q = i / 4;
-        const gp = {
-          x: this.pos.x + (this.blinkFrom.x - this.pos.x) * q,
-          y: this.pos.y + (this.blinkFrom.y - this.pos.y) * q,
-          z: this.pos.z + (this.blinkFrom.z - this.pos.z) * q,
-        };
-        this.drawBasisModel(g, cm, SHIP_MODEL, gp, this.F, this.U, 1, INK_HI, 0.45 - q * 0.3, this.roll);
-      }
-    }
     this.drawBasisModel(g, cm, SHIP_MODEL, this.pos, this.F, this.U, 1, INK, 1, this.roll);
     // a velocidad de embestida, la proa se enciende
     if (this.speed > RAM_SPEED) {
@@ -2533,6 +2578,26 @@ class Game extends Phaser.Scene {
     if (this.shield && sp0) {
       g.lineStyle(1.5, INK_HI, 0.4 + 0.2 * Math.sin(time * 0.008));
       g.strokeCircle(sp0[0], sp0[1], 30 * (FOCAL / sp0[2]));
+    }
+    // el escudo ACTIVO: burbuja doble con arcos girando; parpadea al morir
+    if (time < this.shieldUntil && sp0) {
+      const left = (this.shieldUntil - time) / SHIELD_MS;
+      const dying = left < 0.3 && Math.floor(time / 80) % 2 === 0;
+      if (!dying) {
+        const r = SHIELD_R * 0.85 * (FOCAL / sp0[2]);
+        g.lineStyle(1.5, INK_HI, 0.75);
+        g.strokeCircle(sp0[0], sp0[1], r);
+        g.lineStyle(3, INK_HI, 0.18);
+        g.strokeCircle(sp0[0], sp0[1], r * 1.12);
+        const spin = time * 0.004;
+        g.lineStyle(2.5, INK_HI, 0.9);
+        for (let i = 0; i < 3; i++) {
+          const a0 = spin + (i * Math.PI * 2) / 3;
+          g.beginPath();
+          g.arc(sp0[0], sp0[1], r, a0, a0 + 0.7);
+          g.strokePath();
+        }
+      }
     }
     if (this.muzzleT > 0) {
       const mp = this.project(cm, this.pos.x + f.x * 26, this.pos.y + f.y * 26 - 2, this.pos.z + f.z * 26);
@@ -2659,6 +2724,13 @@ class Game extends Phaser.Scene {
     g.strokeRect(12, 34, 90, 6);
     g.fillStyle(INK_HI, 0.7);
     g.fillRect(13, 35, 88 * (this.boost / BOOST_MAX), 4);
+    // el escudo, recargándose debajo: llena = listo
+    const now = this.time.now;
+    const shReady = now >= this.shieldReady ? 1 : 1 - (this.shieldReady - now) / (SHIELD_MS + SHIELD_COOLDOWN_MS);
+    g.lineStyle(1, INK, 0.4);
+    g.strokeRect(12, 44, 90, 4);
+    g.fillStyle(INK_HI, shReady >= 1 ? 0.8 : 0.4);
+    g.fillRect(13, 45, 88 * Math.max(0, shReady), 2);
     // el próximo misil, recargándose
     if (this.ammo < MISSILE_MAX) {
       g.lineStyle(1, INK, 0.4);
