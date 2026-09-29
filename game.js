@@ -563,11 +563,8 @@ class Title extends Phaser.Scene {
       });
     }
 
-    const title = this.add.text(CX, 88, 'S P A C E  E X P L O R E R', FONT(36)).setOrigin(0.5);
+    const title = this.add.text(CX, 96, 'S P A C E  E X P L O R E R', FONT(36)).setOrigin(0.5);
     title.setShadow(0, 0, INK_CSS, 16, false, true);
-    this.add.text(CX, 124, 'UN JUGADOR', FONT(13, DIM_CSS)).setOrigin(0.5);
-    this.sub = this.add.text(CX, 156, '', FONT(15, DIM_CSS)).setOrigin(0.5);
-    typeIn(this, this.sub, 'Varado sobre un agujero negro. Recupera las piezas. Vuelve a casa.', 30);
 
     // los controles, de verdad — no una sola línea
     [
@@ -578,14 +575,14 @@ class Title extends Phaser.Scene {
       ['B4/B6', 'ESCUDO'],
       ['START', 'PAUSA'],
     ].forEach(([k, v], i) => {
-      const y = 330 + i * 27;
+      const y = 372 + i * 27;
       this.add.text(160, y, k, FONT(14)).setOrigin(1, 0.5);
       this.add.text(180, y, v, FONT(13, DIM_CSS)).setOrigin(0, 0.5);
     });
 
     // el top 5, a la derecha
-    this.add.text(596, 330, 'TOP 5', FONT(14)).setOrigin(0, 0.5);
-    this.scoreText = this.add.text(596, 352, '', FONT(14, DIM_CSS)).setOrigin(0, 0).setLineSpacing(9);
+    this.add.text(596, 372, 'TOP 5', FONT(14)).setOrigin(0, 0.5);
+    this.scoreText = this.add.text(596, 394, '', FONT(14, DIM_CSS)).setOrigin(0, 0).setLineSpacing(9);
     loadScores().then((scores) => {
       if (!scores.length || !this.scene.isActive()) return;
       this.scoreText.setText(
@@ -606,8 +603,9 @@ class Title extends Phaser.Scene {
       g.fillStyle(INK, a);
       g.fillRect(m.x, m.y, m.s, m.s);
     }
-    // tu nave, girando en su eje como en una vitrina — nariz siempre nivelada
-    drawModelAt(g, SHIP_MODEL, CX, 244, 0, -0.18, 2.4, INK, 1, 1.5, this.spin);
+    // tu nave, girando en su eje como en una vitrina — inclinada hacia la
+    // cámara, que se le vea el lomo y se entienda la silueta
+    drawModelAt(g, SHIP_MODEL, CX, 236, 0, -0.5, 2.4, INK, 1, 1.5, this.spin);
     this.press.setAlpha(Math.floor(time / 600) % 2 ? 1 : 0.25);
     if (anyStart()) this.scene.start('game', { level: 0 });
   }
@@ -796,7 +794,7 @@ class Game extends Phaser.Scene {
     this.jumping = false; // Phaser reuses the scene instance across runs
     this.jumpT = 0;
     this.enterT = this.level ? 1 : 0; // llegando: el túnel se deshace
-    this.bossAt = 3; // nivel 1: el destructor tarda esto en llegar
+    this.bossAt = 6; // nivel 1: el destructor tarda esto en llegar
     this.tutStep = -1; // el tutorial avanza objetivo a objetivo
     this.tut = null;
     this.tutWait = 0.6;
@@ -1012,7 +1010,10 @@ class Game extends Phaser.Scene {
         this.spawnDrones(dt, 1 + this.partsGot, 12);
       } else {
         this.spawnDrones(dt, 1, 9);
+        const was = this.bossAt;
         this.bossAt -= dt;
+        // el aviso llega antes que la nave: que se sienta venir
+        if (was > 2.5 && this.bossAt <= 2.5) this.say('SEÑAL MASIVA DETECTADA.');
         if (this.bossAt <= 0) {
           this.phase = 'boss';
           this.say('UN DESTRUCTOR BLOQUEA EL SALTO. DERRÍBALO.');
@@ -1177,18 +1178,22 @@ class Game extends Phaser.Scene {
     });
   }
 
-  // El destructor sale del hiperespacio delante de ti y bloquea el salto.
-  // Llega ANCLADO CERCA DEL CENTRO del sector: la pelea vive donde hay
-  // espacio para rodearlo — nunca contra el borde, que te empuja de vuelta.
+  // El destructor sale del hiperespacio y bloquea el salto. Llega ANCLADO
+  // CERCA DEL CENTRO del sector (la pelea nunca vive contra el borde, que
+  // te empuja de vuelta), y al punto del anillo MÁS LEJANO de ti: la
+  // entrada y la salva se ven enteras, de lejos, como una escena.
   spawnBoss() {
-    const f = this.F;
-    const h = Math.hypot(f.x, f.z) || 1;
-    let bx = this.pos.x + (f.x / h) * 3400;
-    let bz = this.pos.z + (f.z / h) * 3400;
-    const bd = Math.hypot(bx, bz);
-    if (bd > 1100) {
-      bx *= 1100 / bd;
-      bz *= 1100 / bd;
+    const ph = Math.hypot(this.pos.x, this.pos.z);
+    let bx;
+    let bz;
+    if (ph > 300) {
+      bx = (-this.pos.x / ph) * 1200;
+      bz = (-this.pos.z / ph) * 1200;
+    } else {
+      const f = this.F;
+      const h = Math.hypot(f.x, f.z) || 1;
+      bx = (f.x / h) * 1200;
+      bz = (f.z / h) * 1200;
     }
     this.boss = {
       k: 'boss',
@@ -1197,12 +1202,12 @@ class Game extends Phaser.Scene {
       z: bz,
       r: 520 * SD_SCALE,
       t: 0,
-      yaw: Math.atan2(-f.x, -f.z), // la proa hacia ti
+      yaw: Math.atan2(this.pos.x - bx, this.pos.z - bz), // la proa hacia ti
       hangarAt: 6,
       cannonAt: 9,
       missileAt: 4,
       charging: 0,
-      arrive: 0.7, // sale del hiperespacio: estirado en líneas, y luego el snap
+      arrive: 2.2, // sale del hiperespacio DESPACIO: la estela se ve llegar
       parts: SD_PARTS.map(([kind, ox, oy, oz, hp]) => ({ kind, ox, oy, oz, hp, max: hp, fireAt: 1 + Math.random() * 3, burst: 0 })),
     };
     this.ents.push(this.boss);
@@ -1298,28 +1303,29 @@ class Game extends Phaser.Scene {
       return;
     }
     // La escena: quieto, el sector en negro, y una lluvia de cohetes que
-    // primero sube en columnas de óxido y después se curva hacia ti.
+    // primero SUBE alto en columnas de óxido, se abre en direcciones
+    // distintas, y después se curva hacia ti. Lenta a propósito: es cine.
     if (b.cine) {
       b.cineT += dt;
       const ct = b.cineT;
-      b.cineDark = ct < 0.7 ? ct / 0.7 : ct < 2.2 ? 1 : Math.max(0, 1 - (ct - 2.2) / 1.5);
-      if (ct > 0.7 && ct < 1.9) {
+      b.cineDark = ct < 1.4 ? ct / 1.4 : ct < 4.4 ? 1 : Math.max(0, 1 - (ct - 4.4) / 1.8);
+      if (ct > 1.2 && ct < 4.0) {
         b.salvoAt -= dt;
         if (b.salvoAt <= 0) {
-          b.salvoAt = 0.09;
+          b.salvoAt = 0.18;
           const [wx, wy, wz] = this.bossToWorld(b, (Math.random() - 0.5) * 160, -175, -330);
           this.ents.push({
             k: 'emis', x: wx, y: wy, z: wz, r: 22, hp: 1, t: 0, yaw: 0,
-            vx: (Math.random() - 0.5) * 380,
-            vy: -(420 + Math.random() * 320),
-            vz: (Math.random() - 0.5) * 380,
-            rise: 0.8 + Math.random() * 0.9,
-            life: 13,
+            vx: (Math.random() - 0.5) * 560,
+            vy: -(650 + Math.random() * 350),
+            vz: (Math.random() - 0.5) * 560,
+            rise: 1.6 + Math.random() * 1.0,
+            life: 16,
           });
           if (Math.random() < 0.35) Sfx.missile();
         }
       }
-      if (ct > 3.7) {
+      if (ct > 6.4) {
         b.cine = 0;
         b.cineDark = 0;
       }
@@ -2543,7 +2549,7 @@ class Game extends Phaser.Scene {
     if (e.k === 'boss') {
       if (e.arrive > 0) {
         // saliendo del hiperespacio: el casco estirado hacia atrás en líneas
-        const k = e.arrive / 0.7;
+        const k = e.arrive / 2.2;
         g.lineStyle(2, INK_HI, 0.9 - k * 0.5);
         for (const [ox, oy] of [[-SD_HALF_W, 0], [SD_HALF_W, 0], [0, SD_RIDGE], [0, -150]]) {
           this.worldLine(
