@@ -973,7 +973,7 @@ class Game extends Phaser.Scene {
       tpAt: 0,
       salvoAt: 0,
       mini: mini ? 1 : 0,
-      parts: SD_PARTS.filter(([kind]) => !mini || kind !== 'dome')
+      parts: SD_PARTS.filter(([kind], i) => !mini || (kind === 'bridge' || i < 4))
         .map(([kind, ox, oy, oz, hp]) => ({ kind, ox, oy, oz, hp: mini && kind === 'bridge' ? 8 : hp, max: mini && kind === 'bridge' ? 8 : hp, fireAt: 1 + RND() * 3, burst: 0 })),
     };
     if (mini) this.boss2 = nb;
