@@ -125,7 +125,7 @@ const GRY = 0x8a9099; // gris de escombro: paisaje, no equipo
 const MAGNET_R = 240; // lo recogible viene hacia ti
 const FIRE_MS = 160;
 const BOLT_SPEED = 980;
-const BOLT_LIFE = 1.9;
+const BOLT_LIFE = 3.2; // ~3800 de alcance: se pelea desde lejos
 const MISSILE_SPEED = 560;
 const MISSILE_TURN = 3.4; // 1/s de corrección hacia el blanco
 const MISSILE_MAX = 5;
@@ -1561,6 +1561,9 @@ class Game extends Phaser.Scene {
     const bdz = BH[2] - P.z;
     const bhd = HYP(bdx, bdy, bdz);
     this.bhx = CLP(1 - (bhd - BH_KILL) / (BH_PULL - BH_KILL), 0, 1);
+    // el reloj del disco corre según lo cerca que estés: lejos, lento
+    this.bnk = CLP(1 - bhd / 9000, 0, 1);
+    this.bT = (this.bT || 0) + dt * (0.25 + 2.2 * this.bnk * this.bnk);
     if (bhd < BH_PULL) {
       if (this.ep > (this.rmb || 0)) {
         // el retumbo del vacío, cada vez más presente
@@ -1640,7 +1643,8 @@ class Game extends Phaser.Scene {
     this.roll += (bank - this.roll) * MIN(1, 8 * dt);
 
     // B1: cañón — sale de la nariz, hereda tu velocidad (doble con la mejora)
-    if (held.P1_1 && time >= this.fy) {
+    // mientras dura la escena del destructor no se dispara: es SU momento
+    if (held.P1_1 && time >= this.fy && !cineB) {
       this.fy = time + FIRE_MS;
       this.mz2 = 0.05;
       Sfx.fire();
@@ -1700,7 +1704,7 @@ class Game extends Phaser.Scene {
 
     // B3: misil — busca el blanco más alineado con tu nariz; contra el
     // destructor apunta al punto débil vivo más a tiro
-    if (pressed.P1_3 && this.am > 0) {
+    if (pressed.P1_3 && this.am > 0 && !cineB) {
       this.am--;
       Sfx.missile();
       const target = this.bt(f);
@@ -1714,7 +1718,7 @@ class Game extends Phaser.Scene {
         target,
         part: target && target.k === 'B' ? this.ba(target, f) : null,
         tr: [],
-        lf: 5,
+        lf: 7,
       });
     }
   }
@@ -1728,7 +1732,7 @@ class Game extends Phaser.Scene {
       const dy = e.y - this.o.y;
       const dz = e.z - this.o.z;
       const d = HYP(dx, dy, dz);
-      if (d > (e.k === 'B' ? 2600 : 1700)) continue;
+      if (d > (e.k === 'B' ? 3600 : 2800)) continue;
       // el destructor es enorme: cuenta como "de frente" aunque su centro no lo esté
       const dot = (dx * f.x + dy * f.y + dz * f.z) / MAX(d, 1) + (e.k === 'B' ? 0.45 : 0);
       if (dot > bestDot) {
@@ -2567,10 +2571,11 @@ class Game extends Phaser.Scene {
       fc(g, p[0] + r * 0.4, p[1] - r * 0.25, r * 0.6, col, al * 0.7);
     }
     // los planetas, fuera del rumbo del agujero negro (que es SOLO suyo):
-    // la Tierra al sur, Saturno al suroeste y Júpiter al oeste, entre ellos
+    // la Tierra al sur, Saturno al suroeste y Júpiter al este, en el hueco
+    // entre la Tierra y el agujero
     this.so(g, cm, 3.4, 0.3, 46, drawEarth);
     this.so(g, cm, 4.32, 0.14, 64, drawSaturn);
-    this.so(g, cm, 5.35, 0.24, 58, drawJupiter);
+    this.so(g, cm, 1.9, 0.24, 58, drawJupiter);
     this.dl(g, cm, time);
   }
 
@@ -2589,7 +2594,7 @@ class Game extends Phaser.Scene {
   // su punto del mundo, girada con la cámara
   dwb(g, cm, time) {
     const t = time * 0.001;
-    this.dsk(g, cm, t);
+    this.dsk(g, cm);
     const p = this.pj(cm, BH[0], BH[1], BH[2]);
     if (!p) return;
     const r = (BH[3] * FOCAL) / p[2];
@@ -2613,20 +2618,24 @@ class Game extends Phaser.Scene {
   }
 
   // el disco de acreción en 3D, en el punto del agujero y MIRÁNDOTE: su
-  // normal apunta a la nave (apenas inclinada, para que se lea 3D), y los
-  // anillos caen hacia adentro girando — el remolino que se traga todo
-  dsk(g, cm, t) {
+  // normal apunta a la nave, inclinada ~48° para que se lea como un plato
+  // en perspectiva, y los anillos caen hacia adentro girando — el remolino
+  // que se traga todo. La DISTANCIA se siente: lejos gira lento y el trazo
+  // es fino; cerca gira rápido y arde grueso
+  dsk(g, cm) {
     const [x, y, z, RS] = BH;
     const q = this.bhx || 0;
     const P = this.o;
-    const n = vnorm(vmix(vnorm({ x: P.x - x, y: P.y - y, z: P.z - z }), 1, WORLD_UP, 0.3));
+    const t = this.bT || 0;
+    const nk = this.bnk || 0;
+    const n = vnorm(vmix(vnorm({ x: P.x - x, y: P.y - y, z: P.z - z }), 1, WORLD_UP, 1.1));
     const e1 = vnorm(vcross(n, { x: 0.01, y: 1, z: 0 }));
     const e2 = vcross(n, e1);
     const at = (a, r) => [x + (e1.x * COS(a) + e2.x * SIN(a)) * r, y + (e1.y * COS(a) + e2.y * SIN(a)) * r, z + (e1.z * COS(a) + e2.z * SIN(a)) * r];
     for (let i = 0; i < 7; i++) {
       const ph = (i / 7 + t * 0.09) % 1; // 0 afuera → 1 adentro
       const k = 1.5 + 5.5 * (1 - ph);
-      LS(g, 1.5 + 2.5 * ph + q * 2, [0x8a5c48, RUST, 0xe89a5c, AMB, CRM][FLR(ph * 5)], MIN(1, (0.15 + 0.6 * ph) * (1 + q) * MIN(1, (1 - ph) * 8)));
+      LS(g, (1.5 + 2.5 * ph) * (0.4 + nk) + q * 2, [0x8a5c48, RUST, 0xe89a5c, AMB, CRM][FLR(ph * 5)], MIN(1, (0.15 + 0.6 * ph) * (1 + q) * MIN(1, (1 - ph) * 8)));
       for (let arc = 0; arc < 9; arc++) {
         const a0 = t * (3 / k) + arc * 0.698 + i;
         for (let j = 0; j < 3; j++) this.wl(g, cm, at(a0 + j * 0.16, k * RS), at(a0 + j * 0.16 + 0.16, k * RS));
