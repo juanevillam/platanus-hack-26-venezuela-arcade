@@ -88,7 +88,7 @@ const GOD = false;
 const YAW_RATE = 2.4; // rad/s tope
 const YAW_EASE = 13; // 1/s, el giro responde YA
 const PITCH_RATE = 2.5; // rad/s de cabeceo
-const ROLL_LEVEL = 0.55; // rad/s: suave, y solo tras un rato de stick suelto
+const ROLL_LEVEL = 1.2; // rad/s: decidido — pero solo tras medio segundo suelto
 const CRUISE = 235; // crucero constante — la nave NUNCA se detiene
 const TURBO_SPEED = 470; // referencia de "rápido" para estelas y cámara
 const NITRO_MAX = 760; // manteniendo B2 la nave acelera sin parar hasta aquí
@@ -1439,10 +1439,10 @@ class Game extends Phaser.Scene {
     let R;
     [F, U, R] = orthoBasis(F, U);
 
-    // Stick DEL TODO suelto durante un segundo largo: solo entonces la
-    // nave se endereza, suave. Las piruetas no se corrigen solas.
+    // Con input, el enderezado NO existe; medio segundo de stick suelto
+    // y la nave se cuadra rápido — steady sin robarte las piruetas
     this.lvT = !pit && !turn ? (this.lvT || 0) + dt : 0;
-    if (this.lvT > 1.1) {
+    if (this.lvT > 0.45) {
       const up = vdot(F, WORLD_UP);
       if (ABS(up) < 0.97) {
         const D = vnorm(vmix(WORLD_UP, 1, F, -up));
