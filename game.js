@@ -885,18 +885,25 @@ class Game extends PS {
   // --- flujo ---
   update(time, delta) {
     const [me] = [this];
+    // pausa: START congela TODO — la lógica, el reloj de la partida, los
+    // temporizadores (escudo, dash, cadencia), las animaciones y la música.
+    // El juego corre con su propio reloj: el real menos lo que duró la pausa
+    if (pressed.START1 && me.fz !== 'out') {
+      me.pa = !me.pa;
+      me.time.paused = me.pa;
+      me.pa ? me.tweens.pauseAll() : me.tweens.resumeAll();
+      me.tweens.killTweensOf(me.Qe);
+      me.Qe.setText(me.pa ? 'PAUSED' : '').setAlpha(me.pa ? 1 : 0);
+    }
+    if (me.pa) {
+      me.pO = (me.pO || 0) + delta;
+      return;
+    }
+    me.vt = time -= me.pO || 0;
     const dt = MIN(delta, 50) / 1000;
     me.b += dt;
     Music.G = !!(me.G || me.I);
     Music.Z6();
-
-    // pausa: START congela el sector
-    if (pressed.START1 && me.fz !== 'out') {
-      me.pa = !me.pa;
-      me.tweens.killTweensOf(me.Qe);
-      me.Qe.setText(me.pa ? 'PAUSED' : '').setAlpha(me.pa ? 1 : 0);
-    }
-    if (me.pa) return;
 
     // el combo se enfría
     me.mt -= dt;
@@ -3281,7 +3288,7 @@ class Game extends PS {
     LS(1, INK, 0.5);
     g.strokeRect(12, H - 56, 118, 8);
     fr(13, H - 55, 116 * (me.u / BOOST_MAX), 6, INK_HI, 0.75);
-    const now = me.time.now;
+    const now = me.vt;
     const shReady = now >= me.sw ? 1 : 1 - (me.sw - now) / (SHIELD_MS + SHIELD_COOLDOWN_MS);
     LS(1, INK, 0.5);
     g.strokeRect(12, H - 70, 118, 8);
