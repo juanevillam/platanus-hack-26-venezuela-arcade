@@ -897,7 +897,9 @@ class Game extends Phaser.Scene {
                 gy2 = surfY(gx2, gz2) - ((h2 < 8 ? 300 : 90) + (h2 % 5) * 70) - 26;
                 ok = true;
               }
-              // arco o muro en la celda: reintenta — nada nace DENTRO
+              // arco o muro en la celda: reintenta — nada nace DENTRO. Y nada
+              // nace ENCIMA de otro: cada techo tiene un solo sitio
+              if (ok && this.en.some((q) => !q.X && (q.k === 'S' || q.k === 'W') && HYP(q.x - gx2, q.z - gz2) < 220)) ok = false;
             }
             if (!ok) continue;
             // dos de cada seis son TUYAS: menos, más frágiles — sin tu
@@ -1488,15 +1490,16 @@ class Game extends Phaser.Scene {
     let R;
     [F, U, R] = orthoBasis(F, U);
 
-    // Con input, el enderezado NO existe. Un ladeo se corrige rápido a un
-    // tercio de segundo de soltar; de cabeza (un loop, media vuelta) la
-    // nave sigue siendo tuya un segundo entero y vuelve despacio
+    // Con input, el enderezado NO existe. Un ladeo — aun de 90°, como deja
+    // una picada con giro — se corrige rápido a un tercio de segundo de
+    // soltar; solo DE CABEZA (un loop, media vuelta) la nave sigue siendo
+    // tuya un segundo entero y vuelve despacio
     this.lvT = !pit && !turn ? (this.lvT || 0) + dt : 0;
     const up = vdot(F, WORLD_UP);
     if (this.lvT > 0.3 && ABS(up) < 0.97) {
       const D = vnorm(vmix(WORLD_UP, 1, F, -up));
       const phi = AT2(vdot(F, vcross(U, D)), vdot(U, D));
-      const big = ABS(phi) > 1.1;
+      const big = ABS(phi) > 2.4;
       if (!big || this.lvT > 1) {
         const th = Math.sign(phi) * MIN(ABS(phi), (big ? 1.2 : ROLL_LEVEL) * dt);
         [F, U, R] = orthoBasis(F, vmix(U, COS(th), R, SIN(th)));
@@ -1947,7 +1950,7 @@ class Game extends Phaser.Scene {
             const fr2 = RND() < 0.4 ? this.ally(e, 1400) : null;
             if (fr2) {
               const fd = HYP(fr2.x - e.x, fr2.y - e.y, fr2.z - e.z) || 1;
-              this.ss.push({ x: e.x, y: e.y - 20, z: e.z, vx: ((fr2.x - e.x) / fd) * SHOT_SPEED, vy: ((fr2.y - e.y) / fd) * SHOT_SPEED, vz: ((fr2.z - e.z) / fd) * SHOT_SPEED, lf: 7 });
+              this.ss.push({ x: e.x, y: e.y - 20, z: e.z, vx: ((fr2.x - e.x) / fd) * SHOT_SPEED, vy: ((fr2.y - e.y) / fd) * SHOT_SPEED, vz: ((fr2.z - e.z) / fd) * SHOT_SPEED, lf: 7, ow: e });
             } else this.sa(e, SHOT_SPEED);
           }
         }
@@ -2018,7 +2021,7 @@ class Game extends Phaser.Scene {
           if (fr2) {
             const fd = HYP(fr2.x - e.x, fr2.y - e.y, fr2.z - e.z) || 1;
             this.bx.push({ wx: e.x, wy: e.y - 26, wz: e.z, t: 0.28, muzzle: true });
-            this.ss.push({ x: e.x, y: e.y - 26, z: e.z, vx: ((fr2.x - e.x) / fd) * SHOT_SPEED, vy: ((fr2.y - e.y) / fd) * SHOT_SPEED, vz: ((fr2.z - e.z) / fd) * SHOT_SPEED, lf: 7 });
+            this.ss.push({ x: e.x, y: e.y - 26, z: e.z, vx: ((fr2.x - e.x) / fd) * SHOT_SPEED, vy: ((fr2.y - e.y) / fd) * SHOT_SPEED, vz: ((fr2.z - e.z) / fd) * SHOT_SPEED, lf: 7, ow: e });
           } else if (dist < 1000) this.sa(e, SHOT_SPEED);
         }
       } else if (e.k === 'R') {
@@ -2074,6 +2077,13 @@ class Game extends Phaser.Scene {
       s.y += s.vy * dt;
       s.z += s.vz * dt;
       s.lf -= dt;
+      // muerto el que disparó, su disparo se apaga en el aire: nada que
+      // vuele hacia ti sin dueño
+      if (s.ow && s.ow.X) {
+        s.X = true;
+        this.bx.push({ wx: s.x, wy: s.y, wz: s.z, t: 0.32 });
+        continue;
+      }
       const d = HYP(P.x - s.x, P.y - s.y, P.z - s.z);
       if (shieldOn && d < SHIELD_R + (s.big ? 40 : 0)) {
         s.X = true;
@@ -2229,6 +2239,7 @@ class Game extends Phaser.Scene {
       vz: (dz / m) * sp,
       lf: big ? 12 : 6,
       big,
+      ow: e,
     });
   }
 
