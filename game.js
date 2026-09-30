@@ -13,6 +13,10 @@
 // el único final. Texto en inglés, corto, voz arcade. Wireframe luminoso;
 // el óxido marca el peligro.
 
+// Todo va dentro de una IIFE: en el scope global el minificador no puede
+// renombrar ni inlinear las constantes y clases de arriba; aquí sí (~3.4 KB).
+(() => {
+
 
 // DICCIONARIO DE NOMBRES CORTOS — el minificador (SWC) no acorta nombres
 // top-level ni PROPIEDADES, así que estos se acortaron a mano. Métodos:
@@ -3135,3 +3139,4 @@ const config = {
 };
 
 window.__game = new Phaser.Game(config); // handle de debug — quitar antes de enviar
+})();
