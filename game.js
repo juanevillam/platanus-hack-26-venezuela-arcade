@@ -1523,7 +1523,8 @@ class Game extends Phaser.Scene {
             y: tg.y + (tg.vy || 0) * lead - this.pos.y,
             z: tg.z + (tg.vz || 0) * lead - this.pos.z,
           });
-          if (vdot(to, f) > 0.9) aim = to;
+          // ayuda al que YA apunta bien: cono estrecho (~10°), no imán
+          if (vdot(to, f) > 0.985) aim = to;
         }
       }
       for (const off of [-9, 9]) {
