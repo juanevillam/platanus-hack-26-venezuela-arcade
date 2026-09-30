@@ -926,13 +926,13 @@ class Game extends Phaser.Scene {
           }
         }
       }
-      // la regla del ala: un wingman por cada SEIS enemigos en el aire —
-      // mínimo uno, tope dos: el ala ayuda, la pelea es tuya
+      // la regla del ala: UNO por cada CUATRO enemigos en el aire — con
+      // menos de cuatro vuelas solo; tope tres. El ala ayuda, la pelea es tuya
       this.Zj = (this.Zj ?? 22) - dt;
       if (this.Zj <= 0) {
         this.Zj = 14;
         const airE = this.en.filter((q) => (q.k === 'A' || q.k === 'G') && !q.X).length;
-        const want = CLP(FLR(airE / 6) + 1, 1, 2);
+        const want = MIN(3, FLR(airE / 4));
         if (this.en.filter((q) => q.k === 'N' && !q.X).length < want) this.Zr(1);
       }
       // el destructor vuelve siempre — y cada vez con menos ceremonia
@@ -943,7 +943,7 @@ class Game extends Phaser.Scene {
       if (this.bq <= 0) {
         this.Zy('HYPERSPACE RUPTURE.');
         this.Ze();
-        this.Zr(3); // no vas solo: tu ala llega contigo
+        this.Zr(1); // no vas solo: un ala llega contigo
       }
       }
       }
@@ -1005,7 +1005,7 @@ class Game extends Phaser.Scene {
   // Tu escuadrón: naves azules que cazan enemigos con tus mismas balas
   Zr(n) {
     for (let i = 0; i < n; i++) {
-      if (this.en.filter((q) => q.k === 'N').length >= 2) return;
+      if (this.en.filter((q) => q.k === 'N').length >= 3) return;
       const ang = RND() * PI * 2;
       this.en.push({
         k: 'N',
@@ -1836,9 +1836,10 @@ class Game extends Phaser.Scene {
             gy = P.y - 100;
             gz = P.z + this.R.z * 380 * e.or;
           }
-          // y cada tanto, un misil propio — menos que tú, pero pega
+          // y cada tanto, un misil propio — solo contra el destructor: las
+          // naves se las dejan a ti
           e.Zn = (e.Zn ?? 8) - dt;
-          const mtg = wt || this.Bo || this.Bt;
+          const mtg = this.Bo || this.Bt;
           if (e.Zn <= 0 && mtg && !mtg.hd) {
             e.Zn = 15;
             const md = HYP(mtg.x - e.x, mtg.y - e.y, mtg.z - e.z) || 1;
@@ -1870,9 +1871,10 @@ class Game extends Phaser.Scene {
           gx = e.x - (dx / dist) * 1500 + (dz / dist) * 500 * e.or;
           gy = e.y - (dy / dist) * 600;
           gz = e.z - (dz / dist) * 1500 - (dx / dist) * 500 * e.or;
-        } else if (dist < 320) {
-          // te tuvo demasiado cerca: rompe y ESCAPA — la pasada terminó
-          e.fl = 0.7 + RND() * 0.6;
+        } else if (dist < 650 || (dist < 1000 && (this.F.x * dx + this.F.y * dy + this.F.z * dz) / dist < -0.93)) {
+          // se sabe presa: si te tiene cerca, o si está en tu mira, rompe y
+          // se aleja — no se deja atropellar
+          e.fl = 1.2 + RND() * 0.8;
         }
         let m = HYP(e.vx, e.vy, e.vz);
         if (m < 40) {
@@ -1885,7 +1887,7 @@ class Game extends Phaser.Scene {
         const ddy = gy - e.y;
         const ddz = gz - e.z;
         const dd = HYP(ddx, ddy, ddz) || 1;
-        const k2 = MIN(1, (gun2 ? 0.9 : 2.3) * dt);
+        const k2 = MIN(1, (gun2 ? 0.9 : e.fl > 0 ? 3.6 : 2.3) * dt);
         const oy = AT2(e.vx, e.vz);
         let nx = e.vx / m + (ddx / dd - e.vx / m) * k2;
         let ny = e.vy / m + (ddy / dd - e.vy / m) * k2;
