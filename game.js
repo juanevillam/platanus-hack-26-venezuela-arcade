@@ -2700,12 +2700,13 @@ class Game extends Phaser.Scene {
       }
     }
     if (e.k === 'sentry') {
-      // el ojo late y su anillo de vigilancia respira: se ve venir de lejos
+      // el ojo late y su anillo de vigilancia respira — en la tinta de SU
+      // bando; el anillo de amenaza es solo de las enemigas
       const pulse = 0.5 + 0.5 * SIN(e.t * 3);
-      g.fillStyle(RUST_HI, a * (0.6 + 0.4 * pulse));
+      g.fillStyle(e.fr ? BLU : RUST_HI, a * (0.6 + 0.4 * pulse));
       const eye = this.pj(cm, e.x, e.y - 20, e.z);
       if (eye) g.fillCircle(eye[0], eye[1], MAX(3, 1100 / p[2]));
-      sk(g, p[0], p[1], (70 + pulse * 10) * (FOCAL / p[2]), 1.5, RUST, a * (0.25 + 0.3 * pulse));
+      if (!e.fr) sk(g, p[0], p[1], (70 + pulse * 10) * (FOCAL / p[2]), 1.5, RUST, a * (0.25 + 0.3 * pulse));
     }
   }
 
