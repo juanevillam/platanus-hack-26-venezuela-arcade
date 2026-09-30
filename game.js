@@ -828,21 +828,31 @@ class Game extends Phaser.Scene {
           }
           for (let i = 0; i < 4; i++) {
             const wk = RND() < 0.4;
-            const ang = RND() * PI * 2;
-            let gx2 = this.pos.x + SIN(ang) * (700 + RND() * 600);
-            let gz2 = this.pos.z + COS(ang) * (700 + RND() * 600);
-            let gy2 = surfY(gx2, gz2) - (wk ? 175 : 26);
-            if (!wk) {
-              // si la celda tiene estructura, la torreta se sube al TECHO
+            let gx2 = 0;
+            let gz2 = 0;
+            let gy2 = 0;
+            let ok = false;
+            for (let tr2 = 0; tr2 < 6 && !ok; tr2++) {
+              const ang = RND() * PI * 2;
+              gx2 = this.pos.x + SIN(ang) * (700 + RND() * 600);
+              gz2 = this.pos.z + COS(ang) * (700 + RND() * 600);
               const cxx = FLR(gx2 / 700) * 700;
               const czz = FLR(gz2 / 700) * 700;
               const h2 = ((cxx * 1103 + czz * 12793) % 97 + 97) % 97;
-              if (h2 < 22) {
+              if (h2 >= 48) {
+                // celda limpia: al suelo
+                gy2 = surfY(gx2, gz2) - (wk ? 175 : 26);
+                ok = true;
+              } else if (!wk && h2 < 22) {
+                // la torreta puede subirse al TECHO de la estructura
                 gx2 = cxx + 350;
                 gz2 = czz + 350;
                 gy2 = surfY(gx2, gz2) - ((h2 < 8 ? 300 : 90) + (h2 % 5) * 70) - 26;
+                ok = true;
               }
+              // arco o muro en la celda: reintenta — nada nace DENTRO
             }
+            if (!ok) continue;
             this.en.push({
               k: wk ? 'walk' : 'sentry', base: 1,
               x: gx2, y: gy2, z: gz2,
@@ -1748,8 +1758,13 @@ class Game extends Phaser.Scene {
         const hm = HYP(dx, dz) || 1;
         e.yaw = AT2(dx, dz);
         if (dist > 500) {
-          e.x += (dx / hm) * 55 * dt;
-          e.z += (dz / hm) * 55 * dt;
+          const nx2 = e.x + (dx / hm) * 55 * dt;
+          const nz2 = e.z + (dz / hm) * 55 * dt;
+          const ch2 = (((FLR(nx2 / 700) * 700 * 1103 + FLR(nz2 / 700) * 700 * 12793) % 97) + 97) % 97;
+          if (ch2 >= 48 || (ch2 >= 22 && ch2 < 42)) {
+            e.x = nx2;
+            e.z = nz2;
+          }
         }
         e.y = surfY(e.x, e.z) - 175; // cuerpo ALTO: por debajo se pasa
         e.fireAt -= dt;
