@@ -474,22 +474,17 @@ const Music = {
         if (s16 % 2 === 0) Sfx.noise(0.03, 0.028, t);
         this.next += 0.21;
       } else {
-        // EXPLORACIÓN: mayor y con pulso — C → G → Am → F, bajo que camina,
-        // arpegio brillante y un tic de batería; aventura, no terror
+        // CACERÍA: galope en menor (Em → C → D → B), stabs, un destello de
+        // tritono y batería marcada — aventura con dientes, nada cozy
         const s16 = st % 16;
-        const ch = [
-          [65.4, 98, 164.8],
-          [49, 73.4, 123.5],
-          [55, 82.4, 130.8],
-          [43.7, 65.4, 110],
-        ][FLR(st / 16) % 4];
-        Sfx.tone(s16 % 4 === 2 ? ch[0] * 2 : ch[0], 0.22, 'triangle', 0.085, 0, t);
-        if (s16 % 8 === 0) for (const f2 of ch) Sfx.tone(f2 * 2, 1.9, 'triangle', 0.035, 0, t);
-        if (s16 % 2 === 1) Sfx.tone(ch[(s16 >> 1) % 3] * 4, 0.3, 'square', 0.022, 0, t);
-        if (s16 === 10) Sfx.tone(ch[2] * 4, 0.9, 'sine', 0.04, ch[2] * 3, t);
-        if (s16 % 4 === 0) Sfx.noise(0.03, 0.026, t);
-        if (s16 % 8 === 4) Sfx.noise(0.07, 0.045, t);
-        this.next += 0.24;
+        const root = [41.2, 32.7, 36.7, 30.9][FLR(st / 16) % 4];
+        if (s16 % 4 !== 3) Sfx.tone(s16 % 4 === 2 ? root * 2 : root, 0.14, 'triangle', 0.1, 0, t);
+        if (s16 === 0) Sfx.tone(root * 3, 1.2, 'sawtooth', 0.028, 0, t);
+        if (s16 === 4 || s16 === 12) Sfx.tone(root * 4.8, 0.22, 'square', 0.04, 0, t);
+        if (s16 === 8) Sfx.tone(root * 5.66, 0.5, 'sine', 0.045, root * 4.9, t);
+        if (s16 % 2 === 0) Sfx.noise(0.025, 0.03, t);
+        if (s16 % 8 === 4) Sfx.noise(0.09, 0.055, t);
+        this.next += 0.19;
       }
     }
   },
@@ -1415,10 +1410,6 @@ class Game extends Phaser.Scene {
 
     // la superficie de la estación es PARED: aviso cerca, muerte al tocarla
     const sdy = surfY(this.pos.x, this.pos.z) - this.pos.y;
-    if (sdy < 260 && this.ep > this.wa) {
-      this.wa = this.ep + 1.5;
-      this.say('PULL UP.');
-    }
     if (sdy < 46) this.die();
     // las torres de la superficie son SÓLIDAS: rozarlas cuesta casco
     if (sdy < 620) {
@@ -1452,6 +1443,27 @@ class Game extends Phaser.Scene {
         ) {
           this.hy(time);
           this.pos.y = yT - 90;
+        }
+      } else if (hsh >= 36 && hsh < 42) {
+        // el domo es sólido y redondo
+        const ax = cx0 + cs / 2;
+        const az = cz0 + cs / 2;
+        const ay = surfY(ax, az);
+        if (HYP(this.pos.x - ax, this.pos.y - ay, this.pos.z - az) < 165) {
+          this.hy(time);
+          this.pos.y = ay - 230;
+        }
+      } else if (hsh >= 42 && hsh < 48) {
+        // el muro bajo: por encima o por los lados
+        const zm = cz0 + cs / 2;
+        const yW = surfY(cx0 + cs / 2, zm);
+        if (
+          ABS(this.pos.z - zm) < 34 &&
+          this.pos.x > cx0 + 40 && this.pos.x < cx0 + cs - 40 &&
+          this.pos.y > yW - 120
+        ) {
+          this.hy(time);
+          this.pos.y = yW - 190;
         }
       }
     }
@@ -2324,6 +2336,52 @@ class Game extends Phaser.Scene {
         this.wl(g, cm, [x0, y00, z0], [x0, surfY(x0, z0 + cs), z0 + cs]);
         // el hash decide qué celda lleva estructura, y de qué altura
         const hsh = ((x0 * 1103 + z0 * 12793) % 97 + 97) % 97;
+        if (hsh >= 30 && hsh < 36) {
+          // una ANTENA: mástil fino con crucetas y luz — decoración alta
+          const ax = x0 + cs / 2;
+          const az = z0 + cs / 2;
+          const ay = surfY(ax, az);
+          const hM = 320 + (hsh % 3) * 90;
+          g.lineStyle(1.5, GRY, al * 1.4);
+          this.wl(g, cm, [ax, ay, az], [ax, ay - hM, az]);
+          this.wl(g, cm, [ax - 60, ay - hM * 0.55, az], [ax + 60, ay - hM * 0.55, az]);
+          this.wl(g, cm, [ax, ay - hM * 0.8, az - 60], [ax, ay - hM * 0.8, az + 60]);
+          if (FLR(time / 400 + hsh) % 2) {
+            const lp = this.pj(cm, ax, ay - hM - 10, az);
+            if (lp) fc(g, lp[0], lp[1], MAX(1.2, 700 / lp[2]), RUST_HI, al * 1.7);
+          }
+        } else if (hsh >= 36 && hsh < 42) {
+          // un DOMO: media cúpula — sólido, redondo, distinto
+          const ax = x0 + cs / 2;
+          const az = z0 + cs / 2;
+          const ay = surfY(ax, az);
+          const dr = 150;
+          g.lineStyle(1.5, BLD, al * 1.2);
+          let prev = null;
+          for (let a2 = 0; a2 <= 8; a2++) {
+            const th = (a2 / 8) * PI;
+            const pt = [ax + COS(th) * dr, ay - SIN(th) * dr, az];
+            if (prev) this.wl(g, cm, prev, pt);
+            prev = pt;
+          }
+          prev = null;
+          for (let a2 = 0; a2 <= 8; a2++) {
+            const th = (a2 / 8) * PI;
+            const pt = [ax, ay - SIN(th) * dr, az + COS(th) * dr];
+            if (prev) this.wl(g, cm, prev, pt);
+            prev = pt;
+          }
+        } else if (hsh >= 42 && hsh < 48) {
+          // un MURO bajo cruzando la celda: sáltalo o rodéalo
+          const zm = z0 + cs / 2;
+          const hW = 120;
+          g.lineStyle(1.5, GRY, al * 1.3);
+          const yA = surfY(x0 + 40, zm);
+          const yB = surfY(x0 + cs - 40, zm);
+          this.wl(g, cm, [x0 + 40, yA, zm], [x0 + 40, yA - hW, zm]);
+          this.wl(g, cm, [x0 + cs - 40, yB, zm], [x0 + cs - 40, yB - hW, zm]);
+          this.wl(g, cm, [x0 + 40, yA - hW, zm], [x0 + cs - 40, yB - hW, zm]);
+        }
         if (hsh >= 22 && hsh < 30) {
           // un ARCO: dos pilones y un travesaño — pásale por debajo
           const zm = z0 + cs / 2;
