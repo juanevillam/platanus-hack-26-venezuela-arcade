@@ -320,8 +320,7 @@ const Sfx = {
     [440, 554, 659, 880].forEach((f, i) => this.tone(f, 0.5, 'triangle', 0.15, 0, t + i * 0.09));
   },
   dash() {
-    this.noise(0.3, 0.14);
-    this.tone(160, 0.35, 'sine', 0.14, 50);
+    this.tone(140, 0.22, 'triangle', 0.13, 520);
   },
   turn() {
     this.tone(330, 0.3, 'sine', 0.12, 160);
@@ -386,6 +385,10 @@ const ROCK_POOL = [makeRockModel(), makeRockModel(), makeRockModel(), makeRockMo
 
 // La CORBETA: a medio camino entre el ace y el destructor — casco largo,
 // puente alto y dos nacelas; ladra ráfagas manteniendo distancia
+// El CAMINANTE: cuerpo de caja con hocico — las patas se dibujan aparte,
+// animadas de verdad
+const WALK_MODEL = mdl([-26, -70, -34, 26, -70, -34, 26, -70, 34, -26, -70, 34, -26, -42, -34, 26, -42, -34, 26, -42, 34, -26, -42, 34, 0, -58, 58], '01122330455667740415263728386878');
+
 const GUN_MODEL = mdl([0, -2, 70, -16, -8, 30, 16, -8, 30, -20, 8, 24, 20, 8, 24, -22, 0, -20, 22, 0, -20, -14, -6, -64, 14, -6, -64, -16, 8, -58, 16, 8, -58, 0, -16, -14, 0, -12, -44, -30, 2, -48, 30, 2, -48], '01020304152635465768596:789:798:1;2;;<<7<85==96>>:');
 
 // El destructor: una cuña de casi mil unidades con su torre de mando atrás.
@@ -670,7 +673,7 @@ class Game extends Phaser.Scene {
     this.bq = 75; // el primer destructor tarda esto en llegar
     this.bossN = 0;
     this.wvAt = 32; // emboscadas periódicas
-    this.baseAt = 20; // torretas de la superficie: constantes
+    this.baseAt = 5; // la superficie viene armada casi de entrada
     this.svT = 0; // puntos por sobrevivir
     this.wvN = 0;
     this.ht = 0;
@@ -830,22 +833,23 @@ class Game extends Phaser.Scene {
       // cazarlas paga powerup seguro
       this.baseAt -= dt;
       if (this.baseAt <= 0) {
-        this.baseAt = 16;
-        if (this.en.filter((e) => e.base).length < 6) {
+        this.baseAt = 13;
+        if (this.en.filter((e) => e.base).length < 8) {
           if (!this.bgSaid) {
             this.bgSaid = 1;
             this.say('SURFACE GUNS BELOW.');
           }
-          for (let i = 0; i < 3; i++) {
+          for (let i = 0; i < 4; i++) {
+            const wk = RND() < 0.4;
             const ang = RND() * PI * 2;
-            const gx2 = this.pos.x + SIN(ang) * (700 + RND() * 500);
-            const gz2 = this.pos.z + COS(ang) * (700 + RND() * 500);
+            const gx2 = this.pos.x + SIN(ang) * (700 + RND() * 600);
+            const gz2 = this.pos.z + COS(ang) * (700 + RND() * 600);
             this.en.push({
-              k: 'sentry', base: 1,
+              k: wk ? 'walk' : 'sentry', base: 1,
               x: gx2,
-              y: surfY(gx2, gz2) - 70,
+              y: surfY(gx2, gz2) - (wk ? 92 : 70),
               z: gz2,
-              r: 44, hp: 3, t: RND() * 6, yaw: RND() * 6.3, fireAt: 1,
+              r: wk ? 80 : 44, hp: wk ? 5 : 3, t: RND() * 6, yaw: RND() * 6.3, fireAt: 1 + RND() * 2,
             });
           }
         }
@@ -1444,15 +1448,6 @@ class Game extends Phaser.Scene {
           this.hy(time);
           this.pos.y = yT - 90;
         }
-      } else if (hsh >= 36 && hsh < 42) {
-        // el domo es sólido y redondo
-        const ax = cx0 + cs / 2;
-        const az = cz0 + cs / 2;
-        const ay = surfY(ax, az);
-        if (HYP(this.pos.x - ax, this.pos.y - ay, this.pos.z - az) < 165) {
-          this.hy(time);
-          this.pos.y = ay - 230;
-        }
       } else if (hsh >= 42 && hsh < 48) {
         // el muro bajo: por encima o por los lados
         const zm = cz0 + cs / 2;
@@ -1661,6 +1656,21 @@ class Game extends Phaser.Scene {
           e.fireAt = gun2 ? 1.6 : 2.2;
           this.sa(e, SHOT_SPEED);
         }
+      } else if (e.k === 'walk') {
+        // el caminante: pisa la superficie y te sigue por la sombra
+        const hm = HYP(dx, dz) || 1;
+        e.yaw = AT2(dx, dz);
+        if (dist > 500) {
+          e.x += (dx / hm) * 55 * dt;
+          e.z += (dz / hm) * 55 * dt;
+        }
+        e.y = surfY(e.x, e.z) - 92;
+        e.fireAt -= dt;
+        if (dist < 1500 && e.fireAt <= 0) {
+          e.fireAt = 2.6;
+          this.sa(e, SHOT_SPEED);
+        }
+        if (dist > 4200) e.dead = true;
       } else if (e.k === 'emis') {
         // misil del destructor: te sigue, pero gira mal — un giro cerrado,
         // el escudo o el nitro lo dejan atrás; también se puede derribar.
@@ -1807,7 +1817,7 @@ class Game extends Phaser.Scene {
           this.damage(e, 99);
           this.hy(time);
         } else {
-          if (e.k !== 'sentry' && e.k !== 'boss') e.dead = true;
+          if (e.k !== 'sentry' && e.k !== 'boss' && e.k !== 'walk') e.dead = true;
           this.bm(e);
           this.hy(time);
         }
@@ -1920,7 +1930,7 @@ class Game extends Phaser.Scene {
     }
     this.bm(e);
     this.sy(e.x, e.y, e.z, 6);
-    this.ad(e.k === 'sentry' ? (e.base ? 80 : 40) : e.k === 'rock' ? 15 : e.k === 'gun' ? 150 : e.k === 'ace' ? 60 : 25);
+    this.ad(e.k === 'walk' ? 120 : e.k === 'sentry' ? (e.base ? 80 : 40) : e.k === 'rock' ? 15 : e.k === 'gun' ? 150 : e.k === 'ace' ? 60 : 25);
     if (e.k === 'ace' || e.k === 'gun') this.dp(e.x, e.y, e.z, e.k === 'gun' ? 1 : 0.5);
     if (e.base) this.dp(e.x, e.y, e.z, 0.8); // la torreta de la base paga casi siempre
     Sfx.boom();
@@ -2320,6 +2330,26 @@ class Game extends Phaser.Scene {
   // local alrededor tuyo — celdas fijas del MUNDO (no te siguen), con
   // estructuras generadas por hash de celda y luces de posición. Tron abajo.
   dl(g, cm, time) {
+    // el LIMBO: el borde curvo de la esfera, que sube y baja contigo — lo
+    // que dice que esto es un PLANETA de metal y no un piso con cielo
+    const alt = MAX(60, surfY(this.pos.x, this.pos.z) - this.pos.y);
+    const dhz = MIN(9500, Math.sqrt(2 * ST_R * alt));
+    for (const [wd2, al2] of [[5, 0.1], [1.5, 0.5]]) {
+      g.lineStyle(wd2, BLD, al2);
+      let prev = null;
+      for (let i = 0; i <= 26; i++) {
+        const a2 = (i / 26) * PI * 2;
+        const lx = this.pos.x + SIN(a2) * dhz;
+        const lz = this.pos.z + COS(a2) * dhz;
+        const pt = [lx, surfY(lx, lz), lz];
+        if (pt[1] > 8e8) {
+          prev = null;
+          continue;
+        }
+        if (prev) this.wl(g, cm, prev, pt);
+        prev = pt;
+      }
+    }
     const cs = 700;
     const cx0 = FLR(this.pos.x / cs);
     const cz0 = FLR(this.pos.z / cs);
@@ -2349,27 +2379,6 @@ class Game extends Phaser.Scene {
           if (FLR(time / 400 + hsh) % 2) {
             const lp = this.pj(cm, ax, ay - hM - 10, az);
             if (lp) fc(g, lp[0], lp[1], MAX(1.2, 700 / lp[2]), RUST_HI, al * 1.7);
-          }
-        } else if (hsh >= 36 && hsh < 42) {
-          // un DOMO: media cúpula — sólido, redondo, distinto
-          const ax = x0 + cs / 2;
-          const az = z0 + cs / 2;
-          const ay = surfY(ax, az);
-          const dr = 150;
-          g.lineStyle(1.5, BLD, al * 1.2);
-          let prev = null;
-          for (let a2 = 0; a2 <= 8; a2++) {
-            const th = (a2 / 8) * PI;
-            const pt = [ax + COS(th) * dr, ay - SIN(th) * dr, az];
-            if (prev) this.wl(g, cm, prev, pt);
-            prev = pt;
-          }
-          prev = null;
-          for (let a2 = 0; a2 <= 8; a2++) {
-            const th = (a2 / 8) * PI;
-            const pt = [ax, ay - SIN(th) * dr, az + COS(th) * dr];
-            if (prev) this.wl(g, cm, prev, pt);
-            prev = pt;
           }
         } else if (hsh >= 42 && hsh < 48) {
           // un MURO bajo cruzando la celda: sáltalo o rodéalo
@@ -2503,11 +2512,38 @@ class Game extends Phaser.Scene {
 
     const model =
       e.k === 'sentry' ? SENTRY_MODEL : e.k === 'ace' ? SHIP_MODEL : e.k === 'gun' ? GUN_MODEL
+      : e.k === 'walk' ? WALK_MODEL
       : e.k === 'pow' ? POW_MODELS[e.sub] : e.k === 'rock' ? e.model : SCRAP_MODEL;
     const scale = e.k === 'rock' ? e.r / 16 : e.k === 'sentry' ? 1.6 : e.k === 'ace' ? 2.2 : e.k === 'gun' ? 3 : 1;
     const rot = e.k === 'rock' ? e.t * e.spin : e.k === 'scrap' || e.k === 'pow' ? e.t * 1.1 : e.bank || 0;
     this.dm(g, cm, model, e, scale, color, a, rot);
 
+    if (e.k === 'walk') {
+      // las patas CAMINAN: dos pares alternando, con rodilla y pie que se
+      // levanta — la superficie tiene vida propia
+      const cy2 = COS(e.yaw);
+      const sy3 = SIN(e.yaw);
+      g.lineStyle(1.5, RUST, a);
+      for (let i = 0; i < 4; i++) {
+        const hx = i < 2 ? -26 : 26;
+        const hz = i % 2 ? 22 : -22;
+        const ph = e.t * 5 + (i === 0 || i === 3 ? 0 : PI);
+        const stz = SIN(ph) * 28;
+        const wxh = e.x + (hx * cy2 + hz * sy3) * 1.1;
+        const wzh = e.z + (-hx * sy3 + hz * cy2) * 1.1;
+        const hipY = e.y - 46;
+        const wxf = e.x + (hx * 1.7 * cy2 + (hz + stz) * sy3) * 1.1;
+        const wzf = e.z + (-hx * 1.7 * sy3 + (hz + stz) * cy2) * 1.1;
+        const fy = surfY(wxf, wzf) - MAX(0, SIN(ph + PI / 2)) * 16;
+        const kx = (wxh + wxf) / 2;
+        const kz = (wzh + wzf) / 2;
+        const ky = (hipY + fy) / 2 - 12;
+        this.wl(g, cm, [wxh, hipY, wzh], [kx, ky, kz]);
+        this.wl(g, cm, [kx, ky, kz], [wxf, fy, wzf]);
+      }
+      const eye = this.pj(cm, e.x + SIN(e.yaw) * 64, e.y - 58, e.z + COS(e.yaw) * 64);
+      if (eye) fc(g, eye[0], eye[1], MAX(1.5, 700 / eye[2]), RUST_HI, a * (0.6 + 0.4 * SIN(e.t * 5)));
+    }
     if (e.k === 'ace' || e.k === 'gun') {
       // el ojo de brasa en la nariz: se lee quién te está mirando
       const nr = e.k === 'gun' ? 200 : 50;
