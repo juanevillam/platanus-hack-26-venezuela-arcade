@@ -88,7 +88,7 @@ const GOD = false;
 const YAW_RATE = 2.4; // rad/s tope
 const YAW_EASE = 13; // 1/s, el giro responde YA
 const PITCH_RATE = 2.5; // rad/s de cabeceo
-const ROLL_LEVEL = 1.5; // rad/s: suelto el stick, la nave rota sobre su eje hasta quedar derecha
+const ROLL_LEVEL = 0.9; // rad/s: SOLO con el stick del todo suelto, y suave
 const CRUISE = 235; // crucero constante — la nave NUNCA se detiene
 const TURBO_SPEED = 470; // referencia de "rápido" para estelas y cámara
 const NITRO_MAX = 760; // manteniendo B2 la nave acelera sin parar hasta aquí
@@ -1380,9 +1380,9 @@ class Game extends Phaser.Scene {
     let R;
     [F, U, R] = orthoBasis(F, U);
 
-    // Stick suelto: la nave rota SOLO sobre su eje hasta quedar derecha.
-    // No baja la nariz ni cambia el rumbo — sigue volando a donde apuntaba.
-    if (!pit) {
+    // Stick DEL TODO suelto: la nave rota suave sobre su eje hasta quedar
+    // derecha. Girando o cabeceando, el control es tuyo y de nadie más.
+    if (!pit && !turn) {
       const up = vdot(F, WORLD_UP);
       if (ABS(up) < 0.97) {
         const D = vnorm(vmix(WORLD_UP, 1, F, -up));
@@ -1417,11 +1417,6 @@ class Game extends Phaser.Scene {
 
     // cerca del destructor la pasada se frena sola (salvo con nitro):
     // giras antes, lo pierdes de vista menos, la pelea se queda contigo
-    for (const bb of [this.boss, this.boss2]) {
-      if (!bb || sceneHold || held.P1_2 || this.sp <= 190) continue;
-      const bd2 = HYP(bb.x - this.pos.x, bb.y - this.pos.y, bb.z - this.pos.z);
-      if (bd2 < 700) this.sp += (190 - this.sp) * MIN(1, 1 * dt);
-    }
 
     const f = this.fw();
     this.pos.x += f.x * this.sp * dt;
@@ -1502,10 +1497,23 @@ class Game extends Phaser.Scene {
         if (pt) {
           const [wx, wy, wz] = this.bw(bb, pt.ox, pt.oy, pt.oz);
           const to = vnorm({ x: wx - this.pos.x, y: wy - this.pos.y, z: wz - this.pos.z });
-          if (vdot(to, f) > 0.96) {
+          if (vdot(to, f) > 0.93) {
             aim = to;
             break;
           }
+        }
+      }
+      if (aim === f) {
+        const tg = this.bt(f);
+        if (tg && tg.k !== 'boss') {
+          const dd = HYP(tg.x - this.pos.x, tg.y - this.pos.y, tg.z - this.pos.z) || 1;
+          const lead = dd / (BOLT_SPEED + this.sp);
+          const to = vnorm({
+            x: tg.x + (tg.vx || 0) * lead - this.pos.x,
+            y: tg.y + (tg.vy || 0) * lead - this.pos.y,
+            z: tg.z + (tg.vz || 0) * lead - this.pos.z,
+          });
+          if (vdot(to, f) > 0.9) aim = to;
         }
       }
       for (const off of [-9, 9]) {
