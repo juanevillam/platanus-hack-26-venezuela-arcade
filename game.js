@@ -1891,8 +1891,12 @@ class Game extends PS {
     } else if ((me.Gs -= dt) <= 0) {
       me.Gs = 16;
       const d = 1200 + RND() * 400;
-      const x = CLP(Po.x + me.F.x * d + me.R.x * RH() * 600, -5800, 5800);
-      const z = CLP(Po.z + me.F.z * d + me.R.z * RH() * 600, -5800, 5800);
+      // dentro del CÍRCULO del sector (radio útil 5800), nunca tras el borde
+      let x = Po.x + me.F.x * d + me.R.x * RH() * 600;
+      let z = Po.z + me.F.z * d + me.R.z * RH() * 600;
+      const k = MIN(1, 5800 / (HYP(x, z) || 1));
+      x *= k;
+      z *= k;
       me.Gt = { x, y: CLP(Po.y + me.F.y * d + RH() * 400, BND_TOP + 300, surfY(x, z) - 300), z, n: me.F, e1: me.R, e2: me.U };
     }
 
