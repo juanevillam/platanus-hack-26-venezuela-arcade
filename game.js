@@ -121,8 +121,7 @@ const MISSILE_TURN = 3.4; // 1/s de corrección hacia el blanco
 const MISSILE_MAX = 5;
 const MISSILE_DMG = 4;
 const MISSILE_SPLASH = 150; // todo lo que esté cerca del impacto también cae
-const MISSILE_REGEN = 12; // segundos por misil recuperado solo
-const SCRAP_PER_MISSILE = 3;
+const MISSILE_REGEN = 10; // segundos por misil recuperado solo
 
 // --- Enemigos: pocos, grandes, disparos lentos que se pueden esquivar ---
 const SHOT_SPEED = 250;
@@ -419,7 +418,6 @@ const MISSILE_MODEL = mdl([0, 0, 16, 0, 0, -12, -3, 0, 8, 3, 0, 8, 0, -3, 8, 0, 
 
 
 // Chatarra: un trozo de casco — placa con borde, puntal y una solapa doblada
-const SCRAP_MODEL = mdl([-8, -6, 0, 7, -7, 0, 9, 4, 0, -6, 6, 0, 13, 8, -6, -2, 11, -6, -8, -6, -4, 7, -7, -4], '0112233024455306176702');
 
 const FONT = (size, color) => ({
   fontFamily: 'monospace',
@@ -655,8 +653,6 @@ class Game extends Phaser.Scene {
     this.hull = HULL_MAX;
     this.ammo = 3;
     this.ar = 0;
-    this.sq = 0;
-    this.sqSaid = 0;
 
     // cámara: la misma base, suavizada — sigue la nave también de cabeza
     this.camF = { ...this.F };
@@ -668,7 +664,7 @@ class Game extends Phaser.Scene {
     this.fz = 'play';
     this.bq = 75; // el primer destructor tarda esto en llegar
     this.bossN = 0;
-    this.wvAt = 32; // emboscadas periódicas
+    this.wvAt = 50; // la primera emboscada da tiempo a respirar
     this.baseAt = 5; // la superficie viene armada casi de entrada
     this.svT = 0; // puntos por sobrevivir
     this.wvN = 0;
@@ -709,17 +705,12 @@ class Game extends Phaser.Scene {
   po() {
     const rnd = (a, b) => a + RND() * (b - a);
     const rocks = 10;
-    const scraps = 12;
     for (let i = 0; i < rocks; i++) {
       const p = this.ri(SECTOR_R * 0.95);
       this.en.push({
         k: 'rock', x: p[0], y: p[1] * 0.5, z: p[2], r: 42, hp: 2, t: rnd(0, 9), model: ROCK_POOL[FLR(RND() * 4)],
         spin: rnd(-0.5, 0.5), vx: rnd(-16, 16), vy: rnd(-10, 10), vz: rnd(-16, 16), yaw: 0,
       });
-    }
-    for (let i = 0; i < scraps; i++) {
-      const p = this.ri(SECTOR_R * 0.9);
-      this.en.push({ k: 'scrap', x: p[0], y: p[1] * 0.5, z: p[2], r: 16, t: rnd(0, 6), yaw: 0 });
     }
   }
 
@@ -819,11 +810,11 @@ class Game extends Phaser.Scene {
         this.sd(dt, 1, 16);
       } else {
       // el reloj del arcade: todo aprieta con los minutos
-      this.sd(dt, MIN(6, 1 + FLR(this.ep / 40)), MAX(4.5, 11 - this.ep / 40));
+      this.sd(dt, MIN(5, 1 + FLR(this.ep / 50)), MAX(5, 12 - this.ep / 50));
       this.wvAt -= dt;
       if (this.wvAt <= 0) {
-        this.wvAt = 34;
-        this.wave(MIN(6, 2 + FLR(this.ep / 70)));
+        this.wvAt = 45;
+        this.wave(MIN(5, 2 + FLR(this.ep / 90)));
       }
       // las torretas de la base, flotando sobre el disco: bajar al jalón a
       // cazarlas paga powerup seguro
@@ -860,13 +851,12 @@ class Game extends Phaser.Scene {
           }
         }
       }
-      // mientras haya destructor, tu ala se repone sola
-      if (anyB) {
-        this.wgAt = (this.wgAt ?? 20) - dt;
-        if (this.wgAt <= 0) {
-          this.wgAt = 20;
-          this.wingUp(1);
-        }
+      // tu ala vive contigo desde temprano, y se mantiene sola: dos en
+      // paz, tres en guerra
+      this.wgAt = (this.wgAt ?? 22) - dt;
+      if (this.wgAt <= 0) {
+        this.wgAt = 30;
+        if (this.en.filter((q) => q.k === 'wing' && !q.dead).length < (anyB ? 3 : 2)) this.wingUp(1);
       }
       // el destructor vuelve siempre — y cada vez con menos ceremonia
       if (!anyB) {
@@ -1566,7 +1556,7 @@ class Game extends Phaser.Scene {
     let best = null;
     let bestDot = 0.75; // solo lo que ya tienes bastante de frente
     for (const e of this.en) {
-      if (e.k === 'scrap' || e.k === 'wing' || e.dead) continue;
+      if (e.k === 'wing' || e.dead) continue;
       const dx = e.x - this.pos.x;
       const dy = e.y - this.pos.y;
       const dz = e.z - this.pos.z;
@@ -1828,50 +1818,9 @@ class Game extends Phaser.Scene {
         }
       }
 
-      // la chatarra lejana se recicla delante de ti — mundo sin bordes
-      if (e.k === 'scrap' && dist > 3400) {
-        const ang2 = RND() * PI * 2;
-        e.x = P.x + SIN(ang2) * (900 + RND() * 1200);
-        e.y = P.y + (RND() - 0.5) * 900;
-        e.z = P.z + COS(ang2) * (900 + RND() * 1200);
-      }
-      // lo recogible viene hacia ti cuando pasas cerca
-      if (e.k === 'scrap' && dist < MAGNET_R) {
-        const pull = (560 * dt) / dist;
-        e.x += dx * pull;
-        e.y += dy * pull;
-        e.z += dz * pull;
-      }
-
-      // contra el destructor chocas con su casco, no con una esfera — y
-      // estrellarse contra un kilómetro de acero no se sobrevive: ni el
-      // escudo ni el modo prueba te salvan de esa
-      if (e.k === 'boss') {
-        // el teleport de proximidad es la defensa: morir queda solo para
-        // incrustarse de verdad en el casco
-        if (!e.hd && this.ib(e, P.x, P.y, P.z, 16)) this.die();
-        continue;
-      }
-
       // contacto contigo (el wing es tuyo: se atraviesa)
       if (!e.dead && e.k !== 'wing' && dist < e.r + 16) {
-        if (e.k === 'scrap') {
-          e.dead = true;
-          this.score += 10;
-          this.sq++;
-          if (this.sq >= SCRAP_PER_MISSILE && this.ammo < MISSILE_MAX) {
-            this.sq = 0;
-            this.ammo++;
-            this.say('+1 MISSILE.');
-            Sfx.ammo();
-          } else {
-            if (!this.sqSaid) {
-              this.sqSaid = 1;
-              this.say('SCRAP +10 — 3 MAKE A MISSILE.');
-            }
-            Sfx.pickup();
-          }
-        } else if (
+        if (
           (this.sp > RAM_SPEED || time < this.du || time < this.su) &&
           (e.k === 'ace' || e.k === 'gun' || e.k === 'emis')
         ) {
@@ -1947,7 +1896,7 @@ class Game extends Phaser.Scene {
       }
       if (ate) continue;
       for (const e of this.en) {
-        if (e.dead || e.k === 'scrap' || e.k === 'boss' || e.k === 'wing') continue;
+        if (e.dead || e.k === 'boss' || e.k === 'wing') continue;
         const d = HYP(b.x - e.x, b.y - e.y, b.z - e.z);
         if (d < e.r + 10) {
           b.dead = true;
@@ -2116,7 +2065,7 @@ class Game extends Phaser.Scene {
       }
     }
     for (const e of this.en) {
-      if (e.dead || e.k === 'boss' || e.k === 'scrap' || e.k === 'wing') continue;
+      if (e.dead || e.k === 'boss' || e.k === 'wing') continue;
       const d = HYP(m.x - e.x, m.y - e.y, m.z - e.z);
       if (e === m.target || d < MISSILE_SPLASH + e.r) this.damage(e, e === m.target ? MISSILE_DMG : 2);
     }
@@ -2576,16 +2525,16 @@ class Game extends Phaser.Scene {
     const flash = e.ft > 0;
     const color = flash
       ? INK_HI
-      : e.k === 'wing' ? BLU : e.k === 'scrap' ? BLD : e.k === 'rock' ? GRY : RUST;
+      : e.k === 'wing' ? BLU : e.k === 'rock' ? GRY : RUST;
     if (e.k === 'rock' && !flash) a *= 0.7;
 
     const model =
       e.k === 'sentry' ? (e.base ? TURRET_MODEL : SENTRY_MODEL)
       : e.k === 'ace' || e.k === 'wing' ? SHIP_MODEL : e.k === 'gun' ? GUN_MODEL
       : e.k === 'walk' ? WALK_MODEL
-      : e.k === 'rock' ? e.model : SCRAP_MODEL;
+      : e.model;
     const scale = e.k === 'rock' ? e.r / 16 : e.k === 'sentry' ? 1.6 : e.k === 'ace' ? 2.2 : e.k === 'wing' ? 2 : e.k === 'gun' ? 3 : 1;
-    const rot = e.k === 'rock' ? e.t * e.spin : e.k === 'scrap' ? e.t * 1.1 : e.bank || 0;
+    const rot = e.k === 'rock' ? e.t * e.spin : e.bank || 0;
     this.dm(g, cm, model, e, scale, color, a, rot);
 
     if (e.k === 'walk') {
@@ -2818,13 +2767,13 @@ class Game extends Phaser.Scene {
     // las naves cercanas SIEMPRE se anuncian en el borde — aunque no se
     // estén acercando; los proyectiles, desde más lejos que antes
     let chn = 0;
-    const chMax = this.boss || this.boss2 ? 2 : 4;
+    const chMax = 2;
     for (const e of this.en) {
       if ((e.k !== 'ace' && e.k !== 'gun') || e.dead) continue;
       if (chn >= chMax) break;
       const d = { x: e.x - this.pos.x, y: e.y - this.pos.y, z: e.z - this.pos.z };
       const dist = HYP(d.x, d.y, d.z);
-      if (dist > 1400) continue;
+      if (dist > 1100) continue;
       const p = this.pj(cm, e.x, e.y, e.z);
       if (p && p[0] > 30 && p[0] < W - 30 && p[1] > 30 && p[1] < H - 30) continue;
       chn++;
@@ -2863,18 +2812,7 @@ class Game extends Phaser.Scene {
   dv(g, cm) {
     let target = null;
     let label = '';
-    if (!this.boss && !this.boss2) {
-      let bd = 1e9;
-      for (const e of this.en) {
-        if (e.k !== 'scrap' || e.dead) continue;
-        const d = HYP(e.x - this.pos.x, e.y - this.pos.y, e.z - this.pos.z);
-        if (d < bd) {
-          bd = d;
-          target = e;
-          label = 'SCRAP';
-        }
-      }
-    } else {
+    if (this.boss || this.boss2) {
       // no al centro del destructor: al punto débil que toca romper
       let bd = 1e9;
       for (const b of [this.boss, this.boss2]) {
