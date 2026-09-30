@@ -155,7 +155,7 @@ const BND_TOP = -5200;
 // El agujero negro está ANCLADO al mundo, a la derecha del arranque: se
 // puede ir hasta él y alejarse [x, y, z, radio]. Tira más cuanto más cerca y
 // te traga ya DENTRO de la sombra — la caída dura. La Tierra y Saturno son
-// cielo, fijos al fondo del otro lado.
+// cielo, fijos al fondo del lado opuesto (sur y suroeste).
 const BH = [2400, -2200, 3600, 420];
 const BH_PULL = 2700;
 const BH_GRIP = 1500; // aquí ya TE TIENE: el crucero no alcanza — dash o nitro
@@ -2554,8 +2554,9 @@ class Game extends Phaser.Scene {
       fc(g, p[0], p[1], r, col, al);
       fc(g, p[0] + r * 0.4, p[1] - r * 0.25, r * 0.6, col, al * 0.7);
     }
-    this.so(g, cm, -0.3, 0.3, 46, drawEarth);
-    this.so(g, cm, -0.62, 0.12, 64, drawSaturn);
+    // los planetas, a espaldas del agujero negro: su rumbo es SOLO suyo
+    this.so(g, cm, 3.57, 0.3, 46, drawEarth);
+    this.so(g, cm, 4.32, 0.14, 64, drawSaturn);
     this.dl(g, cm, time);
   }
 
