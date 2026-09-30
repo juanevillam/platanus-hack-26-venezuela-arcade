@@ -88,7 +88,7 @@ const GOD = false;
 const YAW_RATE = 2.4; // rad/s tope
 const YAW_EASE = 13; // 1/s, el giro responde YA
 const PITCH_RATE = 2.5; // rad/s de cabeceo
-const ROLL_LEVEL = 0.9; // rad/s: SOLO con el stick del todo suelto, y suave
+const ROLL_LEVEL = 0.55; // rad/s: suave, y solo tras un rato de stick suelto
 const CRUISE = 235; // crucero constante — la nave NUNCA se detiene
 const TURBO_SPEED = 470; // referencia de "rápido" para estelas y cámara
 const NITRO_MAX = 760; // manteniendo B2 la nave acelera sin parar hasta aquí
@@ -1439,9 +1439,10 @@ class Game extends Phaser.Scene {
     let R;
     [F, U, R] = orthoBasis(F, U);
 
-    // Stick DEL TODO suelto: la nave rota suave sobre su eje hasta quedar
-    // derecha. Girando o cabeceando, el control es tuyo y de nadie más.
-    if (!pit && !turn) {
+    // Stick DEL TODO suelto durante un segundo largo: solo entonces la
+    // nave se endereza, suave. Las piruetas no se corrigen solas.
+    this.lvT = !pit && !turn ? (this.lvT || 0) + dt : 0;
+    if (this.lvT > 1.1) {
       const up = vdot(F, WORLD_UP);
       if (ABS(up) < 0.97) {
         const D = vnorm(vmix(WORLD_UP, 1, F, -up));
@@ -1795,6 +1796,7 @@ class Game extends Phaser.Scene {
                 vy: ((wt.y - e.y) / td2) * 900,
                 vz: ((wt.z - e.z) / td2) * 900,
                 life: 1.6,
+                fr: 1,
               });
               Sfx.fire();
             }
@@ -1835,7 +1837,7 @@ class Game extends Phaser.Scene {
             if (tg) {
               e.fireAt = 2.6;
               const fd = HYP(tg.x - e.x, tg.y - e.y, tg.z - e.z) || 1;
-              this.bl.push({ x: e.x, y: e.y - 20, z: e.z, vx: ((tg.x - e.x) / fd) * 620, vy: ((tg.y - e.y) / fd) * 620, vz: ((tg.z - e.z) / fd) * 620, life: 2.4 });
+              this.bl.push({ x: e.x, y: e.y - 20, z: e.z, vx: ((tg.x - e.x) / fd) * 620, vy: ((tg.y - e.y) / fd) * 620, vz: ((tg.z - e.z) / fd) * 620, life: 2.4, fr: 1 });
             }
           } else if (dist < 1500) {
             e.fireAt = 2.6;
@@ -1902,6 +1904,7 @@ class Game extends Phaser.Scene {
                 vy: ((tg.y - e.y) / fd) * 620,
                 vz: ((tg.z - e.z) / fd) * 620,
                 life: 2.4,
+                fr: 1,
               });
             }
           }
@@ -2321,12 +2324,12 @@ class Game extends Phaser.Scene {
       }
     }
 
-    // cañón: trazos brillantes
+    // cañón: trazos brillantes — blanco el tuyo, azul el de tu equipo
     for (const b of this.bl) {
       const p1 = this.pj(cm, b.x, b.y, b.z);
       const p2 = this.pj(cm, b.x - b.vx * 0.03, b.y - b.vy * 0.03, b.z - b.vz * 0.03);
       if (!p1 || !p2) continue;
-      g.lineStyle(2, INK_HI, 0.9);
+      g.lineStyle(2, b.fr ? BLU : INK_HI, 0.9);
       ln(g, p1[0], p1[1], p2[0], p2[1]);
     }
 
@@ -2667,7 +2670,7 @@ class Game extends Phaser.Scene {
       // levanta — la superficie tiene vida propia
       const cy2 = COS(e.yaw);
       const sy3 = SIN(e.yaw);
-      g.lineStyle(1.5, RUST, a);
+      g.lineStyle(1.5, e.fr ? BLU : RUST, a);
       for (let i = 0; i < 4; i++) {
         const hx = i < 2 ? -26 : 26;
         const hz = i % 2 ? 22 : -22;
@@ -2686,7 +2689,7 @@ class Game extends Phaser.Scene {
         this.wl(g, cm, [kx, ky, kz], [wxf, fy, wzf]);
       }
       const eye = this.pj(cm, e.x + SIN(e.yaw) * 64, e.y, e.z + COS(e.yaw) * 64);
-      if (eye) fc(g, eye[0], eye[1], MAX(1.5, 700 / eye[2]), RUST_HI, a * (0.6 + 0.4 * SIN(e.t * 5)));
+      if (eye) fc(g, eye[0], eye[1], MAX(1.5, 700 / eye[2]), e.fr ? BLU : RUST_HI, a * (0.6 + 0.4 * SIN(e.t * 5)));
     }
     if (e.k === 'ace' || e.k === 'gun') {
       // el ojo de brasa en la nariz: se lee quién te está mirando
