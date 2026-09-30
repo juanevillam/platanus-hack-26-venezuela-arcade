@@ -140,8 +140,15 @@ const DIM_CSS = '#8a9099';
 
 // MODO PRUEBA (sin muerte): nada te mata — ni golpes, ni el suelo, ni el
 // agujero negro (de él se sale con nitro). Para recorrer todas las fases.
-// ⚠️ APAGAR (false) ANTES DE ENVIAR: el HUD lo delata con 'HULL ∞'
-const GOD = true;
+// Apagado por defecto; lo enciende y apaga en CUALQUIER momento el código
+// secreto de abajo. El HUD lo delata con 'HULL ∞', y una partida jugada con
+// él no entra al ranking.
+let GOD = false;
+// El código: la secuencia de controles, cada uno por su letra — U D L R es
+// el stick, 1–6 son B1–B6. Por defecto, el Konami de la máquina:
+// ↑ ↑ ↓ ↓ ← → ← → B2 B1
+const CHEAT = 'UUDDLRLR21';
+let cheatKeys = '';
 
 // --- Vuelo: la nave SIEMPRE avanza; el stick dirige, el turbo se recarga.
 // Arriba/abajo cabecea sin tope: mantenlo y das la vuelta completa. La cámara
@@ -268,6 +275,13 @@ window.addEventListener('keydown', (e) => {
     held[code] = true;
     pressed[code] = true;
     Sfx.init(); // el audio solo puede arrancar con un gesto
+    // los últimos controles, por su letra: si terminan en el código, GOD cambia
+    cheatKeys = (cheatKeys + code.slice(3)).slice(-40);
+    if (cheatKeys.endsWith(CHEAT)) {
+      cheatKeys = '';
+      GOD = !GOD;
+      Sfx.O(GOD ? 880 : 220, 0.4, SQR, 0.08, GOD ? 1760 : 110);
+    }
   }
 });
 window.addEventListener('keyup', (e) => {
@@ -608,6 +622,7 @@ class Title extends PS {
     });
     me.Qw = TX(me, CX, H - 52, 'PRESS START', 16, 0, 0.5);
     me.Tp = TX(me, CX, H - 24, '', 12, DIM_CSS, 0.5);
+    me.Gl = TX(me, CX, 140, '', 14, 0, 0.5);
   }
 
   update(time) {
@@ -626,6 +641,7 @@ class Title extends PS {
     sk(CX, 225, 26, 2, 0xfff8ea, 0.7);
     // los consejos, uno cada 3 s: lo que no se adivina solo
     this.Tp.setText(TIPS[FLR(time / 3000) % 7]);
+    this.Gl.setText(GOD ? 'GOD MODE — NOT RANKED' : '');
     this.Qw.setAlpha(FLR(time / 600) % 2 ? 1 : 0.25);
     if (anyStart()) this.scene.start('game');
   }
@@ -799,6 +815,7 @@ class Game extends PS {
     me.ht = 0;
     me.wa = 0;
     me.T = 0;
+    me.Ck = 0; // ¿esta partida pasó por GOD? entonces no va al ranking
     me.Kc = me.Sl = me.Hs = 0; // derribos, cámara lenta, golpe seco
     me.Bc = me.Se = 1; // mejor combo, sector
     me.St = 120;
@@ -980,6 +997,7 @@ class Game extends PS {
       Sfx.Z1();
     }
     Music.G = !!(me.G || me.I);
+    if (GOD) me.Ck = 1;
     Music.Sp = 1 - 0.035 * MIN(6, me.Se - 1); // cada sector, la música aprieta
     me.Gx = (me.Gm -= dt) > 0 ? 1.8 : 1; // multiplicador del alcance del agujero
     Music.Z6();
@@ -2043,7 +2061,7 @@ class Game extends PS {
     me.XB(me.o, 0, { h: true });
     me.S = 14;
     Sfx.Qk();
-    me.time.delayedCall(1400, () => me.scene.start('over', { T: me.T, Sd: [me.Kc, me.Bc, FLR(me.b), me.Se] }));
+    me.time.delayedCall(1400, () => me.scene.start('over', { T: me.T, Sd: [me.Kc, me.Bc, FLR(me.b), me.Se], Ck: me.Ck }));
   }
 
   hy(time, me = this) {
@@ -3695,6 +3713,7 @@ class Over extends PS {
   init(data) {
     this.T = data.T || 0;
     this.Sd = data.Sd || [0, 1, 0, 1];
+    this.Ck = data.Ck;
   }
 
   create() {
@@ -3716,9 +3735,10 @@ class Over extends PS {
 
     TX(me, CX, CY - 70, 'GAME OVER', 32, 0, 0.5);
     TX(me, CX, CY + 4, 'SCORE  ' + String(me.T).padStart(6, '0'), 16, 0, 0.5);
+    if (me.Ck) TX(me, CX, CY + 150, 'GOD MODE — NOT RANKED', 13, DIM_CSS, 0.5);
 
     loadScores().then((scores) => {
-      me.Q6 = scores.length < 5 || me.T > scores[scores.length - 1].s;
+      me.Q6 = !me.Ck && (scores.length < 5 || me.T > scores[scores.length - 1].s);
       me.time.delayedCall(1200, () => (me.Qx = true));
     });
     me.time.delayedCall(9000, () => me.Qg());
