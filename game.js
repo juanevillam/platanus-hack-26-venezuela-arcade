@@ -5,8 +5,8 @@
 // Vuelo libre 3D con proyección propia: la nave siempre avanza y el stick
 // la dirige, con loops completos; la cámara va pegada a ella. MODO ARCADE
 // INFINITO: sin niveles ni final — sobrevive y puntúa. El sector es un
-// cilindro con techo (el HUD dice cuánto queda), con la Tierra, Saturno y un
-// agujero negro que tira y traga flotando en él; los cazadores aprietan
+// cilindro con techo (el HUD dice cuánto queda); la Tierra y Saturno son
+// cielo, y un agujero negro que tira y traga flota en él; los cazadores aprietan
 // con los minutos, hay emboscadas periódicas, torretas de la base flotando
 // sobre el disco del agujero (bajar a cazarlas paga powerup seguro), y un
 // destructor recurrente que llega del hiperespacio a oscuras — el primero
@@ -152,15 +152,14 @@ function surfY(x, z) {
 // hacia adentro; cerca, la pared se dibuja y el HUD dice cuánto queda.
 const BND_R = 6500;
 const BND_TOP = -5200;
-// Tres cuerpos ANCLADOS al mundo — se ven desde todo el sector y se puede
-// ir hasta ellos: [x, y, z, radio]. Tierra y Saturno son sólidos; el
-// agujero negro tira más cuanto más cerca, y en BH_KILL te traga.
-const EARTH = [-2600, -1500, 3600, 700];
-const SATURN = [3000, -2600, 4200, 480];
-const BH = [600, -3800, 5600, 420];
+// El agujero negro está ANCLADO al mundo, a la derecha del arranque: se
+// puede ir hasta él y alejarse [x, y, z, radio]. Tira más cuanto más cerca y
+// te traga ya DENTRO de la sombra — la caída dura. La Tierra y Saturno son
+// cielo, fijos al fondo del otro lado.
+const BH = [2400, -2200, 3600, 420];
 const BH_PULL = 2700;
 const BH_GRIP = 1500; // aquí ya TE TIENE: el crucero no alcanza — dash o nitro
-const BH_KILL = 780;
+const BH_KILL = 240;
 
 const HULL_MAX = 4;
 const SCORE_KEY = 'space-explorer:scores';
@@ -1545,17 +1544,6 @@ class Game extends Phaser.Scene {
         this.say('SECTOR EDGE.');
       }
     }
-    // Tierra y Saturno son sólidos: rozarlos cuesta casco y te escupen
-    for (const [bx, by, bz, br] of [EARTH, SATURN]) {
-      const d = HYP(P.x - bx, P.y - by, P.z - bz);
-      if (d < br + 30) {
-        this.hy(time);
-        const k = (br + 140) / d;
-        P.x = bx + (P.x - bx) * k;
-        P.y = by + (P.y - by) * k;
-        P.z = bz + (P.z - bz) * k;
-      }
-    }
     // el agujero negro: cuanto más cerca, más tira — y muy cerca, te traga
     const bdx = BH[0] - P.x;
     const bdy = BH[1] - P.y;
@@ -1569,8 +1557,10 @@ class Game extends Phaser.Scene {
         Sfx.tn(26 + this.bhx * 22, 0.9, 'sawtooth', 0.11 * this.bhx, 18);
       }
       const grip = bhd < BH_GRIP;
-      // el agarre: un jalón que el crucero no vence — sales con dash o nitro
-      const pull = (grip ? 330 : 650 * this.bhx * this.bhx) * dt / bhd;
+      // el agarre: un jalón que el crucero no vence — sales con dash o nitro.
+      // Y el tiempo se estira: sin nitro la nave se frena, la caída DURA
+      if (grip && !held.P1_2) this.sp += (60 - this.sp) * MIN(1, 8 * dt);
+      const pull = (grip ? 290 : 650 * this.bhx * this.bhx) * dt / bhd;
       P.x += bdx * pull;
       P.y += bdy * pull;
       P.z += bdz * pull;
@@ -2403,8 +2393,8 @@ class Game extends Phaser.Scene {
 
     this.dk(g, cm, time);
     this.dz(g, cm, time);
-    this.dwb(g, cm, time);
     this.de2(g, cm);
+    this.dwb(g, cm, time);
     this.dd(g, cm);
 
     this.label.setVisible(false);
@@ -2564,51 +2554,44 @@ class Game extends Phaser.Scene {
       fc(g, p[0], p[1], r, col, al);
       fc(g, p[0] + r * 0.4, p[1] - r * 0.25, r * 0.6, col, al * 0.7);
     }
+    this.so(g, cm, -0.3, 0.3, 46, drawEarth);
+    this.so(g, cm, -0.62, 0.12, 64, drawSaturn);
     this.dl(g, cm, time);
   }
 
-  // Los tres cuerpos del sector, del más lejano al más cercano: cada uno es
-  // un billete en su punto del mundo, con el arte girado con la cámara
-  dwb(g, cm, time) {
-    const P = this.o;
-    const t = time * 0.001;
-    for (const [B, paint] of [
-      [EARTH, drawEarth],
-      [SATURN, drawSaturn],
-      [BH, (g, r) => this.bh(g, r, t)],
-    ].sort((a, b) => HYP(b[0][0] - P.x, b[0][1] - P.y, b[0][2] - P.z) - HYP(a[0][0] - P.x, a[0][1] - P.y, a[0][2] - P.z))) {
-      if (B === BH) this.dsk(g, cm, t);
-      const p = this.pj(cm, B[0], B[1], B[2]);
-      if (!p) continue;
-      const r = (B[3] * FOCAL) / p[2];
-      const m = r * 4;
-      if (p[0] < -m || p[0] > W + m || p[1] < -m || p[1] > H + m) continue;
-      g.save();
-      g.translateCanvas(p[0], p[1]);
-      g.rotateCanvas(this.kr(cm));
-      paint(g, r);
-      g.restore();
-    }
+  // Dibuja algo del cielo en su dirección, girado con la cámara
+  so(g, cm, yaw, el, r, paint) {
+    const p = this.pd(cm, skyDir(yaw, el));
+    if (!p || p[0] < -3 * r || p[0] > W + 3 * r || p[1] < -3 * r || p[1] > H + 3 * r) return;
+    g.save();
+    g.translateCanvas(p[0], p[1]);
+    g.rotateCanvas(this.kr(cm));
+    paint(g, r);
+    g.restore();
   }
 
-  // EL AGUJERO NEGRO, en pantalla: resplandor, brazos en espiral cayendo,
-  // la sombra, y el disco LENTEADO — su cara de atrás doblada por encima y
+  // el agujero negro: su disco en 3D y, encima, la sombra como billete en
+  // su punto del mundo, girada con la cámara
+  dwb(g, cm, time) {
+    const t = time * 0.001;
+    this.dsk(g, cm, t);
+    const p = this.pj(cm, BH[0], BH[1], BH[2]);
+    if (!p) return;
+    const r = (BH[3] * FOCAL) / p[2];
+    if (p[0] < -3 * r || p[0] > W + 3 * r || p[1] < -3 * r || p[1] > H + 3 * r) return;
+    g.save();
+    g.translateCanvas(p[0], p[1]);
+    g.rotateCanvas(this.kr(cm));
+    this.bh(g, r, t);
+    g.restore();
+  }
+
+  // EL AGUJERO NEGRO, en pantalla: resplandor, la sombra, y el disco LENTEADO — su cara de atrás doblada por encima y
   // por debajo de la sombra. Cuanto más cerca, más arde todo.
   bh(g, r, t) {
     const q = this.bhx || 0;
     fc(g, 0, 0, r * 3.2, 0xe8a060, 0.04 + 0.05 * q);
     fc(g, 0, 0, r * 1.9, 0xe8a060, 0.07 + 0.08 * q);
-    for (let k = 0; k < 4; k++) {
-      LS(g, MAX(1, r * 0.03), k % 2 ? RUST : AMB, 0.35 + 0.3 * q);
-      g.beginPath();
-      for (let j = 0; j <= 16; j++) {
-        const rho = r * (1.15 + j * 0.2);
-        const a = k * 1.57 - t * 1.4 + j * 0.3;
-        if (j === 0) g.moveTo(COS(a) * rho, SIN(a) * rho * 0.5);
-        else g.lineTo(COS(a) * rho, SIN(a) * rho * 0.5);
-      }
-      g.strokePath();
-    }
     fc(g, 0, 0, r, 0x000000, 1);
     for (const [a0, rr, al] of [[PI, 1.3, 0.8], [0, 1.16, 0.5]]) {
       for (const w of [0.14, 0.03]) {
@@ -2622,7 +2605,7 @@ class Game extends Phaser.Scene {
   }
 
   // el disco de acreción en 3D, anclado al mundo en un plano inclinado:
-  // arcos con huecos orbitando, el interior más rápido; y los chorros
+  // arcos con huecos orbitando, el interior más rápido
   dsk(g, cm, t) {
     const [x, y, z, RS] = BH;
     const q = this.bhx || 0;
@@ -2644,14 +2627,6 @@ class Game extends Phaser.Scene {
         const a0 = t * (3 / k) + arc * 0.698;
         for (let i = 0; i < 3; i++) this.wl(g, cm, at(a0 + i * 0.16, r), at(a0 + i * 0.16 + 0.16, r));
       }
-    }
-    const ax = (m) => [x + n.x * RS * m, y + n.y * RS * m, z + n.z * RS * m];
-    const pu = (t * 0.8) % 1;
-    for (const d of [-1, 1]) {
-      LS(g, 7, BLD, 0.12);
-      this.wl(g, cm, ax(d), ax(9 * d));
-      LS(g, 3, BLU, 0.5);
-      this.wl(g, cm, ax((1 + 7 * pu) * d), ax((2 + 7 * pu) * d));
     }
   }
 
