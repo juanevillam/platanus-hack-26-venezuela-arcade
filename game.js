@@ -197,6 +197,19 @@ const surfY = (x, z) => {
 // te traga ya DENTRO de la sombra — la caída dura. La Tierra y Saturno son
 // cielo, fijos al fondo del lado opuesto (sur y suroeste).
 const BH = [2400, -2200, 3600, 420];
+const BHO = { x: BH[0], y: BH[1], z: BH[2] };
+// Los SECTORES: cada 2 minutos uno nuevo, con nombre, bono y otra mezcla —
+// desde el 2 llegan kamikazes, desde el 3 francotiradores
+const TIPS = [
+  'LURE SHIPS INTO THE BLACK HOLE',
+  'SHOOT A MINE — IT TAKES THE PACK',
+  'FLY THROUGH GATES FOR FULL BOOST',
+  'NEAR MISSES FEED OVERDRIVE',
+  'FIVE GATES IN A ROW: OVERDRIVE',
+  'NO HULL LOST: PERFECT SECTOR',
+  'HOLD B3: LOCK 4, RELEASE: SALVO',
+];
+const SEC = ['OUTER RIM', 'THE SWARM', 'SNIPER ALLEY', 'CROSSFIRE', 'THE DEEP', 'EVENT HORIZON'];
 const BH_PULL = 2700;
 const BH_GRIP = 1500; // aquí ya TE TIENE: el crucero no alcanza — dash o nitro
 const BH_KILL = 240;
@@ -206,7 +219,7 @@ const SCORE_KEY = 'space-explorer:scores';
 
 // Las cuatro piezas del hipersalto
 
-const HINT_MAIN = 'B1 FIRE · B2 DASH · B3 MISSILE · B4/B6 SHIELD';
+const HINT_MAIN = 'B1 FIRE · B2 DASH · B3 MISSILE · B4/B6 SHIELD · B5 OVERDRIVE';
 
 // --------------------------------------------------------------------------
 // Arcade cabinet button → keyboard key mapping.
@@ -549,7 +562,7 @@ const Music = {
         if (s16 === 8) Sfx.O(root * 4.76, 0.9, SAW, 0.05, root * 4, t);
         if (s16 === 12) Sfx.O(root * 6, 0.5, TRI, 0.045, root * 5.6, t);
         if (s16 % 2 === 0) Sfx.Qh(0.03, 0.028, t);
-        me.Qg += 0.21;
+        me.Qg += 0.21 * (Music.Sp || 1);
       } else {
         // CACERÍA: galope en menor (Em → C → D → B), stabs, un destello de
         // tritono y batería marcada — aventura con dientes, nada cozy
@@ -561,7 +574,7 @@ const Music = {
         if (s16 === 8) Sfx.O(root * 5.66, 0.5, 'sine', 0.045, root * 4.9, t);
         if (s16 % 2 === 0) Sfx.Qh(0.025, 0.03, t);
         if (s16 % 8 === 4) Sfx.Qh(0.09, 0.055, t);
-        me.Qg += 0.19;
+        me.Qg += 0.19 * (Music.Sp || 1);
       }
     }
   },
@@ -579,15 +592,10 @@ class Title extends PS {
     const [me] = [this];
     me.events.on('postupdate', clearPressed);
     Music.on = false;
+    GF = me.add.graphics(); // el remolino de la portada, detrás de todo
     TX(me, CX, 96, 'S P A C E  E X P L O R E R', 36, 0, 0.5);
-    TX(me, 160, 360, 'STICK\nB1\nB2\nB3\nB4/B6\nSTART', 14).setOrigin(1, 0).setAlign('right').setLineSpacing(13);
-    me.add
-      .text(
-        180, 360,
-        'STEER\nFIRE\nDASH\nMISSILE\nSHIELD\nPAUSE',
-        FONT(13, DIM_CSS)
-      )
-      .setLineSpacing(14);
+    TX(me, 160, 330, 'STICK\nB1\nB2\nB3\nB4/B6\nB5\nSTART', 14).setOrigin(1, 0).setAlign('right').setLineSpacing(13);
+    TX(me, 180, 330, 'STEER\nFIRE\nDASH\nMISSILE\nSHIELD\nOVERDRIVE\nPAUSE', 13, DIM_CSS).setLineSpacing(14);
     TX(me, 596, 360, 'TOP 5', 14);
     me.Q4 = TX(me, 596, 386, '', 14, DIM_CSS).setLineSpacing(9);
     loadScores().then((scores) => {
@@ -597,9 +605,25 @@ class Title extends PS {
       );
     });
     me.Qw = TX(me, CX, H - 52, 'PRESS START', 16, 0, 0.5);
+    me.Tp = TX(me, CX, H - 24, '', 12, DIM_CSS, 0.5);
   }
 
   update(time) {
+    // la portada: el agujero negro, con sus anillos cayendo en remolino
+    GF.clear();
+    for (let i = 0; i < 7; i++) {
+      const ph = (i / 7 + time * 0.00008) % 1;
+      const r = 30 + 110 * (1 - ph);
+      LS(1 + 2 * ph, [0x8a5c48, RUST, 0xe89a5c, AMB, CRM][FLR(ph * 5)], (0.2 + 0.6 * ph) * MIN(1, (1 - ph) * 8));
+      for (let j = 0; j < 9; j++) {
+        const a = (time * 0.084) / r + j * 0.698 + i;
+        PL(CX + COS(a) * r * 1.9, 225 + SIN(a) * r * 0.5, CX + COS(a + 0.25) * r * 1.9, 225 + SIN(a + 0.25) * r * 0.5, CX + COS(a + 0.5) * r * 1.9, 225 + SIN(a + 0.5) * r * 0.5);
+      }
+    }
+    fc(CX, 225, 24, 0, 1);
+    sk(CX, 225, 26, 2, 0xfff8ea, 0.7);
+    // los consejos, uno cada 3 s: lo que no se adivina solo
+    this.Tp.setText(TIPS[FLR(time / 3000) % 7]);
     this.Qw.setAlpha(FLR(time / 600) % 2 ? 1 : 0.25);
     if (anyStart()) this.scene.start('game');
   }
@@ -773,6 +797,24 @@ class Game extends PS {
     me.ht = 0;
     me.wa = 0;
     me.T = 0;
+    me.Kc = me.Sl = me.Hs = 0; // derribos, cámara lenta, golpe seco
+    me.Bc = me.Se = 1; // mejor combo, sector
+    me.St = 120;
+    me.Od = me.Ou = me.Gc = 0; // overdrive: carga y fin; anillos en cadena
+    me.Gt = null;
+    me.Gs = 8;
+    me.Xh = 10000; // cada 10000 puntos, un casco de vuelta
+    me.Ks = me.Kt = 0; // racha de derribos
+    me.Sv = me.Cg = 0; // puntaje mostrado (cuenta hacia el real); derribos del sector
+    me.Lh = me.Lf = 0; // B3 mantenido: cuánto, y cuándo fija el siguiente
+    me.Lk = []; // los blancos fijados
+    // relojes de los eventos, y los avisos de "primera vez", de cero en cada partida
+    me.Gw = 60;
+    me.Ms = 10;
+    me.Gd = 40;
+    me.Gm = me.Pf = me.Kw = me.Sw = me.Mw = me.Of = 0;
+    me.Hi = null; // el récord a batir, cuando llegue del almacenamiento
+    loadScores().then((s) => (me.Hi = s.length ? s[0].s : null));
     me.b = 0;
     me.Q7 = 10; // al principio te dejan orientarte
     me.S = 0;
@@ -867,13 +909,17 @@ class Game extends PS {
     me.Q9 = TX(me, 168, H - 30, '', 17);
     TX(me, 136, H - 52, 'DASH', 10, DIM_CSS).setOrigin(0, 0.5);
     TX(me, 136, H - 66, 'SHIELD', 10, DIM_CSS).setOrigin(0, 0.5);
+    TX(me, 136, H - 80, 'OVERDRIVE', 10, DIM_CSS).setOrigin(0, 0.5);
     me.Zc = TX(me, CX, 64, '', 16, 0, 0.5).setAlpha(0.95);
     me.Qq = TX(me, 0, 0, '', 14, 0, 0.5).setVisible(false);
-    me.Qe = TX(me, CX, 168, '', 16, 0, 0.5).setAlpha(0);
-    me.hint = TX(me, CX, H - 58, HINT_MAIN, 13, DIM_CSS, 0.5).setAlpha(0.6);
+    me.Qe = TX(me, CX, 168, '', 16, 0, 0.5).setAlpha(0).setAlign('center');
+    me.hint = TX(me, CX, H - 104, HINT_MAIN, 13, DIM_CSS, 0.5).setAlpha(0.6);
     me.time.delayedCall(9000, () => me.tweens.add({ targets: me.hint, alpha: 0, duration: 800 }));
     // etiqueta del escudo, junto a su barra
 
+    // los textos que salen del mundo: un pequeño grupo que se recicla
+    me.Pq = [0, 1, 2, 3, 4, 5].map(() => TX(me, 0, 0, '', 14, 0, 0.5).setAlpha(0));
+    me.Pi = 0;
     me.W('SURVIVE. SCORE.');
   }
 
@@ -900,9 +946,40 @@ class Game extends PS {
       return;
     }
     me.vt = time -= me.pO || 0;
-    const dt = MIN(delta, 50) / 1000;
+    // cámara lenta (cae el destructor) y un golpe seco al derribar una nave
+    const rd = MIN(delta, 50) / 1000;
+    me.Sl -= rd;
+    me.Hs -= rd;
+    const dt = rd * (me.Sl > 0 ? 0.3 : me.Hs > 0 ? 0.1 : 1);
     me.b += dt;
+    for (const o of me.Pq) o.Tp += rd;
+    // el arcade de siempre: casco extra por puntos, y el récord cae en vivo
+    if (me.T >= me.Xh) {
+      me.Xh += 10000;
+      me.Qj = MIN(HULL_MAX, me.Qj + 1);
+      me.W('HULL UP.');
+      Sfx.Q3();
+    }
+    if (me.Hi && me.T > me.Hi) me.W('NEW HIGH SCORE.', (me.Hi = null));
+    // con UN casco, la alarma: pitido cada 1.2 s y el marco rojo
+    if (me.Qj === 1 && (me.Lw = (me.Lw || 0) - dt) <= 0) {
+      me.Lw = 1.2;
+      Sfx.O(880, 0.12, SQR, 0.05);
+    }
+    // cada 2 minutos, un sector nuevo: bono por sobrevivirlo y su nombre
+    // y su RETO: derribar 6 + 2·sector naves antes del siguiente — paga fuerte
+    if ((me.St -= dt) <= 0) {
+      me.St = 120;
+      me.T += 300 * me.Se++ + (me.Pf ? 0 : 2000);
+      me.W('SECTOR ' + me.Se + ' — ' + SEC[(me.Se - 1) % 6] + (me.Pf ? '' : '\nPERFECT +2000') + '\nDOWN ' + (6 + 2 * me.Se) + ' SHIPS');
+      me.Cg = me.Pf = 0;
+      me.Qp.setAlpha(0.35);
+      me.tweens.add({ targets: me.Qp, alpha: 0, duration: 700 });
+      Sfx.Z1();
+    }
     Music.G = !!(me.G || me.I);
+    Music.Sp = 1 - 0.035 * MIN(6, me.Se - 1); // cada sector, la música aprieta
+    me.Gx = (me.Gm -= dt) > 0 ? 1.8 : 1; // multiplicador del alcance del agujero
     Music.Z6();
 
     // el combo se enfría
@@ -924,6 +1001,41 @@ class Game extends PS {
       if (me.Zm <= 0) {
         me.Zm = 45;
         me.Z7(MIN(5, 2 + FLR(me.b / 90)));
+      }
+      const Po = me.o;
+      const F = me.F;
+      const R = me.R;
+      // el agujero RESPIRA: cada ~70 s, 5 s tirando con casi el doble de alcance
+      if ((me.Gw -= dt) <= 0) {
+        me.Gw = 70;
+        me.Gm = 5;
+        me.W('GRAVITY SURGE.');
+        Sfx.O(70, 2, SAW, 0.15, 30);
+      }
+      // desde el sector 5, TORMENTAS de meteoritos que vienen de frente
+      if (me.Se > 4 && (me.Ms -= dt) <= 0) {
+        me.Ms = 35;
+        me.W('METEOR STORM.');
+        for (let i = 0; i < 14; i++) {
+          const d = 2000 + RND() * 900;
+          const v = 300 + RND() * 200;
+          me.D.push({
+            k: 8, Mt: 1, r: 40, M: 2, t: 0, E: 0, Zx: ROCK_POOL[i % 4], Zw: RH() * 2,
+            x: Po.x + F.x * d + R.x * RH() * 1600, y: Po.y + F.y * d + RH() * 1000, z: Po.z + F.z * d + R.z * RH() * 1600,
+            A: -F.x * v, C: -F.y * v, B: -F.z * v,
+          });
+        }
+      }
+      // la nave DORADA: rara y veloz, cruza de lado — derríbala: +1000 y
+      // misiles llenos. Se va en 8 s
+      if ((me.Gd -= dt) <= 0) {
+        me.Gd = 45 + RND() * 30;
+        me.W('GOLD RUNNER.');
+        me.D.push({
+          k: 10, r: 50, M: 3, t: 0, E: 0,
+          x: Po.x + R.x * 1800 + F.x * 1300, y: Po.y - 150, z: Po.z + R.z * 1800 + F.z * 1300,
+          A: -R.x * 560, C: 0, B: -R.z * 560,
+        });
       }
       // las torretas de la base, flotando sobre el disco: bajar al jalón a
       // cazarlas paga powerup seguro
@@ -1072,24 +1184,32 @@ class Game extends PS {
   // el nivel 0 se gana peleando, no solo recogiendo
   Z7(n) {
     const Po = this.o;
-    this.W('AMBUSH.');
+    // desde el sector 2 la emboscada llega en ESCUADRA: una V que viene de
+    // un solo lado, ya lanzada contra ti
+    const v = this.Se > 1;
+    const a0 = RND() * PI * 2;
+    this.W(v ? 'SQUADRON.' : 'AMBUSH.');
     Sfx.Z2();
     this.wvN = n;
     for (let i = 0; i < n; i++) {
-      const ang = (i / n) * PI * 2 + RND() * 0.8;
+      const ang = v ? a0 : (i / n) * PI * 2 + RND() * 0.8;
+      const sd = v ? (i % 2 ? -150 : 150) * ((i + 1) >> 1) : 0;
+      const d = 1500 + (v ? ((i + 1) >> 1) * 160 : 0);
       const gun = i === 2 && n >= 4; // las oleadas grandes traen una corbeta
       this.D.push({
         k: gun ? 2 : 1,
-        x: Po.x + SIN(ang) * 1500,
-        y: Po.y + RH() * 600,
-        z: Po.z + COS(ang) * 1500,
+        x: Po.x + SIN(ang) * d + COS(ang) * sd,
+        y: Po.y + (v ? 0 : RH() * 600),
+        z: Po.z + COS(ang) * d - SIN(ang) * sd,
         r: gun ? 130 : 22 * HUNTER_SCALE,
         M: gun ? 8 : 4,
         t: 0,
         E: 0,
         P: 2 + RND() * 2,
         m: RND() < 0.5 ? 1 : -1,
-        A: 0, C: 0, B: 0,
+        A: v ? -SIN(ang) * 320 : 0,
+        C: 0,
+        B: v ? -COS(ang) * 320 : 0,
         wv: 1,
       });
     }
@@ -1105,17 +1225,27 @@ class Game extends PS {
     if (me.Q7 > 0 || alive >= max) return;
     me.Q7 = every;
     const ang = RND() * PI * 2;
-    const gun = me.b > 50 && RND() < 0.25;
+    const r = RND();
+    const kz = me.Se > 1 && r < 0.35;
+    const sn = !kz && me.Se > 2 && r < 0.6;
+    const gun = sn || (me.b > 50 && r > 0.75);
+    const el = me.Se > 4 && !kz && !gun && r < 0.8; // ÉLITE: más casco, fuego rápido
+    if (kz) Sfx.O(900, 0.6, SAW, 0.05, 300);
+    if (kz && !me.Kw) me.W('KAMIKAZES INBOUND.', (me.Kw = 1));
+    if (sn && !me.Sw) me.W('SNIPERS — KEEP MOVING.', (me.Sw = 1));
     me.D.push({
       k: gun ? 2 : 1,
+      Kz: kz,
+      Sn: sn,
+      Et: el,
       x: Po.x + SIN(ang) * 1300,
       y: Po.y + RH() * 500,
       z: Po.z + COS(ang) * 1300,
-      r: gun ? 130 : 22 * HUNTER_SCALE,
-      M: gun ? 8 : 4,
+      r: sn ? 70 : gun ? 130 : (kz ? 16 : 22) * HUNTER_SCALE,
+      M: sn ? 3 : gun ? 8 : kz ? 1 : el ? 7 : 4,
       t: 0,
       E: 0,
-      P: 2,
+      P: sn ? 4 : kz ? 1e9 : 2,
       m: RND() < 0.5 ? 1 : -1,
       A: 0,
       C: 0,
@@ -1160,7 +1290,11 @@ class Game extends PS {
       Q5: 0,
       Qn: mini ? 1 : 0,
       j: SD_PARTS.filter(([kind], i) => !mini || (kind === 2 || i < 4))
-        .map(([kind, ox, oy, oz, hp]) => ({ Z: kind, ox, oy, oz, M: mini && kind === 2 ? 8 : hp, max: mini && kind === 2 ? 8 : hp, P: 1 + RND() * 3, Qi: 0 })),
+        .map(([kind, ox, oy, oz, hp]) => {
+          // cada regreso vuelve con medio casco más
+          hp = mini && kind === 2 ? 8 : RD(hp * (1 + me.Zb / 2));
+          return { Z: kind, ox, oy, oz, M: hp, max: hp, P: 1 + RND() * 3, Qi: 0 };
+        }),
     };
     if (mini) me.I = nb;
     else {
@@ -1461,6 +1595,7 @@ class Game extends PS {
     }
     me.sy(b.x, b.y, b.z, 24);
     me.S = 16;
+    me.Sl = 1.2;
     me.T += b.Qn ? 800 : 1500;
     Sfx.Qk();
     me.Zb++;
@@ -1468,11 +1603,27 @@ class Game extends PS {
     me.W(b.Qn ? 'BACKUP DOWN. +800' : 'DESTROYER DOWN. +1500');
   }
 
-  ad(pts, me = this) {
-    me.T += pts * me.mu;
+  ad(pts, p, lb, me = this) {
+    const v = pts * me.mu;
+    me.T += v;
+    if (p) {
+      me.PU(p, (lb || '') + '+' + v);
+      // lo que se gana peleando carga el OVERDRIVE
+      me.Od = MIN(100, me.Od + 8);
+      if (me.Od >= 100 && !me.Of) me.W('OVERDRIVE READY — B5.', (me.Of = 1));
+    }
     if (me.mt > 0) me.mu = MIN(5, me.mu + 1);
     else me.mu = 2;
     me.mt = 4;
+    me.Bc = MAX(me.Bc, me.mu);
+  }
+
+  // un texto que sale del mundo ('+120', 'CLOSE +50'): sube y se apaga
+  PU(p, s) {
+    const o = this.Pq[this.Pi++ % 6];
+    o.setText(s).setAlpha(1);
+    o.Wp = { x: p.x, y: p.y, z: p.z };
+    o.Tp = 0;
   }
 
   sy(x, y, z, n) {
@@ -1521,6 +1672,14 @@ class Game extends PS {
 
     const turn = sceneHold ? 0 : (held.P1_R ? 1 : 0) - (held.P1_L ? 1 : 0);
     const pit = sceneHold ? 0 : (held.P1_U ? 1 : 0) - (held.P1_D ? 1 : 0); // arriba = nariz arriba
+
+    // B5: OVERDRIVE — seis segundos de fuego cuádruple, intocable
+    if (pressed.P1_5 && me.Od >= 100 && !sceneHold) {
+      me.Od = me.Of = 0;
+      me.Ou = me.iu = time + 6000;
+      me.W('OVERDRIVE!');
+      Sfx.Z1();
+    }
 
     // B4/B6: el escudo se QUEDA — hasta que lo apagues tú con otro toque,
     // o hasta que se consuma solo; apagarlo temprano recarga antes
@@ -1633,11 +1792,11 @@ class Game extends PS {
     const bdy = BH[1] - P.y;
     const bdz = BH[2] - P.z;
     const bhd = HYP(bdx, bdy, bdz);
-    me.Zi = CLP(1 - (bhd - BH_KILL) / (BH_PULL - BH_KILL), 0, 1);
+    me.Zi = CLP(1 - (bhd - BH_KILL) / (BH_PULL * me.Gx - BH_KILL), 0, 1);
     // el reloj del disco corre según lo cerca que estés: lejos, lento
     me.Jf = CLP(1 - bhd / 9000, 0, 1);
     me.bT = (me.bT || 0) + dt * (0.25 + 2.2 * me.Jf * me.Jf);
-    if (bhd < BH_PULL) {
+    if (bhd < BH_PULL * me.Gx) {
       if (me.b > (me.Jl || 0)) {
         // el retumbo del vacío, cada vez más presente
         me.Jl = me.b + 0.8;
@@ -1711,6 +1870,32 @@ class Game extends PS {
       }
     }
 
+    // los ANILLOS: aparecen delante de ti; crúzalos por dentro — puntos,
+    // turbo lleno y el siguiente, más lejos. Pasar por fuera corta la cadena
+    const G = me.Gt;
+    if (G) {
+      const rx = Po.x - G.x;
+      const ry = Po.y - G.y;
+      const rz = Po.z - G.z;
+      const gd = HYP(rx, ry, rz);
+      if (rx * G.n.x + ry * G.n.y + rz * G.n.z > 0 || gd > 4000) {
+        me.Gt = null;
+        if (gd < 120) {
+          me.ad(100 * ++me.Gc, G, 'GATE ');
+          if (me.Gc === 5) me.Od = 100; // cinco seguidos: OVERDRIVE lleno
+          me.u = BOOST_MAX;
+          me.Gs = 0;
+          Sfx.Q3();
+        } else me.Gc = 0;
+      }
+    } else if ((me.Gs -= dt) <= 0) {
+      me.Gs = 16;
+      const d = 1200 + RND() * 400;
+      const x = CLP(Po.x + me.F.x * d + me.R.x * RH() * 600, -5800, 5800);
+      const z = CLP(Po.z + me.F.z * d + me.R.z * RH() * 600, -5800, 5800);
+      me.Gt = { x, y: CLP(Po.y + me.F.y * d + RH() * 400, BND_TOP + 300, surfY(x, z) - 300), z, n: me.F, e1: me.R, e2: me.U };
+    }
+
     // alabeo con el giro
     const bank = me.yv * 0.34;
     me.Ql += (bank - me.Ql) * MIN(1, 8 * dt);
@@ -1718,7 +1903,7 @@ class Game extends PS {
     // B1: cañón — sale de la nariz, hereda tu velocidad (doble con la mejora)
     // mientras dura la escena del destructor no se dispara: es SU momento
     if (held.P1_1 && time >= me.fy && !cineB) {
-      me.fy = time + FIRE_MS;
+      me.fy = time + (time < me.Ou ? 70 : FIRE_MS);
       me.Jj = 0.05;
       Sfx.Zz();
       const sp = BOLT_SPEED + me.H;
@@ -1752,7 +1937,7 @@ class Game extends PS {
           if (vdot(to, f) > 0.985) aim = to;
         }
       }
-      for (const off of [-9, 9]) {
+      for (const off of time < me.Ou ? [-20, -7, 7, 20] : [-9, 9]) {
         me.bl.push({
           x: Po.x + f.x * 24 + R.x * off,
           y: Po.y + f.y * 24 + R.y * off,
@@ -1775,33 +1960,49 @@ class Game extends PS {
       }
     } else me.ar = 0;
 
-    // B3: misil — busca el blanco más alineado con tu nariz; contra el
-    // destructor apunta al punto débil vivo más a tiro
-    if (pressed.P1_3 && me.am > 0 && !cineB) {
-      me.am--;
+    // B3: misil — TOCAR lanza uno al blanco más alineado con tu nariz;
+    // MANTENER fija hasta 4 blancos (uno cada 0.25 s) y al SOLTAR sale la
+    // salva, uno a cada uno. Contra el destructor, al punto débil vivo
+    if (held.P1_3 && me.am > 0 && !cineB) {
+      me.Lh += dt;
+      if (me.Lh > 0.4 && me.Lk.length < MIN(4, me.am) && (me.Lf -= dt) <= 0) {
+        me.Lf = 0.25;
+        const t = me.bt(f, me.Lk);
+        if (t) {
+          me.Lk.push(t);
+          Sfx.O(1400, 0.06, SQR, 0.05);
+        }
+      }
+    } else if (me.Lh) {
+      const ts = me.Lh > 0.4 ? me.Lk.filter((t) => !t.X) : [me.bt(f)];
+      for (const target of ts.length ? ts : [null]) {
+        if (me.am <= 0 || cineB) break;
+        me.am--;
+        me.ms.push({
+          x: Po.x + f.x * 26 - me.U.x * 6,
+          y: Po.y + f.y * 26 - me.U.y * 6,
+          z: Po.z + f.z * 26 - me.U.z * 6,
+          A: f.x * MISSILE_SPEED,
+          C: f.y * MISSILE_SPEED,
+          B: f.z * MISSILE_SPEED,
+          Qd: target,
+          Qc: target && target.k === 7 ? me.ba(target, f) : null,
+          Y: [],
+          N: 7,
+        });
+      }
       Sfx.Qz();
-      const target = me.bt(f);
-      me.ms.push({
-        x: Po.x + f.x * 26 - me.U.x * 6,
-        y: Po.y + f.y * 26 - me.U.y * 6,
-        z: Po.z + f.z * 26 - me.U.z * 6,
-        A: f.x * MISSILE_SPEED,
-        C: f.y * MISSILE_SPEED,
-        B: f.z * MISSILE_SPEED,
-        Qd: target,
-        Qc: target && target.k === 7 ? me.ba(target, f) : null,
-        Y: [],
-        N: 7,
-      });
+      me.Lh = me.Lf = 0;
+      me.Lk = [];
     }
   }
 
-  bt(f) {
+  bt(f, ex) {
     const Po = this.o;
     let best = null;
     let bestDot = 0.75; // solo lo que ya tienes bastante de frente
     for (const e of this.D) {
-      if (e.k === 4 || e.L || e.X) continue;
+      if (e.k === 4 || e.L || e.X || (ex && ex.includes(e))) continue;
       const dx = e.x - Po.x;
       const dy = e.y - Po.y;
       const dz = e.z - Po.z;
@@ -1821,10 +2022,11 @@ class Game extends PS {
   Jc(me = this) {
     if (me.fz === 'out' || (me.G && me.G.f) || (me.I && me.I.f)) return;
     me.fz = 'out';
+    me.Sl = 1.3; // la propia muerte, en cámara lenta
     me.XB(me.o, 0, { h: true });
     me.S = 14;
     Sfx.Qk();
-    me.time.delayedCall(1400, () => me.scene.start('over', { T: me.T }));
+    me.time.delayedCall(1400, () => me.scene.start('over', { T: me.T, Sd: [me.Kc, me.Bc, FLR(me.b), me.Se] }));
   }
 
   hy(time, me = this) {
@@ -1840,6 +2042,7 @@ class Game extends PS {
     Sfx.Z3();
     if (GOD) return; // modo prueba: duele, pero no mata
     me.Qj--;
+    me.Pf = 1; // este sector ya no es perfecto
     me.Jh = 0;
     if (me.Qj <= 0) me.Jc();
   }
@@ -1855,13 +2058,29 @@ class Game extends PS {
       const dy = P.y - e.y;
       const dz = P.z - e.z;
       const dist = HYP(dx, dy, dz);
+      // el agujero negro los traga también: atráelos y caen — y pagan
+      if (e.k < 5 || e.k > 7) {
+        const bd = D3(e, BHO);
+        if (bd < BH_PULL * me.Gx) {
+          const f = ((1 - bd / BH_PULL / me.Gx) ** 2 * 900 * dt) / bd;
+          e.x += (BHO.x - e.x) * f;
+          e.y += (BHO.y - e.y) * f;
+          e.z += (BHO.z - e.z) * f;
+          if (bd < 420) {
+            e.X = true;
+            me.bm(e);
+            if (e.k < 3) me.ad(200, e, 'SWALLOWED ');
+            continue;
+          }
+        }
+      }
 
       if (e.k === 1 || e.k === 2 || e.k === 4) {
         // vuelan como TÚ: siempre hacia adelante, virando con alabeo. El
         // ACE hace pasadas y rompe cerca; la CORBETA guarda su anillo y
         // ladra ráfagas — grande, lenta, nunca huye.
         const gun2 = e.k === 2;
-        const spd2 = gun2 ? 165 : 320;
+        const spd2 = gun2 ? 165 : e.Kz ? 470 : 320; // el kamikaze va a fondo
         let gx = P.x;
         let gy = P.y;
         let gz = P.z;
@@ -1911,7 +2130,19 @@ class Game extends PS {
             });
             Sfx.Qz();
           }
+        } else if (e.Sn) {
+          // el francotirador guarda 2000 de ti, derivando de lado
+          const w = (dist - 2000) / dist;
+          gx = e.x + dx * w + (dz / dist) * 600 * e.m;
+          gy = e.y + dy * w;
+          gz = e.z + dz * w - (dx / dist) * 600 * e.m;
         } else if (gun2) {
+          // desde el sector 4 la corbeta siembra MINAS a su paso
+          if (me.Se > 3 && (e.Mn = (e.Mn || 5) - dt) <= 0) {
+            e.Mn = 6;
+            if (!me.Mw) me.W('MINES — SHOOT THEM.', (me.Mw = 1));
+            me.D.push({ k: 9, x: e.x, y: e.y, z: e.z, r: 30, M: 1, t: 0, E: 0 });
+          }
           if (dist < 620) {
             gx = e.x - (dx / dist) * 1200;
             gy = e.y - (dy / dist) * 400;
@@ -1927,7 +2158,7 @@ class Game extends PS {
           gx = e.x - (dx / dist) * 1500 + (dz / dist) * 500 * e.m;
           gy = e.y - (dy / dist) * 600;
           gz = e.z - (dz / dist) * 1500 - (dx / dist) * 500 * e.m;
-        } else if (dist < 650 || (dist < 1000 && (me.F.x * dx + me.F.y * dy + me.F.z * dz) / dist < -0.93)) {
+        } else if (!e.Kz && (dist < 650 || (dist < 1000 && (me.F.x * dx + me.F.y * dy + me.F.z * dz) / dist < -0.93))) {
           // se sabe presa: si te tiene cerca, o si está en tu mira, rompe y
           // se aleja — no se deja atropellar
           e.fl = 1.2 + RND() * 0.8;
@@ -1943,7 +2174,7 @@ class Game extends PS {
         const ddy = gy - e.y;
         const ddz = gz - e.z;
         const dd = HYP(ddx, ddy, ddz) || 1;
-        const k2 = MIN(1, (gun2 ? 0.9 : e.fl > 0 ? 3.6 : 2.3) * dt);
+        const k2 = MIN(1, (gun2 ? 0.9 : e.Kz ? 1.5 : e.fl > 0 ? 3.6 : 2.3) * dt);
         const oy = AT2(e.A, e.B);
         let nx = e.A / m + (ddx / dd - e.A / m) * k2;
         let ny = e.C / m + (ddy / dd - e.C / m) * k2;
@@ -1977,8 +2208,26 @@ class Game extends PS {
               Sfx.Zz();
             }
           }
+        } else if (e.Sn) {
+          // la línea roja te sigue y se CONGELA 0.4 s antes del disparo —
+          // muévete — y el rayo es instantáneo
+          e.Bf -= dt;
+          if (e.P > 0.4) e.Am = { x: P.x, y: P.y, z: P.z };
+          if (e.P < 1.6 && !e.Ch && dist < 3400) {
+            e.Ch = 1;
+            Sfx.O(200, 1.4, SQR, 0.04, 900);
+          }
+          if (e.P <= 0) {
+            e.P = 4;
+            e.Bf = 0.15;
+            e.Ch = 0;
+            const v = vnorm({ x: e.Am.x - e.x, y: e.Am.y - e.y, z: e.Am.z - e.z });
+            const tt = dx * v.x + dy * v.y + dz * v.z;
+            if (tt > 0 && tt < 3400 && HYP(dx - v.x * tt, dy - v.y * tt, dz - v.z * tt) < 40) me.hy(time);
+            Sfx.Qz();
+          }
         } else if (e.P <= 0 && dist < (gun2 ? 1500 : 1300)) {
-          e.P = gun2 ? 1.6 : 2.2;
+          e.P = gun2 ? 1.6 : e.Et ? 1.1 : 2.2;
           me.sa(e, SHOT_SPEED);
         }
       } else if (e.k === 6) {
@@ -2088,11 +2337,22 @@ class Game extends PS {
             me.q.push({ x: e.x, y: e.y - 26, z: e.z, ...VT(e, fr2, SHOT_SPEED), N: 7, ow: e });
           } else if (dist < 1000) me.sa(e, SHOT_SPEED);
         }
-      } else if (e.k === 8) {
+      } else if (e.k === 9) {
+        // la mina: cerca de ti revienta — y con los años se apaga sola
+        if (dist < 120) {
+          e.X = true;
+          me.XB(e, 0, { h: true });
+          me.hy(time);
+        }
+        if (e.t > 40) e.X = true;
+      } else if (e.k > 7) {
         e.x += e.A * dt;
         e.y += e.C * dt;
         e.z += e.B * dt;
-        if (dist > 2600) {
+        e.E = AT2(e.A, e.B);
+        if (e.Mt || e.k > 8) {
+          if (e.t > (e.Mt ? 14 : 8)) e.X = true;
+        } else if (dist > 2600) {
           const ang = RND() * PI * 2;
           e.x = P.x + SIN(ang) * 1600;
           e.y = P.y + RH() * 900;
@@ -2111,7 +2371,7 @@ class Game extends PS {
       }
 
       // contacto contigo (el wing es tuyo: se atraviesa)
-      if (!e.X && e.k !== 4 && !e.L && dist < e.r + 16) {
+      if (!e.X && e.k !== 4 && e.k < 10 && !e.L && dist < e.r + 16) {
         if (
           (me.H > RAM_SPEED || time < me.du || time < me.su) &&
           e.k < 4
@@ -2123,8 +2383,12 @@ class Game extends PS {
         } else if (e.k < 3) {
           // metal contra metal: el caza estalla y tú pierdes UN casco —
           // morir de un toque contra algo tan pequeño no era justo, y las
-          // emboscadas lo convertían en ejecución
-          me.Qf(e, 99);
+          // emboscadas lo convertían en ejecución. El kamikaze que te
+          // alcanza NO paga: ganó él
+          if (e.Kz) {
+            e.X = true;
+            me.bm(e);
+          } else me.Qf(e, 99);
           me.hy(time);
         } else {
           if (e.k < 5 || e.k > 7) e.X = true;
@@ -2158,6 +2422,12 @@ class Game extends PS {
       if (d < (s.h ? 60 : 22)) {
         s.X = true;
         me.hy(time);
+      } else if (d < (s.Md ?? 1e9)) s.Md = d;
+      // el ROCE: pasó cerca sin tocarte — paga y sube el combo
+      else if (s.Md < 90 && !s.Nm) {
+        s.Nm = 1;
+        me.ad(50, s, 'CLOSE ');
+        Sfx.O(1200, 0.15, TRI, 0.05, 300);
       }
       if (!s.X) {
         for (const q of me.D) {
@@ -2267,7 +2537,28 @@ class Game extends PS {
     }
     me.bm(e);
     me.sy(e.x, e.y, e.z, 6);
-    me.ad(e.k === 6 ? 120 : e.k === 5 ? (e.Qm ? 80 : 40) : e.k === 8 ? 15 : e.k === 2 ? 150 : e.k === 1 ? 60 : 25);
+    // una mina derribada revienta en cadena: lo que esté cerca cae con ella
+    if (e.k === 9) {
+      me.XB(e, 0, { h: true, r: 260 });
+      for (const q of me.D) if (!q.X && q.k !== 7 && q.k !== 4 && !q.L && D3(q, e) < 260) me.Qf(q, 99);
+    }
+    me.ad(e.k > 9 ? 1000 : e.k === 6 ? 120 : e.k === 5 ? (e.Qm ? 80 : 40) : e.k === 8 ? 15 : e.k === 2 ? 150 : e.k === 1 ? 60 : 25, e);
+    if (e.k > 9) me.am = MISSILE_MAX;
+    if (e.k < 3) {
+      me.Kc++;
+      me.Hs = 0.05;
+      if (++me.Cg === 6 + 2 * me.Se) {
+        me.T += 1000 * me.Se;
+        me.W('SECTOR CHALLENGE +' + 1000 * me.Se);
+      }
+      // la racha: derribos a menos de 2 s uno de otro
+      me.Ks = me.b - me.Kt < 2 ? me.Ks + 1 : 1;
+      me.Kt = me.b;
+      if (me.Ks > 1) {
+        me.T += 100 * me.Ks;
+        me.W(['DOUBLE KILL.', 'TRIPLE KILL.', 'RAMPAGE.'][MIN(3, me.Ks) - 2] + ' +' + 100 * me.Ks);
+      }
+    }
     Sfx.Qk();
     if (e.k === 8 && e.r > 20) {
       for (let i = 0; i < 2; i++) {
@@ -2503,6 +2794,11 @@ class Game extends PS {
 
     me.dk(time);
     me.dz(time);
+    fr(0, 0, W, H, [0, 0x3a1f4a, 0x1f3a4a, 0x4a2a1f, 0x1f4a2a, 0x4a1f2a][(me.Se - 1) % 6], 0.08);
+    for (const o of me.Pq) {
+      const p = o.Wp && o.Tp < 1 && me.p(o.Wp);
+      p ? o.setPosition(p[0], p[1] - o.Tp * 50).setAlpha(1 - o.Tp) : o.setAlpha(0);
+    }
     me.de2();
     me.Jd(time);
     me.dd();
@@ -2594,6 +2890,28 @@ class Game extends PS {
     // cerca del agujero, la pantalla entera se tiñe de acreción: no hay
     // duda de DÓNDE estás metido
     if (me.Zi > 0.02) fr(0, 0, W, H, 0xe89a5c, me.Zi * (0.1 + 0.06 * SIN(time * 0.004)));
+    const G = me.Gt;
+    if (G) {
+      // el anillo: dos aros que respiran, en la tinta del jugador
+      LS(3, INK_HI, 0.55 + 0.35 * SIN(time * 0.008));
+      for (const rr of [120, 100])
+        for (let i = 0; i < 20; i++) {
+          const at = (a) => [G.x + (G.e1.x * COS(a) + G.e2.x * SIN(a)) * rr, G.y + (G.e1.y * COS(a) + G.e2.y * SIN(a)) * rr, G.z + (G.e1.z * COS(a) + G.e2.z * SIN(a)) * rr];
+          me.J(at(i * 0.314), at(i * 0.314 + 0.314));
+        }
+    }
+    if (me.Ou > me.vt) fr(0, 0, W, H, BLU, 0.07 + 0.04 * SIN(time * 0.02));
+    if (me.Gx > 1) fr(0, 0, W, H, 0xe89a5c, 0.05 + 0.04 * SIN(time * 0.01));
+    if (me.Qj === 1) {
+      LS(14, RUST, 0.25 + 0.2 * SIN(time * 0.01));
+      GF.strokeRect(0, 0, W, H);
+    }
+    // los blancos fijados por B3: una caja sobre cada uno
+    LS(2, RUST_HI, 0.9);
+    for (const t of me.Lk) {
+      const p = !t.X && me.p(t);
+      if (p) GF.strokeRect(p[0] - 16, p[1] - 16, 32, 32);
+    }
     me.dj(time);
     me.dv();
     me.di(time);
@@ -2903,13 +3221,29 @@ class Game extends PS {
     if (e.Y && dist < 2200) {
       const n = e.Y.length;
       for (let i = 1; i < n; i++) {
-        LS(e.k === 3 ? 3 : 2, e.k === 4 || e.L ? BLU : RUST_HI, (i / n) * 0.5);
+        LS(e.k === 3 ? 3 : 2, e.k === 4 || e.L ? BLU : e.k > 9 ? AMB : RUST_HI, (i / n) * 0.5);
         me.J(e.Y[i - 1], i === n - 1 ? [e.x, e.y, e.z] : e.Y[i]);
       }
+    }
+    // el rayo del francotirador: aviso que engorda, y el destello del tiro
+    if (e.Sn && e.Am && (e.P < 1.6 || e.Bf > 0)) {
+      const v = vnorm({ x: e.Am.x - e.x, y: e.Am.y - e.y, z: e.Am.z - e.z });
+      LS(e.Bf > 0 ? 5 : 1 + (1.6 - e.P) * 1.5, e.Bf > 0 ? INK_HI : RUST_HI, e.Bf > 0 ? 1 : 0.3 + (1.6 - e.P) * 0.4);
+      me.J([e.x, e.y, e.z], [e.x + v.x * 3400, e.y + v.y * 3400, e.z + v.z * 3400]);
     }
     const p = me.p(e);
     if (!p) return;
     let a = me.fg(dist);
+    // el kamikaze late en rojo: se ve venir
+    if (e.Kz) skp(p, MAX(8, (60 * FOCAL) / p[2]) * (1 + 0.2 * SIN(e.t * 14)), 2, RUST_HI, 0.8);
+    if (e.k === 9) {
+      // la mina: un rombo cuyo núcleo parpadea más rápido si estás cerca
+      const r = MAX(4, (34 * FOCAL) / p[2]);
+      LS(2, RUST_HI, MAX(a, 0.4));
+      PL(p[0], p[1] - r, p[0] + r, p[1], p[0], p[1] + r, p[0] - r, p[1], p[0], p[1] - r);
+      if (SIN(e.t * (dist < 500 ? 30 : 8)) > 0) fcp(p, r * 0.45, RUST_HI, 0.9);
+      return;
+    }
 
     if (e.k === 3) {
       const F = vnorm({ x: e.A, y: e.C, z: e.B });
@@ -2937,15 +3271,15 @@ class Game extends PS {
     const flash = e.g > 0;
     const color = flash
       ? INK_HI
-      : e.k === 4 || e.L ? BLU : e.k === 8 ? GRY : RUST;
+      : e.k === 4 || e.L ? BLU : e.k === 8 ? GRY : e.k > 9 ? AMB : e.Et ? RUST_HI : RUST;
     if (e.k === 8 && !flash) a *= 0.7;
 
     const model =
       e.k === 5 ? (e.Qm ? TURRET_MODEL : SENTRY_MODEL)
-      : e.k === 1 || e.k === 4 ? SHIP_MODEL : e.k === 2 ? GUN_MODEL
+      : e.k === 1 || e.k === 4 || e.k > 9 ? SHIP_MODEL : e.k === 2 ? GUN_MODEL
       : e.k === 6 ? WALK_MODEL
       : e.Zx;
-    const scale = e.k === 8 ? e.r / 16 : e.k === 5 ? 1.6 : e.k === 1 ? 2.2 : e.k === 4 ? 2 : e.k === 2 ? 3 : 1;
+    const scale = e.k === 8 ? e.r / 16 : e.k === 5 ? 1.6 : e.k === 1 ? 2.2 : e.k === 4 ? 2 : e.k === 2 ? 3 : 2.4;
     const rot = e.k === 8 ? e.t * e.Zw : e.Qo || 0;
     me.dm(model, e, scale, color, a, rot);
 
@@ -3277,11 +3611,14 @@ class Game extends PS {
     // cuánto falta para la pared
     const P = me.o;
     me.Zl.setText('ALT ' + RD(1800 - P.y) + ' / ' + (1800 - BND_TOP) + '\nEDGE ' + RD(BND_R - HYP(P.x, P.z)));
-    me.Q4.setText(String(me.T).padStart(6, '0') + (me.mu > 1 ? '  x' + me.mu : ''));
+    me.Sv += CLP((me.T - me.Sv) * 0.2, 1, 1e9) * (me.Sv < me.T);
+    me.Q4.setText(String(RD(me.Sv)).padStart(6, '0') + (me.mu > 1 ? '  x' + me.mu : ''));
+    // el combo se enfría: lo que le queda, bajo el puntaje
+    if (me.mu > 1) fr(W - 12 - 27 * me.mt, 30, 27 * me.mt, 3, INK_HI, 0.6);
     me.Zh.setText('HULL ' + (GOD ? '∞' : '▸'.repeat(me.Qj) + '·'.repeat(HULL_MAX - me.Qj)));
     me.Q9.setText('MSL ' + '▴'.repeat(me.am) + '·'.repeat(MISSILE_MAX - me.am));
     const mm = FLR(me.b / 60);
-    me.Zg.setText('T ' + mm + ':' + String(FLR(me.b % 60)).padStart(2, '0'));
+    me.Zg.setText('S' + me.Se + '  T ' + mm + ':' + String(FLR(me.b % 60)).padStart(2, '0'));
     // el bloque de recursos, junto a las vidas: DASH y SHIELD como barras
     // con nombre — llena = lista; el escudo va en SU azul
     const g = me.gfx;
@@ -3293,6 +3630,11 @@ class Game extends PS {
     LS(1, INK, 0.5);
     g.strokeRect(12, H - 70, 118, 8);
     fr(13, H - 69, 116 * MAX(0, shReady), 6, BLU, shReady >= 1 ? 0.9 : 0.35);
+    // OVERDRIVE: se carga peleando; llena, late — y encendida, se vacía
+    const on = me.Ou > now;
+    LS(1, INK, 0.5);
+    g.strokeRect(12, H - 84, 118, 8);
+    fr(13, H - 83, 116 * (on ? (me.Ou - now) / 6000 : me.Od / 100), 6, on || me.Od >= 100 ? BLU : INK_HI, me.Od >= 100 ? 0.6 + 0.4 * SIN(me.b * 10) : 0.7);
     // el próximo misil, recargándose bajo su contador
     if (me.am < MISSILE_MAX) {
       LS(1, INK, 0.4);
@@ -3310,12 +3652,21 @@ class Over extends PS {
 
   init(data) {
     this.T = data.T || 0;
+    this.Sd = data.Sd || [0, 1, 0, 1];
   }
 
   create() {
     const [me] = [this];
+    const T = me.T;
+    const [k, c, s, se] = me.Sd;
     me.events.on('postupdate', clearPressed);
     Music.on = false;
+    // la partida, en números — y un rango para querer otra
+    TX(me, CX, CY - 130, 'RANK ' + (T >= 20000 ? 'S' : T >= 10000 ? 'A' : T >= 4000 ? 'B' : 'C'), 20, 0, 0.5);
+    TX(me, CX, CY + 36, 'SHIPS DOWNED  ' + k + '\nBEST COMBO  x' + c + '\nTIME  ' + FLR(s / 60) + ':' + String(s % 60).padStart(2, '0') + '\nSECTOR  ' + se, 13, DIM_CSS, 0.5)
+      .setOrigin(0.5, 0)
+      .setAlign('center')
+      .setLineSpacing(6);
     me.Qx = false;
     me.Qs = false;
     me.Q6 = false;
