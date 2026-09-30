@@ -36,6 +36,18 @@
 // ci=cine lt=letters or=orbit pz=parts kd=kind sc=score yw=yaw am=ammo
 // tn=tone bhx=blackHoleProximity. Tipos (k): A=ace B=boss E=emis G=gun
 // R=rock S=sentry W=walk N=wing; piezas (kd): t=turret d=dome b=bridge
+// Segunda pasada (Q*/Z*/J*, métodos incluidos): Qa=ctx Qb=short Qc=part
+// Qd=target Qe=notice Qf=damage Qg=next Qh=noise Qi=burst Qj=hull Qk=boom
+// Ql=roll Qm=base Qn=mini Qo=bank Qp=flash Qq=label Qr=rise Qs=left Qt=dust
+// Qu=band Qv=slots Qw=press Qx=ready Qy=saving Qz=missile Q0=big Q1=muzzle
+// Q2=cineT Q3=pickup Q4=scoreText Q5=salvoAt Q6=qualifies Q7=droneAt
+// Q8=cineDark Q9=missileText Za=baseAt Zb=bossN Zc=navText Zd=tpAt
+// Ze=spawnBoss Zf=salvoSaid Zg=partText Zh=hullText Zi=bhx Zj=wgAt
+// Zk=velText Zl=altText Zm=wvAt Zn=msAt Zo=camU Zp=camF Zq=camR Zr=wingUp
+// Zs=sdSaid Zt=bgSaid Zu=boltVsBoss Zv=shieldUp Zw=spin Zx=model Zy=say
+// Zz=fire Z0=dash Z1=jump Z2=turn Z3=hurt Z4=ammo Z5=over Z6=tick Z7=wave
+// Z8=foe Z9=ally Ja=draw Jb=cam Jc=die Jd=dwb Je=dsk Jf=bnk Jg=tpCd Jh=hRt
+// Ji=svT Jj=mz2 Jk=lvT Jl=rmb
 // Estado: sp=speed cu=cruise fz=phase en=ents sh=shake bx=booms tr=trail
 // ft=flashT bz=boost hd=hidden ss=shots bl=bolts ms=missiles sz=shards
 // sn=stars yv=yawVel pv=pitchVel su=shieldUntil sw=shieldReady ht=shieldHitT
@@ -267,27 +279,27 @@ async function saveScores(scores) {
 // --------------------------------------------------------------------------
 // Audio: solo efectos puntuales, sintetizados. La música llega al final.
 const Sfx = {
-  ctx: null,
+  Qa: null,
   out: null,
 
   init() {
-    if (this.ctx) {
-      if (this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.Qa) {
+      if (this.Qa.state === 'suspended') this.Qa.resume();
       return;
     }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
-    this.ctx = new AC();
-    this.out = this.ctx.createGain();
+    this.Qa = new AC();
+    this.out = this.Qa.createGain();
     this.out.gain.value = 0.45;
-    this.out.connect(this.ctx.destination);
+    this.out.connect(this.Qa.destination);
   },
 
   tn(f0, dur, type, vol, f1, at) {
-    if (!this.ctx) return;
-    const t = (at || this.ctx.currentTime) + 0.001;
-    const osc = this.ctx.createOscillator();
-    const g = this.ctx.createGain();
+    if (!this.Qa) return;
+    const t = (at || this.Qa.currentTime) + 0.001;
+    const osc = this.Qa.createOscillator();
+    const g = this.Qa.createGain();
     osc.type = type || 'square';
     osc.frequency.setValueAtTime(f0, t);
     if (f1) osc.frequency.linearRampToValueAtTime(f1, t + dur);
@@ -299,15 +311,15 @@ const Sfx = {
     osc.stop(t + dur + 0.02);
   },
 
-  noise(dur, vol, at) {
-    if (!this.ctx) return;
-    const t = at || this.ctx.currentTime;
-    const len = FLR(this.ctx.sampleRate * dur);
-    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+  Qh(dur, vol, at) {
+    if (!this.Qa) return;
+    const t = at || this.Qa.currentTime;
+    const len = FLR(this.Qa.sampleRate * dur);
+    const buf = this.Qa.createBuffer(1, len, this.Qa.sampleRate);
     const d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = (RND() * 2 - 1) * (1 - i / len);
-    const src = this.ctx.createBufferSource();
-    const g = this.ctx.createGain();
+    const src = this.Qa.createBufferSource();
+    const g = this.Qa.createGain();
     src.buffer = buf;
     g.gain.value = vol;
     src.connect(g);
@@ -315,47 +327,47 @@ const Sfx = {
     src.start(t);
   },
 
-  fire() {
+  Zz() {
     this.tn(760, 0.07, 'square', 0.09, 320);
   },
-  missile() {
+  Qz() {
     this.tn(520, 0.35, 'sawtooth', 0.14, 90);
-    this.noise(0.25, 0.12);
+    this.Qh(0.25, 0.12);
   },
-  boom() {
-    this.noise(0.3, 0.38);
+  Qk() {
+    this.Qh(0.3, 0.38);
     this.tn(110, 0.28, 'sawtooth', 0.2, 40);
   },
-  hurt() {
-    this.noise(0.2, 0.38);
+  Z3() {
+    this.Qh(0.2, 0.38);
     this.tn(140, 0.3, 'sawtooth', 0.3, 55);
   },
-  pickup() {
+  Q3() {
     this.tn(660, 0.06, 'square', 0.13);
-    this.tn(990, 0.09, 'square', 0.13, 0, this.ctx && this.ctx.currentTime + 0.07);
+    this.tn(990, 0.09, 'square', 0.13, 0, this.Qa && this.Qa.currentTime + 0.07);
   },
-  ammo() {
+  Z4() {
     this.tn(440, 0.08, 'triangle', 0.16);
-    this.tn(880, 0.12, 'triangle', 0.16, 0, this.ctx && this.ctx.currentTime + 0.09);
+    this.tn(880, 0.12, 'triangle', 0.16, 0, this.Qa && this.Qa.currentTime + 0.09);
   },
-  part() {
-    const t = this.ctx && this.ctx.currentTime;
+  Qc() {
+    const t = this.Qa && this.Qa.currentTime;
     [440, 554, 659, 880].forEach((f, i) => this.tn(f, 0.5, 'triangle', 0.15, 0, t + i * 0.09));
   },
-  dash() {
+  Z0() {
     this.tn(140, 0.22, 'triangle', 0.13, 520);
   },
-  turn() {
+  Z2() {
     this.tn(330, 0.3, 'sine', 0.12, 160);
   },
-  shieldUp() {
+  Zv() {
     this.tn(240, 0.28, 'sine', 0.15, 520);
   },
-  jump() {
-    const t = this.ctx && this.ctx.currentTime;
+  Z1() {
+    const t = this.Qa && this.Qa.currentTime;
     [330, 440, 554, 659, 880, 1108].forEach((f, i) => this.tn(f, 0.4, 'triangle', 0.15, 0, t + i * 0.09));
   },
-  over() {
+  Z5() {
     this.tn(160, 1.1, 'sawtooth', 0.18, 55);
   },
 };
@@ -474,16 +486,16 @@ function ln(g, ax, ay, bx, by) {
 }
 
 const Music = {
-  next: 0,
+  Qg: 0,
   step: 0,
   on: false,
   Bo: false,
-  tick() {
-    if (!this.on || !Sfx.ctx) return;
-    const now = Sfx.ctx.currentTime;
-    if (this.next < now) this.next = now + 0.05;
-    while (this.next < now + 0.4) {
-      const t = this.next;
+  Z6() {
+    if (!this.on || !Sfx.Qa) return;
+    const now = Sfx.Qa.currentTime;
+    if (this.Qg < now) this.Qg = now + 0.05;
+    while (this.Qg < now + 0.4) {
+      const t = this.Qg;
       const st = this.step++;
       if (this.Bo) {
         // EL DESTRUCTOR: ostinato grave que camina por semitonos, quinta
@@ -495,8 +507,8 @@ const Music = {
         if (s16 % 4 === 0) Sfx.tn(root * 3, 0.6, 'triangle', 0.065, 0, t);
         if (s16 === 8) Sfx.tn(root * 4.76, 0.9, 'sawtooth', 0.05, root * 4, t);
         if (s16 === 12) Sfx.tn(root * 6, 0.5, 'triangle', 0.045, root * 5.6, t);
-        if (s16 % 2 === 0) Sfx.noise(0.03, 0.028, t);
-        this.next += 0.21;
+        if (s16 % 2 === 0) Sfx.Qh(0.03, 0.028, t);
+        this.Qg += 0.21;
       } else {
         // CACERÍA: galope en menor (Em → C → D → B), stabs, un destello de
         // tritono y batería marcada — aventura con dientes, nada cozy
@@ -506,9 +518,9 @@ const Music = {
         if (s16 === 0) Sfx.tn(root * 3, 1.2, 'sawtooth', 0.028, 0, t);
         if (s16 === 4 || s16 === 12) Sfx.tn(root * 4.8, 0.22, 'square', 0.04, 0, t);
         if (s16 === 8) Sfx.tn(root * 5.66, 0.5, 'sine', 0.045, root * 4.9, t);
-        if (s16 % 2 === 0) Sfx.noise(0.025, 0.03, t);
-        if (s16 % 8 === 4) Sfx.noise(0.09, 0.055, t);
-        this.next += 0.19;
+        if (s16 % 2 === 0) Sfx.Qh(0.025, 0.03, t);
+        if (s16 % 8 === 4) Sfx.Qh(0.09, 0.055, t);
+        this.Qg += 0.19;
       }
     }
   },
@@ -535,18 +547,18 @@ class Title extends Phaser.Scene {
       )
       .setLineSpacing(14);
     this.add.text(596, 360, 'TOP 5', FONT(14));
-    this.scoreText = this.add.text(596, 386, '', FONT(14, DIM_CSS)).setLineSpacing(9);
+    this.Q4 = this.add.text(596, 386, '', FONT(14, DIM_CSS)).setLineSpacing(9);
     loadScores().then((scores) => {
       if (!scores.length || !this.scene.isActive()) return;
-      this.scoreText.setText(
+      this.Q4.setText(
         scores.map((s, i) => `${i + 1}  ${s.n.padEnd(3)}  ${String(s.s).padStart(6, '0')}`).join('\n')
       );
     });
-    this.press = this.add.text(CX, H - 52, 'PRESS START', FONT(16)).setOrigin(0.5);
+    this.Qw = this.add.text(CX, H - 52, 'PRESS START', FONT(16)).setOrigin(0.5);
   }
 
   update(time) {
-    this.press.setAlpha(FLR(time / 600) % 2 ? 1 : 0.25);
+    this.Qw.setAlpha(FLR(time / 600) % 2 ? 1 : 0.25);
     if (anyStart()) this.scene.start('game');
   }
 }
@@ -691,35 +703,35 @@ class Game extends Phaser.Scene {
     this.cu = 220;
     this.sp = this.cu;
     this.bz = BOOST_MAX;
-    this.roll = 0; // alabeo solo visual, al girar
+    this.Ql = 0; // alabeo solo visual, al girar
     this.su = 0;
     this.sw = 0;
     this.du = 0;
     this.fy = 0;
     this.iu = 0;
-    this.hull = HULL_MAX;
+    this.Qj = HULL_MAX;
     this.am = 3;
     this.ar = 0;
 
     // cámara: la misma base, suavizada — sigue la nave también de cabeza
-    this.camF = { ...this.F };
-    this.camU = { ...this.U };
-    this.camR = { ...this.R };
+    this.Zp = { ...this.F };
+    this.Zo = { ...this.U };
+    this.Zq = { ...this.R };
 
     // ARCADE INFINITO: una sola fase — sobrevive y puntúa hasta morir.
     // (Phaser reuses the scene instance across runs)
     this.fz = 'play';
     this.bq = 75; // el primer destructor tarda esto en llegar
-    this.bossN = 0;
-    this.wvAt = 50; // la primera emboscada da tiempo a respirar
-    this.baseAt = 5; // la superficie viene armada casi de entrada
-    this.svT = 0; // puntos por sobrevivir
+    this.Zb = 0;
+    this.Zm = 50; // la primera emboscada da tiempo a respirar
+    this.Za = 5; // la superficie viene armada casi de entrada
+    this.Ji = 0; // puntos por sobrevivir
     this.wvN = 0;
     this.ht = 0;
     this.wa = 0;
     this.sc = 0;
     this.ep = 0;
-    this.droneAt = 10; // al principio te dejan orientarte
+    this.Q7 = 10; // al principio te dejan orientarte
     this.sh = 0;
 
     this.en = [];
@@ -733,8 +745,8 @@ class Game extends Phaser.Scene {
     this.pa = false;
     this.mu = 1; // multiplicador de combo
     this.mt = 0;
-    this.hRt = 0; // el casco se recompone solo, con calma y sin golpes
-    this.mz2 = 0;
+    this.Jh = 0; // el casco se recompone solo, con calma y sin golpes
+    this.Jj = 0;
     this.Bo = null;
     this.Bt = null; // el refuerzo que llama al perder los escudos
 
@@ -742,7 +754,7 @@ class Game extends Phaser.Scene {
     this.bs();
     this.bu();
 
-    this.flash = this.add.rectangle(CX, CY, W, H, 0xffffff).setAlpha(0).setDepth(10);
+    this.Qp = this.add.rectangle(CX, CY, W, H, 0xffffff).setAlpha(0).setDepth(10);
     Music.on = true;
     window.__g = this; // handle de debug — quitar antes de enviar
   }
@@ -754,8 +766,8 @@ class Game extends Phaser.Scene {
     for (let i = 0; i < rocks; i++) {
       const p = this.ri(SECTOR_R * 0.95);
       this.en.push({
-        k: 'R', x: p[0], y: p[1] * 0.5, z: p[2], r: 42, hp: 2, t: rnd(0, 9), model: ROCK_POOL[FLR(RND() * 4)],
-        spin: rnd(-0.5, 0.5), vx: rnd(-16, 16), vy: rnd(-10, 10), vz: rnd(-16, 16), yw: 0,
+        k: 'R', x: p[0], y: p[1] * 0.5, z: p[2], r: 42, hp: 2, t: rnd(0, 9), Zx: ROCK_POOL[FLR(RND() * 4)],
+        Zw: rnd(-0.5, 0.5), vx: rnd(-16, 16), vy: rnd(-10, 10), vz: rnd(-16, 16), yw: 0,
       });
     }
   }
@@ -782,10 +794,10 @@ class Game extends Phaser.Scene {
       });
     }
     // the galaxy's band: dense faint stars hugging the horizon
-    this.band = [];
+    this.Qu = [];
     for (let i = 0; i < 260; i++) {
       const u = RND() + RND() + RND() - 1.5;
-      this.band.push({
+      this.Qu.push({
         yw: RND() * PI * 2,
         el: (u * 26) / FOCAL,
         s: RND() < 0.2 ? 2 : 1,
@@ -794,9 +806,9 @@ class Game extends Phaser.Scene {
     }
     // el polvo: motas cercanas que convierten la velocidad en estelas —
     // son la referencia principal de hacia dónde te mueves
-    this.dust = [];
+    this.Qt = [];
     for (let i = 0; i < 96; i++) {
-      this.dust.push({
+      this.Qt.push({
         x: (RND() - 0.5) * 560,
         y: (RND() - 0.5) * 560,
         z: (RND() - 0.5) * 560,
@@ -805,27 +817,27 @@ class Game extends Phaser.Scene {
   }
 
   bu() {
-    this.velText = this.add.text(12, 10, '', FONT(15)).setAlpha(0.9);
-    this.altText = this.add.text(12, 30, '', FONT(13, DIM_CSS));
-    this.scoreText = this.add.text(W - 12, 10, '', FONT(15)).setOrigin(1, 0).setAlpha(0.9);
-    this.partText = this.add.text(W - 12, H - 28, '', FONT(15, DIM_CSS)).setOrigin(1, 0);
-    this.hullText = this.add.text(12, H - 30, '', FONT(17));
-    this.missileText = this.add.text(168, H - 30, '', FONT(17));
+    this.Zk = this.add.text(12, 10, '', FONT(15)).setAlpha(0.9);
+    this.Zl = this.add.text(12, 30, '', FONT(13, DIM_CSS));
+    this.Q4 = this.add.text(W - 12, 10, '', FONT(15)).setOrigin(1, 0).setAlpha(0.9);
+    this.Zg = this.add.text(W - 12, H - 28, '', FONT(15, DIM_CSS)).setOrigin(1, 0);
+    this.Zh = this.add.text(12, H - 30, '', FONT(17));
+    this.Q9 = this.add.text(168, H - 30, '', FONT(17));
     this.add.text(136, H - 52, 'DASH', FONT(10, DIM_CSS)).setOrigin(0, 0.5);
     this.add.text(136, H - 66, 'SHIELD', FONT(10, DIM_CSS)).setOrigin(0, 0.5);
-    this.navText = this.add.text(CX, 64, '', FONT(16)).setOrigin(0.5).setAlpha(0.95);
-    this.label = this.add.text(0, 0, '', FONT(14)).setOrigin(0.5).setVisible(false);
-    this.notice = this.add.text(CX, 168, '', FONT(16)).setOrigin(0.5).setAlpha(0);
+    this.Zc = this.add.text(CX, 64, '', FONT(16)).setOrigin(0.5).setAlpha(0.95);
+    this.Qq = this.add.text(0, 0, '', FONT(14)).setOrigin(0.5).setVisible(false);
+    this.Qe = this.add.text(CX, 168, '', FONT(16)).setOrigin(0.5).setAlpha(0);
     this.hint = this.add.text(CX, H - 58, HINT_MAIN, FONT(13, DIM_CSS)).setOrigin(0.5).setAlpha(0.6);
     this.time.delayedCall(9000, () => this.tweens.add({ targets: this.hint, alpha: 0, duration: 800 }));
     // etiqueta del escudo, junto a su barra
 
-    this.say('SURVIVE. SCORE.');
+    this.Zy('SURVIVE. SCORE.');
   }
 
-  say(msg) {
-    this.notice.setText(msg).setAlpha(1);
-    this.tweens.add({ targets: this.notice, alpha: 0, delay: 2000, duration: 700 });
+  Zy(msg) {
+    this.Qe.setText(msg).setAlpha(1);
+    this.tweens.add({ targets: this.Qe, alpha: 0, delay: 2000, duration: 700 });
   }
 
   // --- flujo ---
@@ -833,20 +845,20 @@ class Game extends Phaser.Scene {
     const dt = MIN(delta, 50) / 1000;
     this.ep += dt;
     Music.Bo = !!(this.Bo || this.Bt);
-    Music.tick();
+    Music.Z6();
 
     // pausa: START congela el sector
     if (pressed.START1 && this.fz !== 'out') {
       this.pa = !this.pa;
-      this.tweens.killTweensOf(this.notice);
-      this.notice.setText(this.pa ? 'PAUSED' : '').setAlpha(this.pa ? 1 : 0);
+      this.tweens.killTweensOf(this.Qe);
+      this.Qe.setText(this.pa ? 'PAUSED' : '').setAlpha(this.pa ? 1 : 0);
     }
     if (this.pa) return;
 
     // el combo se enfría
     this.mt -= dt;
     if (this.mt <= 0) this.mu = 1;
-    this.mz2 -= dt;
+    this.Jj -= dt;
     this.ht = MAX(0, this.ht - dt);
 
     const cb = (this.Bo && this.Bo.ci && this.Bo) || (this.Bt && this.Bt.ci && this.Bt);
@@ -858,20 +870,20 @@ class Game extends Phaser.Scene {
       } else {
       // el reloj del arcade: todo aprieta con los minutos
       this.sd(dt, MIN(5, 1 + FLR(this.ep / 50)), MAX(5, 12 - this.ep / 50));
-      this.wvAt -= dt;
-      if (this.wvAt <= 0) {
-        this.wvAt = 45;
-        this.wave(MIN(5, 2 + FLR(this.ep / 90)));
+      this.Zm -= dt;
+      if (this.Zm <= 0) {
+        this.Zm = 45;
+        this.Z7(MIN(5, 2 + FLR(this.ep / 90)));
       }
       // las torretas de la base, flotando sobre el disco: bajar al jalón a
       // cazarlas paga powerup seguro
-      this.baseAt -= dt;
-      if (this.baseAt <= 0) {
-        this.baseAt = 13;
-        if (this.en.filter((e) => e.base).length < 12) {
-          if (!this.bgSaid) {
-            this.bgSaid = 1;
-            this.say('SURFACE GUNS BELOW.');
+      this.Za -= dt;
+      if (this.Za <= 0) {
+        this.Za = 13;
+        if (this.en.filter((e) => e.Qm).length < 12) {
+          if (!this.Zt) {
+            this.Zt = 1;
+            this.Zy('SURFACE GUNS BELOW.');
           }
           for (let i = 0; i < 6; i++) {
             const wk = RND() < 0.4;
@@ -906,7 +918,7 @@ class Game extends Phaser.Scene {
             // ayuda, el frente de abajo se pierde
             const fr = i >= 4 ? 1 : 0;
             this.en.push({
-              k: wk ? 'W' : 'S', base: 1, fr,
+              k: wk ? 'W' : 'S', Qm: 1, fr,
               x: gx2, y: gy2, z: gz2,
               r: wk ? 80 : 44, hp: fr ? (wk ? 3 : 2) : wk ? 5 : 3,
               t: RND() * 6, yw: RND() * 6.3, fA: 1 + RND() * 2,
@@ -916,38 +928,38 @@ class Game extends Phaser.Scene {
       }
       // la regla del ala: un wingman por cada SEIS enemigos en el aire —
       // mínimo uno, tope dos: el ala ayuda, la pelea es tuya
-      this.wgAt = (this.wgAt ?? 22) - dt;
-      if (this.wgAt <= 0) {
-        this.wgAt = 14;
+      this.Zj = (this.Zj ?? 22) - dt;
+      if (this.Zj <= 0) {
+        this.Zj = 14;
         const airE = this.en.filter((q) => (q.k === 'A' || q.k === 'G') && !q.X).length;
         const want = CLP(FLR(airE / 6) + 1, 1, 2);
-        if (this.en.filter((q) => q.k === 'N' && !q.X).length < want) this.wingUp(1);
+        if (this.en.filter((q) => q.k === 'N' && !q.X).length < want) this.Zr(1);
       }
       // el destructor vuelve siempre — y cada vez con menos ceremonia
       if (!anyB) {
       const was = this.bq;
       this.bq -= dt;
-      if (was > 2.5 && this.bq <= 2.5) this.say('MASSIVE SIGNAL.');
+      if (was > 2.5 && this.bq <= 2.5) this.Zy('MASSIVE SIGNAL.');
       if (this.bq <= 0) {
-        this.say('HYPERSPACE RUPTURE.');
-        this.spawnBoss();
-        this.wingUp(3); // no vas solo: tu ala llega contigo
+        this.Zy('HYPERSPACE RUPTURE.');
+        this.Ze();
+        this.Zr(3); // no vas solo: tu ala llega contigo
       }
       }
       }
       // el casco se recompone solo: aguanta 28 s sin golpes
-      if (this.hull < HULL_MAX) {
-        this.hRt += dt;
-        if (this.hRt >= 28) {
-          this.hRt = 0;
-          this.hull++;
-          Sfx.pickup();
+      if (this.Qj < HULL_MAX) {
+        this.Jh += dt;
+        if (this.Jh >= 28) {
+          this.Jh = 0;
+          this.Qj++;
+          Sfx.Q3();
         }
       }
       // sobrevivir puntúa solo
-      this.svT += dt;
-      if (this.svT >= 5) {
-        this.svT -= 5;
+      this.Ji += dt;
+      if (this.Ji >= 5) {
+        this.Ji -= 5;
         this.sc += 25;
       }
     }
@@ -957,12 +969,12 @@ class Game extends Phaser.Scene {
     this.ux(dt);
     this.um(dt, time);
     this.uc(dt);
-    this.draw(time);
+    this.Ja(time);
     this.uh();
   }
 
   // ¿Quién es el enemigo/aliado más cercano a esta unidad?
-  foe(e, rng) {
+  Z8(e, rng) {
     let best = null;
     let bd = rng;
     for (const q of this.en) {
@@ -976,7 +988,7 @@ class Game extends Phaser.Scene {
     return best;
   }
 
-  ally(e, rng) {
+  Z9(e, rng) {
     let best = null;
     let bd = rng;
     for (const q of this.en) {
@@ -991,7 +1003,7 @@ class Game extends Phaser.Scene {
   }
 
   // Tu escuadrón: naves azules que cazan enemigos con tus mismas balas
-  wingUp(n) {
+  Zr(n) {
     for (let i = 0; i < n; i++) {
       if (this.en.filter((q) => q.k === 'N').length >= 2) return;
       const ang = RND() * PI * 2;
@@ -1007,9 +1019,9 @@ class Game extends Phaser.Scene {
 
   // La emboscada: n naves entran A LA VEZ desde direcciones distintas —
   // el nivel 0 se gana peleando, no solo recogiendo
-  wave(n) {
-    this.say('AMBUSH.');
-    Sfx.turn();
+  Z7(n) {
+    this.Zy('AMBUSH.');
+    Sfx.Z2();
     this.wvN = n;
     for (let i = 0; i < n; i++) {
       const ang = (i / n) * PI * 2 + RND() * 0.8;
@@ -1034,10 +1046,10 @@ class Game extends Phaser.Scene {
   // Después de un rato, salen a cazarte — y más, con cada pieza a bordo.
   // Con la primera pieza aparecen también interceptores, que embisten.
   sd(dt, max, every) {
-    this.droneAt -= dt;
+    this.Q7 -= dt;
     const alive = this.en.filter((e) => e.k === 'A' || e.k === 'G').length;
-    if (this.droneAt > 0 || alive >= max) return;
-    this.droneAt = every;
+    if (this.Q7 > 0 || alive >= max) return;
+    this.Q7 = every;
     const ang = RND() * PI * 2;
     const gun = this.ep > 50 && RND() < 0.25;
     this.en.push({
@@ -1061,13 +1073,13 @@ class Game extends Phaser.Scene {
   // CERCA DEL CENTRO del sector (la pelea nunca vive contra el borde, que
   // te empuja de vuelta), y al punto del anillo MÁS LEJANO de ti: la
   // entrada y la salva se ven enteras, de lejos, como una escena.
-  spawnBoss(mini) {
+  Ze(mini) {
     // Aparece LEJOS, delante de ti y a TU MISMA ALTURA: lo ves de lado,
     // entero, imponente. No hay anillo: el sector eres tú. El MINI es el
     // refuerzo: escolta sin domos, con menos casco — pero son DOS.
     const f = this.F;
     const h = HYP(f.x, f.z) || 1;
-    const bd = mini ? 2400 : this.bossN ? 2200 : 2600;
+    const bd = mini ? 2400 : this.Zb ? 2200 : 2600;
     const ang = mini ? RND() * PI * 2 : 0;
     const bx = this.o.x + (mini ? SIN(ang) : f.x / h) * bd;
     const bz = this.o.z + (mini ? COS(ang) : f.z / h) * bd;
@@ -1087,13 +1099,13 @@ class Game extends Phaser.Scene {
       // negro, el destructor simplemente ESTÁ, de golpe, con el flash
       hd: 1,
       ci: 1,
-      cineT: 0,
-      short: mini || this.bossN ? 1 : 0, // el primero con toda la ceremonia
-      tpAt: 0,
-      salvoAt: 0,
-      mini: mini ? 1 : 0,
+      Q2: 0,
+      Qb: mini || this.Zb ? 1 : 0, // el primero con toda la ceremonia
+      Zd: 0,
+      Q5: 0,
+      Qn: mini ? 1 : 0,
       pz: SD_PARTS.filter(([kind], i) => !mini || (kind === 'b' || i < 4))
-        .map(([kind, ox, oy, oz, hp]) => ({ kd: kind, ox, oy, oz, hp: mini && kind === 'b' ? 8 : hp, max: mini && kind === 'b' ? 8 : hp, fA: 1 + RND() * 3, burst: 0 })),
+        .map(([kind, ox, oy, oz, hp]) => ({ kd: kind, ox, oy, oz, hp: mini && kind === 'b' ? 8 : hp, max: mini && kind === 'b' ? 8 : hp, fA: 1 + RND() * 3, Qi: 0 })),
     };
     if (mini) this.Bt = nb;
     else {
@@ -1107,8 +1119,8 @@ class Game extends Phaser.Scene {
         }
       }
       this.ss.length = 0;
-      this.bx.push({ wx: nb.x, wy: nb.y, wz: nb.z, t: 0, big: true, r: 1100 });
-      this.say('EMP BLAST.');
+      this.bx.push({ wx: nb.x, wy: nb.y, wz: nb.z, t: 0, Q0: true, r: 1100 });
+      this.Zy('EMP BLAST.');
     }
     this.en.push(nb);
   }
@@ -1171,20 +1183,20 @@ class Game extends Phaser.Scene {
       this.bx.push({ wx, wy, wz, t: 0.3 });
       return;
     }
-    this.bx.push({ wx, wy, wz, t: 0, big: true });
+    this.bx.push({ wx, wy, wz, t: 0, Q0: true });
     this.sy(wx, wy, wz, 8);
-    Sfx.boom();
+    Sfx.Qk();
     if (pt.kd === 't') {
       this.ad(60);
     } else if (pt.kd === 'd') {
       this.ad(150);
       const domesLeft = b.pz.some((q) => q.kd === 'd' && q.hp > 0);
-      this.say(domesLeft ? 'DOME DOWN.' : 'HIT THE BRIDGE.');
-      b.tpAt = 0.7; // perder un domo lo hace saltar
+      this.Zy(domesLeft ? 'DOME DOWN.' : 'HIT THE BRIDGE.');
+      b.Zd = 0.7; // perder un domo lo hace saltar
       // sin escudos, no pelea limpio: llama a su escolta — ahora son DOS
-      if (!domesLeft && !this.Bt && !b.mini && this.bossN >= 1) {
-        this.say('IT CALLS FOR BACKUP.');
-        this.spawnBoss(1);
+      if (!domesLeft && !this.Bt && !b.Qn && this.Zb >= 1) {
+        this.Zy('IT CALLS FOR BACKUP.');
+        this.Ze(1);
       }
     } else {
       this.kb(b);
@@ -1198,25 +1210,25 @@ class Game extends Phaser.Scene {
     // cohetes que sube alto, se abre en direcciones distintas y después
     // se curva hacia ti mientras vuelve la luz.
     if (b.ci) {
-      b.cineT += dt;
-      const ct = b.cineT;
-      const S = b.short ? 0.8 : 1;
-      b.cineDark = ct < 1.2 * S ? ct / (1.2 * S) : ct < 4.4 * S ? 1 : MAX(0, 1 - (ct - 4.4 * S) / (1.8 * S));
+      b.Q2 += dt;
+      const ct = b.Q2;
+      const S = b.Qb ? 0.8 : 1;
+      b.Q8 = ct < 1.2 * S ? ct / (1.2 * S) : ct < 4.4 * S ? 1 : MAX(0, 1 - (ct - 4.4 * S) / (1.8 * S));
       if (b.hd && ct >= 1.2 * S) {
         b.hd = 0;
-        this.flash.setAlpha(0.7);
-        this.tweens.add({ targets: this.flash, alpha: 0, duration: 700 });
+        this.Qp.setAlpha(0.7);
+        this.tweens.add({ targets: this.Qp, alpha: 0, duration: 700 });
         this.sh = 12;
-        Sfx.boom();
-        this.say(b.short ? "IT'S BACK." : 'DESTROYER AHEAD.');
+        Sfx.Qk();
+        this.Zy(b.Qb ? "IT'S BACK." : 'DESTROYER AHEAD.');
       }
       if (!b.hd && ct > 1.5 * S && ct < 4.1 * S) {
-        b.salvoAt -= dt;
-        if (b.salvoAt <= 0 && this.en.filter((q) => q.k === 'E').length < 6) {
-          b.salvoAt = 0.26;
-          if (!b.salvoSaid && !b.short) {
-            b.salvoSaid = 1;
-            this.say('SALVO INBOUND.');
+        b.Q5 -= dt;
+        if (b.Q5 <= 0 && this.en.filter((q) => q.k === 'E').length < 6) {
+          b.Q5 = 0.26;
+          if (!b.Zf && !b.Qb) {
+            b.Zf = 1;
+            this.Zy('SALVO INBOUND.');
           }
           // la salva se abre en espiral (ángulo áureo), sube LENTA con su
           // columna de estela — y uno de cada cuatro es un dardo: sube poco
@@ -1230,9 +1242,9 @@ class Game extends Phaser.Scene {
           this.en.push({
             k: 'E', x: wx, y: wy, z: wz, r: 22, hp: 1, t: 0, yw: 0,
             vx: COS(ang) * (260 + RND() * 300),
-            vy: -(fast ? 260 : (300 + RND() * 180)) * (b.short ? 0.7 : 1),
+            vy: -(fast ? 260 : (300 + RND() * 180)) * (b.Qb ? 0.7 : 1),
             vz: SIN(ang) * (260 + RND() * 300),
-            rise: (fast ? 0.6 : 2.2 + RND() * 1.2) * (b.short ? 0.6 : 1),
+            Qr: (fast ? 0.6 : 2.2 + RND() * 1.2) * (b.Qb ? 0.6 : 1),
             fast,
             mid: fast ? 0 : 1,
             gx: b.x + (P.x - b.x) * mk + (RND() - 0.5) * 700,
@@ -1240,29 +1252,29 @@ class Game extends Phaser.Scene {
             gz: b.z + (P.z - b.z) * mk + (RND() - 0.5) * 700,
             lf: 12,
           });
-          if (RND() < 0.35) Sfx.missile();
+          if (RND() < 0.35) Sfx.Qz();
         }
       }
       if (ct > 6.4 * S) {
         b.ci = 0;
-        b.cineDark = 0;
-        if (!b.short) this.wgAt = 4; // el ala se reagrupa tras el PEM
+        b.Q8 = 0;
+        if (!b.Qb) this.Zj = 4; // el ala se reagrupa tras el PEM
       }
       return;
     }
 
     // si te le acercas demasiado, no pelea contigo cuerpo a cuerpo:
     // desaparece y te castiga desde lejos
-    if (!b.tpAt && dist < 420 && this.ep > (b.tpCd || 0)) {
-      b.tpCd = this.ep + 20;
-      b.tpAt = 1.0;
-      this.say('TOO CLOSE — IT CHARGES A JUMP.');
+    if (!b.Zd && dist < 420 && this.ep > (b.Jg || 0)) {
+      b.Jg = this.ep + 20;
+      b.Zd = 1.0;
+      this.Zy('TOO CLOSE — IT CHARGES A JUMP.');
     }
     // cada domo que pierde también lo saca del apuro: salto corto —
     // desaparece, un silencio, y reaparece lejos con salva
-    if (b.tpAt > 0) {
-      b.tpAt -= dt;
-      if (b.tpAt <= 0) {
+    if (b.Zd > 0) {
+      b.Zd -= dt;
+      if (b.Zd <= 0) {
         for (const e2 of this.en) {
           if (e2.k === 'E') {
             e2.X = true;
@@ -1272,14 +1284,14 @@ class Game extends Phaser.Scene {
         // tus misiles en vuelo hacia él vuelven al tubo: el salto no roba
         let back = 0;
         for (const m2 of this.ms) {
-          if (m2.target === b && !m2.X) {
+          if (m2.Qd === b && !m2.X) {
             m2.X = true;
             back++;
           }
         }
         if (back) {
           this.am = MIN(MISSILE_MAX, this.am + back);
-          this.say('MISSILES RECALLED.');
+          this.Zy('MISSILES RECALLED.');
         }
         const ta = RND() * PI * 2;
         b.x = this.o.x + SIN(ta) * 1700;
@@ -1287,12 +1299,12 @@ class Game extends Phaser.Scene {
         b.y = MIN(this.o.y, surfY(b.x, b.z) - 380);
         b.yw = AT2(this.o.x - b.x, this.o.z - b.z);
         b.hd = 1;
-        b.short = 1;
+        b.Qb = 1;
         b.ci = 1;
-        b.cineT = 0;
-        b.salvoAt = 0;
-        Sfx.jump();
-        this.say('IT JUMPED.');
+        b.Q2 = 0;
+        b.Q5 = 0;
+        Sfx.Z1();
+        this.Zy('IT JUMPED.');
         return;
       }
     }
@@ -1310,9 +1322,9 @@ class Game extends Phaser.Scene {
     for (const pt of b.pz) {
       if (pt.kd !== 't' || pt.hp <= 0 || dist > 2600) continue;
       pt.fA -= dt;
-      if (pt.burst > 0 && pt.fA <= 0) {
-        pt.burst--;
-        pt.fA = pt.burst ? 0.2 : 4.6 + RND() * 1.8;
+      if (pt.Qi > 0 && pt.fA <= 0) {
+        pt.Qi--;
+        pt.fA = pt.Qi ? 0.2 : 4.6 + RND() * 1.8;
         const [wx, wy, wz] = this.bw(b, pt.ox, pt.oy - 30, pt.oz);
         // el destructor es la policía mala: la mitad de sus ráfagas van
         // contra los carroñeros, no contra ti
@@ -1330,14 +1342,14 @@ class Game extends Phaser.Scene {
           const pdy = prey.y - wy;
           const pdz = prey.z - wz;
           const pm = HYP(pdx, pdy, pdz) || 1;
-          this.bx.push({ wx, wy, wz, t: 0.28, muzzle: true });
+          this.bx.push({ wx, wy, wz, t: 0.28, Q1: true });
           this.ss.push({ x: wx, y: wy, z: wz, vx: (pdx / pm) * SHOT_SPEED, vy: (pdy / pm) * SHOT_SPEED, vz: (pdz / pm) * SHOT_SPEED, lf: 8, sd: 1 });
-          if (!this.sdSaid) {
-            this.sdSaid = 1;
-            this.say('IT HUNTS THEM TOO.');
+          if (!this.Zs) {
+            this.Zs = 1;
+            this.Zy('IT HUNTS THEM TOO.');
           }
         } else this.sa({ x: wx, y: wy, z: wz }, SHOT_SPEED);
-      } else if (pt.burst === 0 && pt.fA <= 0) pt.burst = 2;
+      } else if (pt.Qi === 0 && pt.fA <= 0) pt.Qi = 2;
     }
 
     // el hangar suelta interceptores
@@ -1361,7 +1373,7 @@ class Game extends Phaser.Scene {
         const vz = (oz - b.z) * 0.3;
         this.en.push({ k: 'E', x: wx, y: wy, z: wz, r: 22, hp: 1, t: 0, yw: 0, vx, vy: -160, vz, lf: 9 });
       }
-      Sfx.missile();
+      Sfx.Qz();
     }
 
     // el cañón de proa: carga a la vista y suelta una esfera enorme y lenta
@@ -1371,7 +1383,7 @@ class Game extends Phaser.Scene {
         const [wx, wy, wz] = this.bw(b, 0, 10, SD_NOSE);
         this.sa({ x: wx, y: wy, z: wz }, 190, true);
         this.sh = 6;
-        Sfx.missile();
+        Sfx.Qz();
       }
     } else {
       b.ca -= dt;
@@ -1388,15 +1400,15 @@ class Game extends Phaser.Scene {
     if (this.Bt === b) this.Bt = null;
     for (let i = 0; i < 9; i++) {
       const [wx, wy, wz] = this.bw(b, (RND() - 0.5) * 400, (RND() - 0.7) * 150, SD_REAR + RND() * 900);
-      this.bx.push({ wx, wy, wz, t: -i * 0.12, big: true });
+      this.bx.push({ wx, wy, wz, t: -i * 0.12, Q0: true });
     }
     this.sy(b.x, b.y, b.z, 24);
     this.sh = 16;
-    this.sc += b.mini ? 800 : 1500;
-    Sfx.boom();
-    this.bossN++;
+    this.sc += b.Qn ? 800 : 1500;
+    Sfx.Qk();
+    this.Zb++;
     this.bq = 50; // el siguiente ya viene (cuando no quede ninguno)
-    this.say(b.mini ? 'BACKUP DOWN. +800' : 'DESTROYER DOWN. +1500');
+    this.Zy(b.Qn ? 'BACKUP DOWN. +800' : 'DESTROYER DOWN. +1500');
   }
 
   ad(pts) {
@@ -1433,7 +1445,7 @@ class Game extends Phaser.Scene {
     const cineB = (this.Bo && this.Bo.ci && this.Bo) || (this.Bt && this.Bt.ci && this.Bt);
     // solo la PRIMERA entrada te quita el mando; en los saltos a mitad de
     // pelea se apaga el sector, pero la nave sigue siendo tuya
-    const sceneHold = !!cineB && !cineB.short;
+    const sceneHold = !!cineB && !cineB.Qb;
     if (sceneHold) {
       const b = cineB;
       // encuadra 500 POR ENCIMA del casco: el destructor queda en cuadro,
@@ -1461,7 +1473,7 @@ class Game extends Phaser.Scene {
       } else if (time >= this.sw) {
         this.su = time + SHIELD_MS;
         this.sw = time + SHIELD_MS + SHIELD_COOLDOWN_MS;
-        Sfx.shieldUp();
+        Sfx.Zv();
       }
     }
 
@@ -1494,13 +1506,13 @@ class Game extends Phaser.Scene {
     // una picada con giro — se corrige rápido a un tercio de segundo de
     // soltar; solo DE CABEZA (un loop, media vuelta) la nave sigue siendo
     // tuya un segundo entero y vuelve despacio
-    this.lvT = !pit && !turn ? (this.lvT || 0) + dt : 0;
+    this.Jk = !pit && !turn ? (this.Jk || 0) + dt : 0;
     const up = vdot(F, WORLD_UP);
-    if (this.lvT > 0.3 && ABS(up) < 0.97) {
+    if (this.Jk > 0.3 && ABS(up) < 0.97) {
       const D = vnorm(vmix(WORLD_UP, 1, F, -up));
       const phi = AT2(vdot(F, vcross(U, D)), vdot(U, D));
       const big = ABS(phi) > 2.4;
-      if (!big || this.lvT > 1) {
+      if (!big || this.Jk > 1) {
         const th = Math.sign(phi) * MIN(ABS(phi), (big ? 1.2 : ROLL_LEVEL) * dt);
         [F, U, R] = orthoBasis(F, vmix(U, COS(th), R, SIN(th)));
       }
@@ -1516,7 +1528,7 @@ class Game extends Phaser.Scene {
       this.bz -= DASH_COST;
       this.sp = MAX(this.sp, this.cu) + DASH_KICK;
       this.du = time + DASH_INVULN_MS;
-      Sfx.dash();
+      Sfx.Z0();
     }
     if (sceneHold) {
       this.bz = MIN(BOOST_MAX, this.bz + BOOST_REGEN * dt);
@@ -1555,7 +1567,7 @@ class Game extends Phaser.Scene {
       if (out > 0) [this.F, this.U, this.R] = orthoBasis(vmix(vmix(this.F, 1, o, -1.5 * k), 1, tg, k), this.U);
       if (this.ep > this.wa) {
         this.wa = this.ep + 3;
-        this.say('SECTOR EDGE.');
+        this.Zy('SECTOR EDGE.');
       }
     }
     // el agujero negro: cuanto más cerca, más tira — y muy cerca, te traga
@@ -1563,36 +1575,36 @@ class Game extends Phaser.Scene {
     const bdy = BH[1] - P.y;
     const bdz = BH[2] - P.z;
     const bhd = HYP(bdx, bdy, bdz);
-    this.bhx = CLP(1 - (bhd - BH_KILL) / (BH_PULL - BH_KILL), 0, 1);
+    this.Zi = CLP(1 - (bhd - BH_KILL) / (BH_PULL - BH_KILL), 0, 1);
     // el reloj del disco corre según lo cerca que estés: lejos, lento
-    this.bnk = CLP(1 - bhd / 9000, 0, 1);
-    this.bT = (this.bT || 0) + dt * (0.25 + 2.2 * this.bnk * this.bnk);
+    this.Jf = CLP(1 - bhd / 9000, 0, 1);
+    this.bT = (this.bT || 0) + dt * (0.25 + 2.2 * this.Jf * this.Jf);
     if (bhd < BH_PULL) {
-      if (this.ep > (this.rmb || 0)) {
+      if (this.ep > (this.Jl || 0)) {
         // el retumbo del vacío, cada vez más presente
-        this.rmb = this.ep + 0.8;
-        Sfx.tn(26 + this.bhx * 22, 0.9, 'sawtooth', 0.11 * this.bhx, 18);
+        this.Jl = this.ep + 0.8;
+        Sfx.tn(26 + this.Zi * 22, 0.9, 'sawtooth', 0.11 * this.Zi, 18);
       }
       const grip = bhd < BH_GRIP;
       // el agarre: un jalón que el crucero no vence — sales con dash o nitro.
       // Y el tiempo se estira: sin nitro la nave se frena, la caída DURA
       if (grip && !held.P1_2) this.sp += (60 - this.sp) * MIN(1, 8 * dt);
-      const pull = (grip ? 290 : 650 * this.bhx * this.bhx) * dt / bhd;
+      const pull = (grip ? 290 : 650 * this.Zi * this.Zi) * dt / bhd;
       P.x += bdx * pull;
       P.y += bdy * pull;
       P.z += bdz * pull;
-      this.sh = MAX(this.sh, grip ? 6 : this.bhx * 4);
+      this.sh = MAX(this.sh, grip ? 6 : this.Zi * 4);
       if (this.ep > this.wa) {
         this.wa = this.ep + (grip ? 2.5 : 4);
-        this.say(grip ? 'IT HAS YOU — DASH.' : 'BLACK HOLE — BREAK AWAY.');
+        this.Zy(grip ? 'IT HAS YOU — DASH.' : 'BLACK HOLE — BREAK AWAY.');
       }
     }
     // el horizonte de sucesos no negocia: ni el escudo ni el modo prueba
-    if (bhd < BH_KILL) this.die();
+    if (bhd < BH_KILL) this.Jc();
 
     // la superficie de la estación es PARED: aviso cerca, muerte al tocarla
     const sdy = surfY(this.o.x, this.o.z) - this.o.y;
-    if (sdy < 46) this.die();
+    if (sdy < 46) this.Jc();
     // las torres de la superficie son SÓLIDAS: rozarlas cuesta casco
     if (sdy < 620) {
       const cs = 700;
@@ -1643,14 +1655,14 @@ class Game extends Phaser.Scene {
 
     // alabeo con el giro
     const bank = this.yv * 0.34;
-    this.roll += (bank - this.roll) * MIN(1, 8 * dt);
+    this.Ql += (bank - this.Ql) * MIN(1, 8 * dt);
 
     // B1: cañón — sale de la nariz, hereda tu velocidad (doble con la mejora)
     // mientras dura la escena del destructor no se dispara: es SU momento
     if (held.P1_1 && time >= this.fy && !cineB) {
       this.fy = time + FIRE_MS;
-      this.mz2 = 0.05;
-      Sfx.fire();
+      this.Jj = 0.05;
+      Sfx.Zz();
       const sp = BOLT_SPEED + this.sp;
       const R = this.R;
       // contra el destructor, el cañón corrige hacia el punto débil abierto
@@ -1701,7 +1713,7 @@ class Game extends Phaser.Scene {
       if (this.ar >= MISSILE_REGEN) {
         this.ar = 0;
         this.am++;
-        Sfx.ammo();
+        Sfx.Z4();
       }
     } else this.ar = 0;
 
@@ -1709,7 +1721,7 @@ class Game extends Phaser.Scene {
     // destructor apunta al punto débil vivo más a tiro
     if (pressed.P1_3 && this.am > 0 && !cineB) {
       this.am--;
-      Sfx.missile();
+      Sfx.Qz();
       const target = this.bt(f);
       this.ms.push({
         x: this.o.x + f.x * 26 - this.U.x * 6,
@@ -1718,8 +1730,8 @@ class Game extends Phaser.Scene {
         vx: f.x * MISSILE_SPEED,
         vy: f.y * MISSILE_SPEED,
         vz: f.z * MISSILE_SPEED,
-        target,
-        part: target && target.k === 'B' ? this.ba(target, f) : null,
+        Qd: target,
+        Qc: target && target.k === 'B' ? this.ba(target, f) : null,
         tr: [],
         lf: 7,
       });
@@ -1747,12 +1759,12 @@ class Game extends Phaser.Scene {
   }
 
   // La muerte: una sola, para todo lo que mata de un golpe
-  die() {
+  Jc() {
     if (this.fz === 'out' || (this.Bo && this.Bo.ci) || (this.Bt && this.Bt.ci)) return;
     this.fz = 'out';
-    this.bx.push({ wx: this.o.x, wy: this.o.y, wz: this.o.z, t: 0, big: true });
+    this.bx.push({ wx: this.o.x, wy: this.o.y, wz: this.o.z, t: 0, Q0: true });
     this.sh = 14;
-    Sfx.boom();
+    Sfx.Qk();
     this.time.delayedCall(1400, () => this.scene.start('over', { sc: this.sc }));
   }
 
@@ -1766,11 +1778,11 @@ class Game extends Phaser.Scene {
     if (time < this.iu || time < this.du) return;
     this.iu = time + 2600;
     this.sh = 9;
-    Sfx.hurt();
+    Sfx.Z3();
     if (GOD) return; // modo prueba: duele, pero no mata
-    this.hull--;
-    this.hRt = 0;
-    if (this.hull <= 0) this.die();
+    this.Qj--;
+    this.Jh = 0;
+    if (this.Qj <= 0) this.Jc();
   }
 
   // --- el sector ---
@@ -1825,22 +1837,22 @@ class Game extends Phaser.Scene {
             gz = P.z + this.R.z * 380 * e.or;
           }
           // y cada tanto, un misil propio — menos que tú, pero pega
-          e.msAt = (e.msAt ?? 8) - dt;
+          e.Zn = (e.Zn ?? 8) - dt;
           const mtg = wt || this.Bo || this.Bt;
-          if (e.msAt <= 0 && mtg && !mtg.hd) {
-            e.msAt = 15;
+          if (e.Zn <= 0 && mtg && !mtg.hd) {
+            e.Zn = 15;
             const md = HYP(mtg.x - e.x, mtg.y - e.y, mtg.z - e.z) || 1;
             this.ms.push({
               x: e.x, y: e.y, z: e.z,
               vx: ((mtg.x - e.x) / md) * MISSILE_SPEED,
               vy: ((mtg.y - e.y) / md) * MISSILE_SPEED,
               vz: ((mtg.z - e.z) / md) * MISSILE_SPEED,
-              target: mtg,
-              part: mtg.k === 'B' ? this.ba(mtg, this.F) : null,
+              Qd: mtg,
+              Qc: mtg.k === 'B' ? this.ba(mtg, this.F) : null,
               tr: [],
               lf: 5,
             });
-            Sfx.missile();
+            Sfx.Qz();
           }
         } else if (gun2) {
           if (dist < 620) {
@@ -1887,7 +1899,7 @@ class Game extends Phaser.Scene {
         e.z += e.vz * dt;
         e.yw = AT2(e.vx, e.vz);
         // el alabeo visual sale del propio viraje
-        e.bank = (e.bank || 0) + (CLP(AWR(e.yw - oy) * 14, -0.9, 0.9) - (e.bank || 0)) * MIN(1, 6 * dt);
+        e.Qo = (e.Qo || 0) + (CLP(AWR(e.yw - oy) * 14, -0.9, 0.9) - (e.Qo || 0)) * MIN(1, 6 * dt);
         e.fA -= dt;
         if (e.k === 'N') {
           // dispara TUS balas contra su blanco — sin prisa y con pulso de
@@ -1904,7 +1916,7 @@ class Game extends Phaser.Scene {
                 lf: 1.6,
                 fr: 1,
               });
-              Sfx.fire();
+              Sfx.Zz();
             }
           }
         } else if (e.fA <= 0 && dist < (gun2 ? 1500 : 1300)) {
@@ -1917,7 +1929,7 @@ class Game extends Phaser.Scene {
         let tz2 = dz;
         let tdist = dist;
         if (e.fr) {
-          const tg = this.foe(e, 2400);
+          const tg = this.Z8(e, 2400);
           if (tg) {
             tx2 = tg.x - e.x;
             tz2 = tg.z - e.z;
@@ -1939,7 +1951,7 @@ class Game extends Phaser.Scene {
         e.fA -= dt;
         if (e.fA <= 0) {
           if (e.fr) {
-            const tg = this.foe(e, 1500);
+            const tg = this.Z8(e, 1500);
             if (tg) {
               e.fA = 2.6;
               const fd = HYP(tg.x - e.x, tg.y - e.y, tg.z - e.z) || 1;
@@ -1947,7 +1959,7 @@ class Game extends Phaser.Scene {
             }
           } else if (dist < 1500) {
             e.fA = 2.6;
-            const fr2 = RND() < 0.4 ? this.ally(e, 1400) : null;
+            const fr2 = RND() < 0.4 ? this.Z9(e, 1400) : null;
             if (fr2) {
               const fd = HYP(fr2.x - e.x, fr2.y - e.y, fr2.z - e.z) || 1;
               this.ss.push({ x: e.x, y: e.y - 20, z: e.z, vx: ((fr2.x - e.x) / fd) * SHOT_SPEED, vy: ((fr2.y - e.y) / fd) * SHOT_SPEED, vz: ((fr2.z - e.z) / fd) * SHOT_SPEED, lf: 7, ow: e });
@@ -1959,8 +1971,8 @@ class Game extends Phaser.Scene {
         // misil del destructor: te sigue, pero gira mal — un giro cerrado,
         // el escudo o el nitro lo dejan atrás; también se puede derribar.
         // Los de la salva primero SUBEN en columna y luego se curvan a ti.
-        if (e.rise > 0) {
-          e.rise -= dt;
+        if (e.Qr > 0) {
+          e.Qr -= dt;
         } else {
           // el dardo va al doble de velocidad pero gira peor: te roza y
           // vuelve a intentarlo. Los de la cortina caen primero a su punto
@@ -2000,7 +2012,7 @@ class Game extends Phaser.Scene {
         if (e.fr) {
           // torreta ALIADA: busca lo enemigo y lo bate con tus balas
           if (e.fA <= 0) {
-            const tg = this.foe(e, 1500);
+            const tg = this.Z8(e, 1500);
             if (tg) {
               e.fA = 2.4;
               const fd = HYP(tg.x - e.x, tg.y - e.y, tg.z - e.z) || 1;
@@ -2015,12 +2027,12 @@ class Game extends Phaser.Scene {
             }
           }
         } else if (e.fA <= 0 && dist < 1600) {
-          e.fA = e.base ? 2.1 : 3.2;
+          e.fA = e.Qm ? 2.1 : 3.2;
           // la enemiga reparte: a veces a ti, a veces a los tuyos
-          const fr2 = RND() < 0.5 ? this.ally(e, 1400) : null;
+          const fr2 = RND() < 0.5 ? this.Z9(e, 1400) : null;
           if (fr2) {
             const fd = HYP(fr2.x - e.x, fr2.y - e.y, fr2.z - e.z) || 1;
-            this.bx.push({ wx: e.x, wy: e.y - 26, wz: e.z, t: 0.28, muzzle: true });
+            this.bx.push({ wx: e.x, wy: e.y - 26, wz: e.z, t: 0.28, Q1: true });
             this.ss.push({ x: e.x, y: e.y - 26, z: e.z, vx: ((fr2.x - e.x) / fd) * SHOT_SPEED, vy: ((fr2.y - e.y) / fd) * SHOT_SPEED, vz: ((fr2.z - e.z) / fd) * SHOT_SPEED, lf: 7, ow: e });
           } else if (dist < 1000) this.sa(e, SHOT_SPEED);
         }
@@ -2054,13 +2066,13 @@ class Game extends Phaser.Scene {
         ) {
           // a toda velocidad — o con dash o escudo — la nave es el arma;
           // a la corbeta solo la abolla
-          this.damage(e, e.k === 'G' ? 3 : 99);
+          this.Qf(e, e.k === 'G' ? 3 : 99);
           this.sh = 7;
         } else if (e.k === 'A' || e.k === 'G') {
           // metal contra metal: el caza estalla y tú pierdes UN casco —
           // morir de un toque contra algo tan pequeño no era justo, y las
           // emboscadas lo convertían en ejecución
-          this.damage(e, 99);
+          this.Qf(e, 99);
           this.hy(time);
         } else {
           if (e.k !== 'S' && e.k !== 'B' && e.k !== 'W') e.X = true;
@@ -2085,13 +2097,13 @@ class Game extends Phaser.Scene {
         continue;
       }
       const d = HYP(P.x - s.x, P.y - s.y, P.z - s.z);
-      if (shieldOn && d < SHIELD_R + (s.big ? 40 : 0)) {
+      if (shieldOn && d < SHIELD_R + (s.Q0 ? 40 : 0)) {
         s.X = true;
         this.ht = 0.3;
         this.bx.push({ wx: s.x, wy: s.y, wz: s.z, t: 0.32 });
         continue;
       }
-      if (d < (s.big ? 60 : 22)) {
+      if (d < (s.Q0 ? 60 : 22)) {
         s.X = true;
         this.hy(time);
       }
@@ -2113,7 +2125,7 @@ class Game extends Phaser.Scene {
         for (const q of this.en) {
           if ((q.k === 'A' || q.k === 'G') && !q.X && HYP(q.x - s.x, q.y - s.y, q.z - s.z) < 60) {
             s.X = true;
-            this.damage(q, 1);
+            this.Qf(q, 1);
             break;
           }
         }
@@ -2124,7 +2136,7 @@ class Game extends Phaser.Scene {
     for (const b of this.bl) {
       let ate = false;
       for (const bb of [this.Bo, this.Bt]) {
-        if (bb && !bb.hd && this.boltVsBoss(bb, b)) {
+        if (bb && !bb.hd && this.Zu(bb, b)) {
           ate = true;
           break;
         }
@@ -2135,7 +2147,7 @@ class Game extends Phaser.Scene {
         const d = HYP(b.x - e.x, b.y - e.y, b.z - e.z);
         if (d < e.r + 10) {
           b.X = true;
-          this.damage(e, 1, b.x, b.y, b.z);
+          this.Qf(e, 1, b.x, b.y, b.z);
           break;
         }
       }
@@ -2158,7 +2170,7 @@ class Game extends Phaser.Scene {
 
   // Un disparo tuyo contra el destructor: pega en un punto débil, o el casco
   // se lo traga con una chispa. Devuelve true si el disparo se consumió.
-  boltVsBoss(boss, b) {
+  Zu(boss, b) {
     for (const pt of boss.pz) {
       if (pt.hp <= 0) continue;
       const [wx, wy, wz] = this.bw(boss, pt.ox, pt.oy, pt.oz);
@@ -2177,7 +2189,7 @@ class Game extends Phaser.Scene {
     return false;
   }
 
-  damage(e, n) {
+  Qf(e, n) {
     e.hp -= n;
     e.ft = 0.08;
     if (e.hp > 0) {
@@ -2188,7 +2200,7 @@ class Game extends Phaser.Scene {
     if (e.fr) {
       this.bm(e);
       this.sy(e.x, e.y, e.z, 4);
-      Sfx.boom();
+      Sfx.Qk();
       return;
     }
     // la última nave de la emboscada paga SIEMPRE: así se aprende que
@@ -2196,19 +2208,19 @@ class Game extends Phaser.Scene {
     if (e.wv) {
       e.wv = 0;
       if (--this.wvN <= 0) {
-        this.say('WAVE CLEAR.');
+        this.Zy('WAVE CLEAR.');
         this.ad(100);
       }
     }
     this.bm(e);
     this.sy(e.x, e.y, e.z, 6);
-    this.ad(e.k === 'W' ? 120 : e.k === 'S' ? (e.base ? 80 : 40) : e.k === 'R' ? 15 : e.k === 'G' ? 150 : e.k === 'A' ? 60 : 25);
-    Sfx.boom();
+    this.ad(e.k === 'W' ? 120 : e.k === 'S' ? (e.Qm ? 80 : 40) : e.k === 'R' ? 15 : e.k === 'G' ? 150 : e.k === 'A' ? 60 : 25);
+    Sfx.Qk();
     if (e.k === 'R' && e.r > 20) {
       for (let i = 0; i < 2; i++) {
         this.en.push({
-          k: 'R', x: e.x, y: e.y, z: e.z, r: 18, hp: 1, t: 0, yw: 0, model: ROCK_POOL[FLR(RND() * 4)],
-          spin: (RND() - 0.5) * 3,
+          k: 'R', x: e.x, y: e.y, z: e.z, r: 18, hp: 1, t: 0, yw: 0, Zx: ROCK_POOL[FLR(RND() * 4)],
+          Zw: (RND() - 0.5) * 3,
           vx: (RND() - 0.5) * 120,
           vy: (RND() - 0.5) * 80,
           vz: (RND() - 0.5) * 120,
@@ -2219,7 +2231,7 @@ class Game extends Phaser.Scene {
 
   sa(e, sp, big) {
     // el fogonazo marca de dónde sale — se ve quién te dispara
-    this.bx.push({ wx: e.x, wy: e.y, wz: e.z, t: 0.28, muzzle: true });
+    this.bx.push({ wx: e.x, wy: e.y, wz: e.z, t: 0.28, Q1: true });
     // apunta a donde VAS a estar, no a donde estás
     const t = HYP(this.o.x - e.x, this.o.y - e.y, this.o.z - e.z) / sp;
     const f = this.fw();
@@ -2238,7 +2250,7 @@ class Game extends Phaser.Scene {
       vy: (dy / m) * sp,
       vz: (dz / m) * sp,
       lf: big ? 12 : 6,
-      big,
+      Q0: big,
       ow: e,
     });
   }
@@ -2259,14 +2271,14 @@ class Game extends Phaser.Scene {
 
   um(dt) {
     for (const m of this.ms) {
-      const t = m.target;
+      const t = m.Qd;
       if (t && !t.X) {
         // corrige el rumbo hacia el blanco — contra el destructor, hacia su punto débil
         let [tx, ty, tz] = [t.x, t.y, t.z];
         let hitR = t.r + 16;
-        if (m.part && m.part.hp > 0) {
-          [tx, ty, tz] = this.bw(t, m.part.ox, m.part.oy, m.part.oz);
-          hitR = SD_PART_R[m.part.kd];
+        if (m.Qc && m.Qc.hp > 0) {
+          [tx, ty, tz] = this.bw(t, m.Qc.ox, m.Qc.oy, m.Qc.oz);
+          hitR = SD_PART_R[m.Qc.kd];
         }
         const dx = tx - m.x;
         const dy = ty - m.y;
@@ -2294,22 +2306,22 @@ class Game extends Phaser.Scene {
   // El misil estalla: golpe fuerte al blanco y a todo lo que esté cerca
   dn(m) {
     m.X = true;
-    this.bx.push({ wx: m.x, wy: m.y, wz: m.z, t: 0, big: true, r: MISSILE_SPLASH });
+    this.bx.push({ wx: m.x, wy: m.y, wz: m.z, t: 0, Q0: true, r: MISSILE_SPLASH });
     this.sh = MAX(this.sh, 5);
-    Sfx.boom();
+    Sfx.Qk();
     for (const boss of [this.Bo, this.Bt]) {
       if (!boss) continue;
       for (const pt of boss.pz) {
         const [wx, wy, wz] = this.bw(boss, pt.ox, pt.oy, pt.oz);
-        if (pt === m.part || HYP(m.x - wx, m.y - wy, m.z - wz) < MISSILE_SPLASH) {
-          this.bp(boss, pt, pt === m.part ? MISSILE_DMG - 1 : 1);
+        if (pt === m.Qc || HYP(m.x - wx, m.y - wy, m.z - wz) < MISSILE_SPLASH) {
+          this.bp(boss, pt, pt === m.Qc ? MISSILE_DMG - 1 : 1);
         }
       }
     }
     for (const e of this.en) {
       if (e.X || e.k === 'B' || e.k === 'N' || e.fr) continue;
       const d = HYP(m.x - e.x, m.y - e.y, m.z - e.z);
-      if (e === m.target || d < MISSILE_SPLASH + e.r) this.damage(e, e === m.target ? MISSILE_DMG : 2);
+      if (e === m.Qd || d < MISSILE_SPLASH + e.r) this.Qf(e, e === m.Qd ? MISSILE_DMG : 2);
     }
   }
 
@@ -2317,14 +2329,14 @@ class Game extends Phaser.Scene {
   // inclinación, así la pantalla siempre coincide con el stick
   uc(dt) {
     const k = MIN(1, 8 * dt);
-    [this.camF, this.camU, this.camR] = orthoBasis(vmix(this.camF, 1 - k, this.F, k), vmix(this.camU, 1 - k, this.U, k));
+    [this.Zp, this.Zo, this.Zq] = orthoBasis(vmix(this.Zp, 1 - k, this.F, k), vmix(this.Zo, 1 - k, this.U, k));
     if (this.sh > 0) this.sh = MAX(0, this.sh - 34 * dt);
   }
 
   // --- proyección mundo → pantalla ---
-  cam() {
-    const F = this.camF;
-    const U = this.camU;
+  Jb() {
+    const F = this.Zp;
+    const U = this.Zo;
     const back = CAM_BACK + MAX(0, this.sp - this.cu) * 0.09; // con nitro la cámara se queda atrás
     return {
       x: this.o.x - F.x * back + U.x * CAM_UP,
@@ -2332,7 +2344,7 @@ class Game extends Phaser.Scene {
       z: this.o.z - F.z * back + U.z * CAM_UP,
       F,
       U,
-      R: this.camR,
+      R: this.Zq,
     };
   }
 
@@ -2412,23 +2424,23 @@ class Game extends Phaser.Scene {
     for (const [a, b] of edges) this.wl(g, cm, pts[a], pts[b]);
   }
 
-  draw(time) {
+  Ja(time) {
     const g = this.gfx;
     g.clear();
     this.cameras.main.setBackgroundColor(0x070709);
-    const cm = this.cam();
+    const cm = this.Jb();
 
     this.dk(g, cm, time);
     this.dz(g, cm, time);
     this.de2(g, cm);
-    this.dwb(g, cm, time);
+    this.Jd(g, cm, time);
     this.dd(g, cm);
 
-    this.label.setVisible(false);
+    this.Qq.setVisible(false);
     // la escena de la salva: el sector entero se apaga y solo quedan el
     // destructor, sus cohetes, tus disparos y tú
     const cineB2 = (this.Bo && this.Bo.ci && this.Bo) || (this.Bt && this.Bt.ci && this.Bt);
-    const cine = cineB2 ? cineB2.cineDark || 0 : 0;
+    const cine = cineB2 ? cineB2.Q8 || 0 : 0;
     for (const e of this.en) {
       if (cine > 0 && (e.k === 'B' || e.k === 'E')) continue;
       this.de(g, cm, e, time);
@@ -2472,7 +2484,7 @@ class Game extends Phaser.Scene {
       const p = this.pj(cm, s.x, s.y, s.z);
       if (!p) continue;
       const q = this.pj(cm, s.x - s.vx * 0.35, s.y - s.vy * 0.35, s.z - s.vz * 0.35);
-      const r = CLP(((s.big ? 48 : 7) * FOCAL) / p[2], s.big ? 6 : 3, s.big ? 70 : 14);
+      const r = CLP(((s.Q0 ? 48 : 7) * FOCAL) / p[2], s.Q0 ? 6 : 3, s.Q0 ? 70 : 14);
       if (q) {
         LS(g, r * 0.9, RUST, 0.45);
         ln(g, p[0], p[1], q[0], q[1]);
@@ -2490,15 +2502,15 @@ class Game extends Phaser.Scene {
       const p = this.pj(cm, bm.wx, bm.wy, bm.wz);
       if (!p) continue;
       const k = FOCAL / p[2];
-      if (bm.muzzle) {
+      if (bm.Q1) {
         fc(g, p[0], p[1], MAX(4, 30 * k), RUST_HI, (0.5 - bm.t) * 3.5);
         continue;
       }
-      const r = (4 + bm.t * (bm.r ? bm.r * 2.4 : bm.big ? 260 : 150)) * k;
+      const r = (4 + bm.t * (bm.r ? bm.r * 2.4 : bm.Q0 ? 260 : 150)) * k;
       if (bm.r) {
         fc(g, p[0], p[1], r * 0.8, AMB, 0.35 * (1 - bm.t / 0.5));
       }
-      sk(g, p[0], p[1], r, bm.r ? 3 : 1.5, bm.big ? INK_HI : bm.fr ? BLU : RUST, 1 - bm.t / 0.5);
+      sk(g, p[0], p[1], r, bm.r ? 3 : 1.5, bm.Q0 ? INK_HI : bm.fr ? BLU : RUST, 1 - bm.t / 0.5);
     }
     for (const s of this.sz) {
       const p1 = this.pj(cm, s.x, s.y, s.z);
@@ -2510,7 +2522,7 @@ class Game extends Phaser.Scene {
 
     // cerca del agujero, la pantalla entera se tiñe de acreción: no hay
     // duda de DÓNDE estás metido
-    if (this.bhx > 0.02) fr(g, 0, 0, W, H, 0xe89a5c, this.bhx * (0.1 + 0.06 * SIN(time * 0.004)));
+    if (this.Zi > 0.02) fr(g, 0, 0, W, H, 0xe89a5c, this.Zi * (0.1 + 0.06 * SIN(time * 0.004)));
     this.dj(g, cm, time);
     this.dv(g, cm);
     this.di(g, cm, time);
@@ -2554,7 +2566,7 @@ class Game extends Phaser.Scene {
     band(-18, 18, 0x3a4452, 0.1);
     band(-6, 6, 0x5a6878, 0.1);
     band(-0.7, 0.7, INK, 0.28);
-    for (const b of this.band) {
+    for (const b of this.Qu) {
       const p = this.pd(cm, skyDir(b.yw, b.el));
       if (!p) continue;
       fr(g, p[0], p[1], b.s, b.s, INK, b.a);
@@ -2603,9 +2615,9 @@ class Game extends Phaser.Scene {
 
   // el agujero negro: su disco en 3D y, encima, la sombra como billete en
   // su punto del mundo, girada con la cámara
-  dwb(g, cm, time) {
+  Jd(g, cm, time) {
     const t = time * 0.001;
-    this.dsk(g, cm);
+    this.Je(g, cm);
     const p = this.pj(cm, BH[0], BH[1], BH[2]);
     if (!p) return;
     const r = (BH[3] * FOCAL) / p[2];
@@ -2620,7 +2632,7 @@ class Game extends Phaser.Scene {
   // EL AGUJERO NEGRO, en pantalla: resplandor, la sombra y el anillo de
   // fotones. Cuanto más cerca, más arde todo.
   bh(g, r, t) {
-    const q = this.bhx || 0;
+    const q = this.Zi || 0;
     fc(g, 0, 0, r * 3.2, 0xe8a060, 0.04 + 0.05 * q);
     fc(g, 0, 0, r * 1.9, 0xe8a060, 0.07 + 0.08 * q);
     fc(g, 0, 0, r, 0x000000, 1);
@@ -2633,12 +2645,12 @@ class Game extends Phaser.Scene {
   // en perspectiva, y los anillos caen hacia adentro girando — el remolino
   // que se traga todo. La DISTANCIA se siente: lejos gira lento y el trazo
   // es fino; cerca gira rápido y arde grueso
-  dsk(g, cm) {
+  Je(g, cm) {
     const [x, y, z, RS] = BH;
-    const q = this.bhx || 0;
+    const q = this.Zi || 0;
     const P = this.o;
     const t = this.bT || 0;
-    const nk = this.bnk || 0;
+    const nk = this.Jf || 0;
     const n = vnorm(vmix(vnorm({ x: P.x - x, y: P.y - y, z: P.z - z }), 1, WORLD_UP, 1.1));
     const e1 = vnorm(vcross(n, { x: 0.01, y: 1, z: 0 }));
     const e2 = vcross(n, e1);
@@ -2798,7 +2810,7 @@ class Game extends Phaser.Scene {
     const L = 560;
     const f = this.fw();
     const trail = 0.016 + (this.sp / TURBO_SPEED) * 0.065;
-    for (const m of this.dust) {
+    for (const m of this.Qt) {
       const wx = this.o.x + WRP(m.x - this.o.x, -L / 2, L / 2);
       const wy = this.o.y + WRP(m.y - this.o.y, -L / 2, L / 2);
       const wz = this.o.z + WRP(m.z - this.o.z, -L / 2, L / 2);
@@ -2858,12 +2870,12 @@ class Game extends Phaser.Scene {
     if (e.k === 'R' && !flash) a *= 0.7;
 
     const model =
-      e.k === 'S' ? (e.base ? TURRET_MODEL : SENTRY_MODEL)
+      e.k === 'S' ? (e.Qm ? TURRET_MODEL : SENTRY_MODEL)
       : e.k === 'A' || e.k === 'N' ? SHIP_MODEL : e.k === 'G' ? GUN_MODEL
       : e.k === 'W' ? WALK_MODEL
-      : e.model;
+      : e.Zx;
     const scale = e.k === 'R' ? e.r / 16 : e.k === 'S' ? 1.6 : e.k === 'A' ? 2.2 : e.k === 'N' ? 2 : e.k === 'G' ? 3 : 1;
-    const rot = e.k === 'R' ? e.t * e.spin : e.bank || 0;
+    const rot = e.k === 'R' ? e.t * e.Zw : e.Qo || 0;
     this.dm(g, cm, model, e, scale, color, a, rot);
 
     if (e.k === 'W') {
@@ -3019,10 +3031,10 @@ class Game extends Phaser.Scene {
     if (time < this.du) {
       for (let i = 1; i <= 3; i++) {
         const gp = { x: this.o.x - f.x * 22 * i, y: this.o.y - f.y * 22 * i, z: this.o.z - f.z * 22 * i };
-        this.db(g, cm, SHIP_MODEL, gp, this.F, this.U, 1, INK_HI, 0.4 / i, this.roll);
+        this.db(g, cm, SHIP_MODEL, gp, this.F, this.U, 1, INK_HI, 0.4 / i, this.Ql);
       }
     }
-    this.db(g, cm, SHIP_MODEL, this.o, this.F, this.U, 1, INK, 1, this.roll);
+    this.db(g, cm, SHIP_MODEL, this.o, this.F, this.U, 1, INK, 1, this.Ql);
     // a velocidad de embestida, la proa se enciende
     if (this.sp > RAM_SPEED) {
       const np = this.pj(cm, this.o.x + f.x * 22, this.o.y + f.y * 22, this.o.z + f.z * 22);
@@ -3064,7 +3076,7 @@ class Game extends Phaser.Scene {
         sk(g, sp0[0], sp0[1], r * (1 + u * 0.55), 2.5, INK_HI, 0.9 * (1 - u));
       }
     }
-    if (this.mz2 > 0) {
+    if (this.Jj > 0) {
       const mp = this.pj(cm, this.o.x + f.x * 26, this.o.y + f.y * 26 - 2, this.o.z + f.z * 26);
       if (mp) {
         fc(g, mp[0], mp[1], MAX(2, 500 / mp[2]), INK_HI, 0.9);
@@ -3161,12 +3173,12 @@ class Game extends Phaser.Scene {
     }
 
     if (!target) {
-      this.navText.setText('');
+      this.Zc.setText('');
       return;
     }
     const part = target;
     const dist = HYP(part.x - this.o.x, part.y - this.o.y, part.z - this.o.z);
-    this.navText.setText(label + '  ' + Math.round(dist) + ' M');
+    this.Zc.setText(label + '  ' + Math.round(dist) + ' M');
 
     const p = this.pj(cm, part.x, part.y, part.z);
     const margin = 46;
@@ -3206,16 +3218,16 @@ class Game extends Phaser.Scene {
   }
 
   uh() {
-    this.velText.setText('SPD ' + String(ABS(Math.round(this.sp))).padStart(3, '0'));
+    this.Zk.setText('SPD ' + String(ABS(Math.round(this.sp))).padStart(3, '0'));
     // dónde quedan los bordes: altura sobre la estación contra el techo, y
     // cuánto falta para la pared
     const P = this.o;
-    this.altText.setText('ALT ' + Math.round(1800 - P.y) + ' / ' + (1800 - BND_TOP) + '\nEDGE ' + Math.round(BND_R - HYP(P.x, P.z)));
-    this.scoreText.setText(String(this.sc).padStart(6, '0') + (this.mu > 1 ? '  x' + this.mu : ''));
-    this.hullText.setText('HULL ' + (GOD ? '∞' : '▸'.repeat(this.hull) + '·'.repeat(HULL_MAX - this.hull)));
-    this.missileText.setText('MSL ' + '▴'.repeat(this.am) + '·'.repeat(MISSILE_MAX - this.am));
+    this.Zl.setText('ALT ' + Math.round(1800 - P.y) + ' / ' + (1800 - BND_TOP) + '\nEDGE ' + Math.round(BND_R - HYP(P.x, P.z)));
+    this.Q4.setText(String(this.sc).padStart(6, '0') + (this.mu > 1 ? '  x' + this.mu : ''));
+    this.Zh.setText('HULL ' + (GOD ? '∞' : '▸'.repeat(this.Qj) + '·'.repeat(HULL_MAX - this.Qj)));
+    this.Q9.setText('MSL ' + '▴'.repeat(this.am) + '·'.repeat(MISSILE_MAX - this.am));
     const mm = FLR(this.ep / 60);
-    this.partText.setText('T ' + mm + ':' + String(FLR(this.ep % 60)).padStart(2, '0'));
+    this.Zg.setText('T ' + mm + ':' + String(FLR(this.ep % 60)).padStart(2, '0'));
     // el bloque de recursos, junto a las vidas: DASH y SHIELD como barras
     // con nombre — llena = lista; el escudo va en SU azul
     const g = this.gfx;
@@ -3249,30 +3261,30 @@ class Over extends Phaser.Scene {
   create() {
     this.events.on('postupdate', clearPressed);
     Music.on = false;
-    this.ready = false;
-    this.left = false;
-    this.qualifies = false;
-    Sfx.over();
+    this.Qx = false;
+    this.Qs = false;
+    this.Q6 = false;
+    Sfx.Z5();
 
     this.add.text(CX, CY - 70, 'GAME OVER', FONT(32)).setOrigin(0.5);
     this.add.text(CX, CY + 4, 'SCORE  ' + String(this.sc).padStart(6, '0'), FONT(16)).setOrigin(0.5);
 
     loadScores().then((scores) => {
-      this.qualifies = scores.length < 5 || this.sc > scores[scores.length - 1].s;
-      this.time.delayedCall(1200, () => (this.ready = true));
+      this.Q6 = scores.length < 5 || this.sc > scores[scores.length - 1].s;
+      this.time.delayedCall(1200, () => (this.Qx = true));
     });
-    this.time.delayedCall(9000, () => this.next());
+    this.time.delayedCall(9000, () => this.Qg());
   }
 
-  next() {
-    if (this.left) return;
-    this.left = true;
-    if (this.qualifies && this.sc > 0) this.scene.start('initials', { sc: this.sc });
+  Qg() {
+    if (this.Qs) return;
+    this.Qs = true;
+    if (this.Q6 && this.sc > 0) this.scene.start('initials', { sc: this.sc });
     else this.scene.start('title');
   }
 
   update() {
-    if (this.ready && anyStart()) this.next();
+    if (this.Qx && anyStart()) this.Qg();
   }
 }
 
@@ -3290,27 +3302,27 @@ class Initials extends Phaser.Scene {
     this.events.on('postupdate', clearPressed);
     this.lt = [0, 0, 0];
     this.sl = 0;
-    this.saving = false;
+    this.Qy = false;
 
     this.add.text(CX, CY - 110, 'TOP 5!', FONT(16)).setOrigin(0.5);
     this.add.text(CX, CY - 78, 'SCORE  ' + String(this.sc).padStart(6, '0'), FONT(15, DIM_CSS)).setOrigin(0.5);
-    this.slots = [0, 1, 2].map((i) => this.add.text(CX - 48 + i * 48, CY + 8, 'A', FONT(32)).setOrigin(0.5));
+    this.Qv = [0, 1, 2].map((i) => this.add.text(CX - 48 + i * 48, CY + 8, 'A', FONT(32)).setOrigin(0.5));
     this.add.text(CX, CY + 88, 'STICK SELECT · B1 OK', FONT(13, DIM_CSS)).setOrigin(0.5).setAlpha(0.8);
   }
 
   update(time) {
-    if (this.saving) return;
+    if (this.Qy) return;
     const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     if (pressed.P1_U) this.lt[this.sl] = (this.lt[this.sl] + 25) % 26;
     if (pressed.P1_D) this.lt[this.sl] = (this.lt[this.sl] + 1) % 26;
     if (pressed.P1_L) this.sl = MAX(0, this.sl - 1);
     if (pressed.P1_R) this.sl = MIN(2, this.sl + 1);
-    if (pressed.P1_U || pressed.P1_D) Sfx.pickup();
+    if (pressed.P1_U || pressed.P1_D) Sfx.Q3();
 
     if (pressed.P1_1 || pressed.START1) {
       if (this.sl < 2) this.sl++;
       else {
-        this.saving = true;
+        this.Qy = true;
         const name = this.lt.map((l) => A[l]).join('');
         loadScores().then((scores) => {
           scores.push({ n: name, s: this.sc });
@@ -3320,7 +3332,7 @@ class Initials extends Phaser.Scene {
       }
     }
 
-    this.slots.forEach((t, i) => {
+    this.Qv.forEach((t, i) => {
       t.setText(A[this.lt[i]]);
       t.setAlpha(i === this.sl ? (FLR(time / 300) % 2 ? 1 : 0.35) : 0.8);
     });
