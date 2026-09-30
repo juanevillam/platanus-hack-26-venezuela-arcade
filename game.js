@@ -2090,7 +2090,7 @@ class Game extends Phaser.Scene {
               q.X = true;
               this.bm(q);
               this.sy(q.x, q.y, q.z, 5);
-            } else this.bx.push({ wx: s.x, wy: s.y, wz: s.z, t: 0.32 });
+            } else this.bx.push({ wx: s.x, wy: s.y, wz: s.z, t: 0.32, fr: 1 });
             break;
           }
         }
@@ -2229,7 +2229,7 @@ class Game extends Phaser.Scene {
   }
 
   bm(e) {
-    this.bx.push({ wx: e.x, wy: e.y, wz: e.z, t: 0 });
+    this.bx.push({ wx: e.x, wy: e.y, wz: e.z, t: 0, fr: e.k === 'N' || e.fr });
   }
 
   ux(dt) {
@@ -2483,7 +2483,7 @@ class Game extends Phaser.Scene {
       if (bm.r) {
         fc(g, p[0], p[1], r * 0.8, AMB, 0.35 * (1 - bm.t / 0.5));
       }
-      sk(g, p[0], p[1], r, bm.r ? 3 : 1.5, bm.big ? INK_HI : RUST, 1 - bm.t / 0.5);
+      sk(g, p[0], p[1], r, bm.r ? 3 : 1.5, bm.big ? INK_HI : bm.fr ? BLU : RUST, 1 - bm.t / 0.5);
     }
     for (const s of this.sz) {
       const p1 = this.pj(cm, s.x, s.y, s.z);
@@ -2795,11 +2795,12 @@ class Game extends Phaser.Scene {
 
   de(g, cm, e, time) {
     const dist = HYP(e.x - this.o.x, e.y - this.o.y, e.z - this.o.z);
-    // la estela de lo que se mueve: se ve de dónde viene y hacia dónde va
+    // la estela de lo que se mueve: se ve de dónde viene y hacia dónde va —
+    // en la tinta de SU bando: nada aliado deja óxido
     if (e.tr && dist < 2200) {
       const n = e.tr.length;
       for (let i = 1; i < n; i++) {
-        LS(g, e.k === 'E' ? 3 : 2, RUST_HI, (i / n) * 0.5);
+        LS(g, e.k === 'E' ? 3 : 2, e.k === 'N' || e.fr ? BLU : RUST_HI, (i / n) * 0.5);
         this.wl(g, cm, e.tr[i - 1], i === n - 1 ? [e.x, e.y, e.z] : e.tr[i]);
       }
     }
