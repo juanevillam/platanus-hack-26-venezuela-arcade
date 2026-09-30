@@ -138,8 +138,10 @@ const HSH = (x0, z0) => (((x0 * 1103 + z0 * 12793) % 97) + 97) % 97;
 const INK_CSS = '#eef2f7';
 const DIM_CSS = '#8a9099';
 
-// MODO PRUEBA: vidas infinitas para depurar — APAGADO: tres vidas de verdad
-const GOD = false;
+// MODO PRUEBA (sin muerte): nada te mata — ni golpes, ni el suelo, ni el
+// agujero negro (de él se sale con nitro). Para recorrer todas las fases.
+// ⚠️ APAGAR (false) ANTES DE ENVIAR: el HUD lo delata con 'HULL ∞'
+const GOD = true;
 
 // --- Vuelo: la nave SIEMPRE avanza; el stick dirige, el turbo se recarga.
 // Arriba/abajo cabecea sin tope: mantenlo y das la vuelta completa. La cámara
@@ -939,7 +941,7 @@ class Game extends PS {
       me.time.paused = me.pa;
       me.pa ? me.tweens.pauseAll() : me.tweens.resumeAll();
       me.tweens.killTweensOf(me.Qe);
-      me.Qe.setText(me.pa ? 'PAUSED' : '').setAlpha(me.pa ? 1 : 0);
+      me.Qe.setText(me.pa ? 'PAUSED\nSECTOR ' + me.Se + ' · ' + me.Kc + ' DOWN · BEST x' + me.Bc : '').setAlpha(me.pa ? 1 : 0);
     }
     if (me.pa) {
       me.pO = (me.pO || 0) + delta;
@@ -971,7 +973,7 @@ class Game extends PS {
     if ((me.St -= dt) <= 0) {
       me.St = 120;
       me.T += 300 * me.Se++ + (me.Pf ? 0 : 2000);
-      me.W('SECTOR ' + me.Se + ' — ' + SEC[(me.Se - 1) % 6] + (me.Pf ? '' : '\nPERFECT +2000') + '\nDOWN ' + (6 + 2 * me.Se) + ' SHIPS');
+      me.W('SECTOR ' + me.Se + ' — ' + SEC[(me.Se - 1) % 6] + (me.Se > 6 ? ' ' + 'I'.repeat(1 + FLR((me.Se - 1) / 6)) : '') + (me.Pf ? '' : '\nPERFECT +2000') + '\nDOWN ' + (6 + 2 * me.Se) + ' SHIPS');
       me.Cg = me.Pf = 0;
       me.Qp.setAlpha(0.35);
       me.tweens.add({ targets: me.Qp, alpha: 0, duration: 700 });
@@ -1007,7 +1009,7 @@ class Game extends PS {
       const R = me.R;
       // el agujero RESPIRA: cada ~70 s, 5 s tirando con casi el doble de alcance
       if ((me.Gw -= dt) <= 0) {
-        me.Gw = 70;
+        me.Gw = (me.Se - 1) % 6 > 4 ? 35 : 70;
         me.Gm = 5;
         me.W('GRAVITY SURGE.');
         Sfx.O(70, 2, SAW, 0.15, 30);
@@ -1596,6 +1598,8 @@ class Game extends PS {
     me.sy(b.x, b.y, b.z, 24);
     me.S = 16;
     me.Sl = 1.2;
+    // su muerte es una ONDA: arrasa las naves enemigas que tenga cerca
+    for (const q of me.D) if (q.k < 4 && !q.X && D3(q, b) < 2500) me.Qf(q, 99);
     me.T += b.Qn ? 800 : 1500;
     Sfx.Qk();
     me.Zb++;
@@ -1612,9 +1616,12 @@ class Game extends PS {
       me.Od = MIN(100, me.Od + 8);
       if (me.Od >= 100 && !me.Of) me.W('OVERDRIVE READY — B5.', (me.Of = 1));
     }
+    const was = me.mu;
     if (me.mt > 0) me.mu = MIN(5, me.mu + 1);
     else me.mu = 2;
-    me.mt = 4;
+    // al llegar a ×5 el combo se anuncia, y en ×5 aguanta 6 s en vez de 4
+    if (me.mu > 4 && was < 5) me.W('MAX COMBO x5');
+    me.mt = me.mu > 4 ? 6 : 4;
     me.Bc = MAX(me.Bc, me.mu);
   }
 
@@ -1678,6 +1685,7 @@ class Game extends PS {
       me.Od = me.Of = 0;
       me.Ou = me.iu = time + 6000;
       me.W('OVERDRIVE!');
+      me.q.length = 0; // encenderlo barre el fuego enemigo del aire
       Sfx.Z1();
     }
 
@@ -1821,7 +1829,7 @@ class Game extends PS {
 
     // la superficie de la estación es PARED: aviso cerca, muerte al tocarla
     const sdy = surfY(Po.x, Po.z) - Po.y;
-    if (sdy < 46) me.Jc();
+    if (sdy < 46) GOD ? (Po.y -= 46 - sdy) : me.Jc();
     // las torres de la superficie son SÓLIDAS: rozarlas cuesta casco
     if (sdy < 620) {
       const cs = CELL;
@@ -1897,7 +1905,12 @@ class Game extends PS {
       const k = MIN(1, 5800 / (HYP(x, z) || 1));
       x *= k;
       z *= k;
-      me.Gt = { x, y: CLP(Po.y + me.F.y * d + RH() * 400, BND_TOP + 300, surfY(x, z) - 300), z, n: me.F, e1: me.R, e2: me.U };
+      const y = CLP(Po.y + me.F.y * d + RH() * 400, BND_TOP + 300, surfY(x, z) - 300);
+      // si el borde lo corrió hacia adentro, el anillo se gira hacia ti:
+      // siempre se puede cruzar
+      const n = k < 1 ? vnorm({ x: x - Po.x, y: y - Po.y, z: z - Po.z }) : me.F;
+      const e1 = k < 1 ? vnorm(vcross(n, WORLD_UP)) : me.R;
+      me.Gt = { x, y, z, n, e1, e2: vcross(n, e1) };
     }
 
     // alabeo con el giro
@@ -2024,7 +2037,7 @@ class Game extends PS {
 
   // La muerte: una sola, para todo lo que mata de un golpe
   Jc(me = this) {
-    if (me.fz === 'out' || (me.G && me.G.f) || (me.I && me.I.f)) return;
+    if (GOD || me.fz === 'out' || (me.G && me.G.f) || (me.I && me.I.f)) return;
     me.fz = 'out';
     me.Sl = 1.3; // la propia muerte, en cámara lenta
     me.XB(me.o, 0, { h: true });
@@ -2044,6 +2057,10 @@ class Game extends PS {
     me.iu = time + 2600;
     me.S = 9;
     Sfx.Z3();
+    // el golpe se ve: chispas de tu casco y un destello
+    me.sy(me.o.x, me.o.y, me.o.z, 8);
+    me.Qp.setAlpha(0.25);
+    me.tweens.add({ targets: me.Qp, alpha: 0, duration: 300 });
     if (GOD) return; // modo prueba: duele, pero no mata
     me.Qj--;
     me.Pf = 1; // este sector ya no es perfecto
@@ -2227,7 +2244,13 @@ class Game extends PS {
             e.Ch = 0;
             const v = vnorm({ x: e.Am.x - e.x, y: e.Am.y - e.y, z: e.Am.z - e.z });
             const tt = dx * v.x + dy * v.y + dz * v.z;
-            if (tt > 0 && tt < 3400 && HYP(dx - v.x * tt, dy - v.y * tt, dz - v.z * tt) < 40) me.hy(time);
+            if (tt > 0 && tt < 3400 && HYP(dx - v.x * tt, dy - v.y * tt, dz - v.z * tt) < 40) {
+              // con el escudo arriba el rayo REBOTA y lo mata a él
+              if (time < me.su) {
+                me.Qf(e, 99);
+                me.ad(300, e, 'REFLECTED ');
+              } else me.hy(time);
+            }
             Sfx.Qz();
           }
         } else if (e.P <= 0 && dist < (gun2 ? 1500 : 1300)) {
@@ -2425,6 +2448,7 @@ class Game extends PS {
       }
       if (d < (s.h ? 60 : 22)) {
         s.X = true;
+        me.Rv = s.ow; // quien te pegó: derribarlo es REVANCHA
         me.hy(time);
       } else if (d < (s.Md ?? 1e9)) s.Md = d;
       // el ROCE: pasó cerca sin tocarte — paga y sube el combo
@@ -2432,6 +2456,7 @@ class Game extends PS {
         s.Nm = 1;
         me.ad(50, s, 'CLOSE ');
         Sfx.O(1200, 0.15, TRI, 0.05, 300);
+        me.Sl = MAX(me.Sl, 0.3); // un respiro de tiempo bala
       }
       if (!s.X) {
         for (const q of me.D) {
@@ -2442,6 +2467,7 @@ class Game extends PS {
               q.X = true;
               me.bm(q);
               me.sy(q.x, q.y, q.z, 5);
+              if (q.k === 4) me.W('WINGMAN DOWN.');
             } else me.XB(s, 0.32, { L: 1 });
             break;
           }
@@ -2474,6 +2500,8 @@ class Game extends PS {
         if (d < e.r + 10) {
           b.X = true;
           me.Qf(e, 1, b.x, b.y, b.z);
+          // derribo con TUS balas desde más de 2400: tiro largo
+          if (e.X && e.k < 3 && !b.L && D3(e, me.o) > 2400) me.ad(100, e, 'LONG SHOT ');
           break;
         }
       }
@@ -2541,16 +2569,26 @@ class Game extends PS {
     }
     me.bm(e);
     me.sy(e.x, e.y, e.z, 6);
-    // una mina derribada revienta en cadena: lo que esté cerca cae con ella
-    if (e.k === 9) {
-      me.XB(e, 0, { h: true, r: 260 });
-      for (const q of me.D) if (!q.X && q.k !== 7 && q.k !== 4 && !q.L && D3(q, e) < 260) me.Qf(q, 99);
+    // una mina o un kamikaze derribados revientan en cadena: lo que esté
+    // cerca cae con ellos — en un enjambre, uno bien puesto limpia el cielo
+    if (e.k === 9 || e.Kz) {
+      const br = e.Kz ? 200 : 260;
+      me.XB(e, 0, { h: true, r: br });
+      for (const q of me.D) if (!q.X && q.k !== 7 && q.k !== 4 && !q.L && D3(q, e) < br) me.Qf(q, 99);
     }
     me.ad(e.k > 9 ? 1000 : e.k === 6 ? 120 : e.k === 5 ? (e.Qm ? 80 : 40) : e.k === 8 ? 15 : e.k === 2 ? 150 : e.k === 1 ? 60 : 25, e);
-    if (e.k > 9) me.am = MISSILE_MAX;
+    if (e.k > 9) {
+      // la dorada: misiles y OVERDRIVE llenos
+      me.am = MISSILE_MAX;
+      me.Od = 100;
+    }
     if (e.k < 3) {
       me.Kc++;
       me.Hs = 0.05;
+      if (e === me.Rv) {
+        me.Rv = 0;
+        me.ad(200, e, 'REVENGE ');
+      }
       if (++me.Cg === 6 + 2 * me.Se) {
         me.T += 1000 * me.Se;
         me.W('SECTOR CHALLENGE +' + 1000 * me.Se);
