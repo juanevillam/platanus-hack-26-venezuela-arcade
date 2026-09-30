@@ -639,6 +639,13 @@ function drawSaturn(g, r) {
   ring(0);
 }
 
+// Júpiter: franjas crema y marrón, y la gran mancha roja
+function drawJupiter(g, r) {
+  sk(g, 0, 0, r * 1.04, r * 0.06 + 2, 0xe0c8a8, 0.12);
+  drawBandedSphere(g, r, [0xe8dcc8, 0xc49a6c, 0xe6d6bc, 0xa87a54, 0xdcc4a4, 0xb88a60, 0xe8dcc8, 0xc49a6c, 0xe0d0b8], 0.3);
+  fc(g, r * 0.05, r * 0.3, r * 0.15, 0xc0603c, 0.85);
+}
+
 // La Tierra: océano, continentes, nubes, la noche entrando por la derecha
 function drawEarth(g, r) {
   fc(g, 0, 0, r * 1.1, 0x6fb4e0, 0.12);
@@ -905,13 +912,13 @@ class Game extends Phaser.Scene {
           }
         }
       }
-      // la regla del ala: un wingman por cada CUATRO enemigos en el aire
-      // (contigo somos dos) — mínimo uno, tope cuatro
+      // la regla del ala: un wingman por cada SEIS enemigos en el aire —
+      // mínimo uno, tope dos: el ala ayuda, la pelea es tuya
       this.wgAt = (this.wgAt ?? 22) - dt;
       if (this.wgAt <= 0) {
         this.wgAt = 14;
         const airE = this.en.filter((q) => (q.k === 'A' || q.k === 'G') && !q.X).length;
-        const want = CLP(FLR(airE / 4) + 1, 1, 4);
+        const want = CLP(FLR(airE / 6) + 1, 1, 2);
         if (this.en.filter((q) => q.k === 'N' && !q.X).length < want) this.wingUp(1);
       }
       // el destructor vuelve siempre — y cada vez con menos ceremonia
@@ -984,7 +991,7 @@ class Game extends Phaser.Scene {
   // Tu escuadrón: naves azules que cazan enemigos con tus mismas balas
   wingUp(n) {
     for (let i = 0; i < n; i++) {
-      if (this.en.filter((q) => q.k === 'N').length >= 4) return;
+      if (this.en.filter((q) => q.k === 'N').length >= 2) return;
       const ang = RND() * PI * 2;
       this.en.push({
         k: 'N',
@@ -1422,7 +1429,9 @@ class Game extends Phaser.Scene {
     // ni nitro, y la nave se NIVELA Y ENCUADRA al destructor sola — lo ves
     // de lado, entero, y recuperas el mando cuando la luz vuelve
     const cineB = (this.Bo && this.Bo.ci && this.Bo) || (this.Bt && this.Bt.ci && this.Bt);
-    const sceneHold = !!cineB;
+    // solo la PRIMERA entrada te quita el mando; en los saltos a mitad de
+    // pelea se apaga el sector, pero la nave sigue siendo tuya
+    const sceneHold = !!cineB && !cineB.short;
     if (sceneHold) {
       const b = cineB;
       // encuadra 500 POR ENCIMA del casco: el destructor queda en cuadro,
@@ -1479,15 +1488,17 @@ class Game extends Phaser.Scene {
     let R;
     [F, U, R] = orthoBasis(F, U);
 
-    // Con input, el enderezado NO existe; un tercio de segundo de stick suelto
-    // y la nave se cuadra rápido — steady sin robarte las piruetas
+    // Con input, el enderezado NO existe. Un ladeo se corrige rápido a un
+    // tercio de segundo de soltar; de cabeza (un loop, media vuelta) la
+    // nave sigue siendo tuya un segundo entero y vuelve despacio
     this.lvT = !pit && !turn ? (this.lvT || 0) + dt : 0;
-    if (this.lvT > 0.3) {
-      const up = vdot(F, WORLD_UP);
-      if (ABS(up) < 0.97) {
-        const D = vnorm(vmix(WORLD_UP, 1, F, -up));
-        const phi = AT2(vdot(F, vcross(U, D)), vdot(U, D));
-        const th = Math.sign(phi) * MIN(ABS(phi), ROLL_LEVEL * dt);
+    const up = vdot(F, WORLD_UP);
+    if (this.lvT > 0.3 && ABS(up) < 0.97) {
+      const D = vnorm(vmix(WORLD_UP, 1, F, -up));
+      const phi = AT2(vdot(F, vcross(U, D)), vdot(U, D));
+      const big = ABS(phi) > 1.1;
+      if (!big || this.lvT > 1) {
+        const th = Math.sign(phi) * MIN(ABS(phi), (big ? 1.2 : ROLL_LEVEL) * dt);
         [F, U, R] = orthoBasis(F, vmix(U, COS(th), R, SIN(th)));
       }
     }
@@ -1872,16 +1883,17 @@ class Game extends Phaser.Scene {
         e.bank = (e.bank || 0) + (CLP(AWR(e.yw - oy) * 14, -0.9, 0.9) - (e.bank || 0)) * MIN(1, 6 * dt);
         e.fA -= dt;
         if (e.k === 'N') {
-          // dispara TUS balas contra su blanco
+          // dispara TUS balas contra su blanco — sin prisa y con pulso de
+          // humano: muchas se van por un lado
           if (wt && e.fA <= 0) {
             const td2 = HYP(wt.x - e.x, wt.y - e.y, wt.z - e.z) || 1;
             if (td2 < 1300) {
-              e.fA = 1.9;
+              e.fA = 3.4;
               this.bl.push({
                 x: e.x, y: e.y, z: e.z,
-                vx: ((wt.x - e.x) / td2) * 900,
-                vy: ((wt.y - e.y) / td2) * 900,
-                vz: ((wt.z - e.z) / td2) * 900,
+                vx: ((wt.x - e.x) / td2) * 900 + (RND() - 0.5) * 180,
+                vy: ((wt.y - e.y) / td2) * 900 + (RND() - 0.5) * 180,
+                vz: ((wt.z - e.z) / td2) * 900 + (RND() - 0.5) * 180,
                 lf: 1.6,
                 fr: 1,
               });
@@ -2554,9 +2566,11 @@ class Game extends Phaser.Scene {
       fc(g, p[0], p[1], r, col, al);
       fc(g, p[0] + r * 0.4, p[1] - r * 0.25, r * 0.6, col, al * 0.7);
     }
-    // los planetas, a espaldas del agujero negro: su rumbo es SOLO suyo
-    this.so(g, cm, 3.57, 0.3, 46, drawEarth);
+    // los planetas, fuera del rumbo del agujero negro (que es SOLO suyo):
+    // la Tierra al sur, Saturno al suroeste y Júpiter al oeste, entre ellos
+    this.so(g, cm, 3.4, 0.3, 46, drawEarth);
     this.so(g, cm, 4.32, 0.14, 64, drawSaturn);
+    this.so(g, cm, 5.35, 0.24, 58, drawJupiter);
     this.dl(g, cm, time);
   }
 
@@ -2587,46 +2601,35 @@ class Game extends Phaser.Scene {
     g.restore();
   }
 
-  // EL AGUJERO NEGRO, en pantalla: resplandor, la sombra, y el disco LENTEADO — su cara de atrás doblada por encima y
-  // por debajo de la sombra. Cuanto más cerca, más arde todo.
+  // EL AGUJERO NEGRO, en pantalla: resplandor, la sombra y el anillo de
+  // fotones. Cuanto más cerca, más arde todo.
   bh(g, r, t) {
     const q = this.bhx || 0;
     fc(g, 0, 0, r * 3.2, 0xe8a060, 0.04 + 0.05 * q);
     fc(g, 0, 0, r * 1.9, 0xe8a060, 0.07 + 0.08 * q);
     fc(g, 0, 0, r, 0x000000, 1);
-    for (const [a0, rr, al] of [[PI, 1.3, 0.8], [0, 1.16, 0.5]]) {
-      for (const w of [0.14, 0.03]) {
-        LS(g, MAX(1.5, r * w), CRM, al * (w > 0.1 ? 0.22 : 1) * (0.8 + 0.2 * SIN(t * 5)));
-        g.beginPath();
-        g.arc(0, 0, r * rr, a0 + 0.15, a0 + PI - 0.15);
-        g.strokePath();
-      }
-    }
+    sk(g, 0, 0, r * 1.1, r * 0.16, CRM, 0.12 + 0.1 * q);
     sk(g, 0, 0, r * 1.04, MAX(1.5, r * 0.04), 0xfff8ea, 0.7 + 0.3 * SIN(t * 3));
   }
 
-  // el disco de acreción en 3D, anclado al mundo en un plano inclinado:
-  // arcos con huecos orbitando, el interior más rápido
+  // el disco de acreción en 3D, en el punto del agujero y MIRÁNDOTE: su
+  // normal apunta a la nave (apenas inclinada, para que se lea 3D), y los
+  // anillos caen hacia adentro girando — el remolino que se traga todo
   dsk(g, cm, t) {
     const [x, y, z, RS] = BH;
     const q = this.bhx || 0;
-    const n = vnorm({ x: 0.35, y: -1, z: 0.25 });
-    const e1 = vnorm(vcross(n, { x: 0, y: 0, z: 1 }));
+    const P = this.o;
+    const n = vnorm(vmix(vnorm({ x: P.x - x, y: P.y - y, z: P.z - z }), 1, WORLD_UP, 0.3));
+    const e1 = vnorm(vcross(n, { x: 0.01, y: 1, z: 0 }));
     const e2 = vcross(n, e1);
     const at = (a, r) => [x + (e1.x * COS(a) + e2.x * SIN(a)) * r, y + (e1.y * COS(a) + e2.y * SIN(a)) * r, z + (e1.z * COS(a) + e2.z * SIN(a)) * r];
-    for (const [k, col, al] of [
-      [1.7, CRM, 0.75],
-      [2.2, AMB, 0.6],
-      [2.9, 0xe89a5c, 0.45],
-      [3.8, RUST, 0.35],
-      [5, RUST, 0.22],
-      [6.5, 0x8a5c48, 0.15],
-    ]) {
-      const r = k * RS;
-      LS(g, 2 + q * 2, col, MIN(1, al * (1 + q)));
+    for (let i = 0; i < 7; i++) {
+      const ph = (i / 7 + t * 0.09) % 1; // 0 afuera → 1 adentro
+      const k = 1.5 + 5.5 * (1 - ph);
+      LS(g, 1.5 + 2.5 * ph + q * 2, [0x8a5c48, RUST, 0xe89a5c, AMB, CRM][FLR(ph * 5)], MIN(1, (0.15 + 0.6 * ph) * (1 + q) * MIN(1, (1 - ph) * 8)));
       for (let arc = 0; arc < 9; arc++) {
-        const a0 = t * (3 / k) + arc * 0.698;
-        for (let i = 0; i < 3; i++) this.wl(g, cm, at(a0 + i * 0.16, r), at(a0 + i * 0.16 + 0.16, r));
+        const a0 = t * (3 / k) + arc * 0.698 + i;
+        for (let j = 0; j < 3; j++) this.wl(g, cm, at(a0 + j * 0.16, k * RS), at(a0 + j * 0.16 + 0.16, k * RS));
       }
     }
   }
