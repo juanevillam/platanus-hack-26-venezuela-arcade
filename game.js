@@ -156,7 +156,6 @@ let cheatKeys = '';
 const YAW_RATE = 2.4; // rad/s tope
 const YAW_EASE = 13; // 1/s, el giro responde YA
 const PITCH_RATE = 2.5; // rad/s de cabeceo
-const ROLL_LEVEL = 3.2; // rad/s: 45° de ladeo se corrigen en ~0.25 s
 const CRUISE = 235; // crucero constante — la nave NUNCA se detiene
 const TURBO_SPEED = 470; // referencia de "rápido" para estelas y cámara
 const NITRO_MAX = 760; // manteniendo B2 la nave acelera sin parar hasta aquí
@@ -1728,43 +1727,12 @@ class Game extends PS {
     const ya = me.yv * dt;
     let F = vmix(me.F, COS(pa), me.U, SIN(pa));
     let U = vmix(me.U, COS(pa), me.F, -SIN(pa));
-    // El giro mueve la nariz EN PANTALLA (sobre el techo de la propia nave) y
-    // después devuelve el LADEO que traías respecto del horizonte: girando
-    // nivelado sigues nivelado, así que abajo+izquierda baja hacia la
-    // izquierda en vez de entrar en tirabuzón con un ala arriba. Muy empinado,
-    // conservar el ladeo obligaría a rodar la vista (una picada de 70° con
-    // "derecha" rodaba 38°), así que con el giro SOLO, entre ~46° y ~66° de
-    // inclinación se suelta y manda la pantalla; con cabeceo + giro (una
-    // diagonal) se conserva casi hasta la vertical. Fuera de lo nivelado gira
-    // un 30% más.
-    const hz = (f, u) => {
-      const p = vmix(WORLD_UP, 1, f, -vdot(WORLD_UP, f));
-      const pn = vnorm(p);
-      return [AT2(vdot(f, vcross(pn, u)), vdot(pn, u)), HYP(p.x, p.y, p.z)];
-    };
-    [F, U] = orthoBasis(F, U);
-    const [b0, hl] = hz(F, U);
-    F = rotAxis(F, U, -ya * (1.3 - 0.3 * CLP((ABS(vdot(U, WORLD_UP)) - 0.9) / 0.095, 0, 1)));
-    [F, U] = orthoBasis(F, U);
-    U = rotAxis(U, F, AWR(b0 - hz(F, U)[0]) * CLP((hl - (pit ? 0.1 : 0.4)) / 0.3, 0, 1));
+    // Todo es de la NAVE, nunca del mapa: arriba/abajo cabecea sobre su ala,
+    // izquierda/derecha gira sobre su techo, y nada la endereza sola — si la
+    // dejas de cabeza, se queda de cabeza. El horizonte no manda.
+    F = rotAxis(F, U, -ya);
     let R;
     [F, U, R] = orthoBasis(F, U);
-
-    // Con input, el enderezado NO existe. Un ladeo — aun de 90°, como deja
-    // una picada con giro — se corrige rápido a un tercio de segundo de
-    // soltar; solo DE CABEZA (un loop, media vuelta) la nave sigue siendo
-    // tuya un segundo entero y vuelve despacio
-    me.Jk = !pit && !turn ? (me.Jk || 0) + dt : 0;
-    const up = vdot(F, WORLD_UP);
-    if (me.Jk > 0.3 && ABS(up) < 0.97) {
-      const D = vnorm(vmix(WORLD_UP, 1, F, -up));
-      const phi = AT2(vdot(F, vcross(U, D)), vdot(U, D));
-      const big = ABS(phi) > 2.4;
-      if (!big || me.Jk > 1) {
-        const th = Math.sign(phi) * MIN(ABS(phi), (big ? 1.2 : ROLL_LEVEL) * dt);
-        [F, U, R] = orthoBasis(F, vmix(U, COS(th), R, SIN(th)));
-      }
-    }
     // B2 + lado: TONEL — una vuelta entera sobre la nariz y un paso hacia
     // ese lado, dentro de la invulnerabilidad del dash: el esquive de verdad
     if (me.Jr) {
