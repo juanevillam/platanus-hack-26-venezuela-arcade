@@ -1107,7 +1107,7 @@ class Game extends PS {
               }
               // arco o muro en la celda: reintenta — nada nace DENTRO. Y nada
               // nace ENCIMA de otro: cada techo tiene un solo sitio
-              if (ok && me.D.some((q) => !q.X && (q.k === 5 || q.k === 6) && HYP(q.x - gx2, q.z - gz2) < 220)) ok = false;
+              if (ok && (HYP(gx2, gz2) > BND_R - 300 || me.D.some((q) => !q.X && (q.k === 5 || q.k === 6) && HYP(q.x - gx2, q.z - gz2) < 220))) ok = false;
             }
             if (!ok) continue;
             // UNA de cada seis es TUYA, y nunca más de tres vivas: las
@@ -1301,8 +1301,12 @@ class Game extends PS {
     const h = HYP(f.x, f.z) || 1;
     const bd = mini ? 2400 : me.Zb ? 2200 : 2600;
     const ang = mini ? RND() * PI * 2 : 0;
-    const bx = Po.x + (mini ? SIN(ang) : f.x / h) * bd;
-    const bz = Po.z + (mini ? COS(ang) : f.z / h) * bd;
+    let bx = Po.x + (mini ? SIN(ang) : f.x / h) * bd;
+    let bz = Po.z + (mini ? COS(ang) : f.z / h) * bd;
+    // nunca tras el borde: se acota ANTES de medir el suelo bajo él
+    const bk = MIN(1, (BND_R - 1000) / HYP(bx, bz));
+    bx *= bk;
+    bz *= bk;
     const nb = {
       k: 7,
       x: bx,
@@ -1519,7 +1523,9 @@ class Game extends PS {
           me.am = MIN(MISSILE_MAX, me.am + back);
           me.W('MISSILES RECALLED.');
         }
-        const ta = RND() * PI * 2;
+        // salta hacia ADENTRO del sector (hacia el centro, con juego): cerca
+        // del borde, un rumbo al azar lo dejaba tras el muro
+        const ta = AT2(-Po.x, -Po.z) + RH() * 1.4;
         b.x = Po.x + SIN(ta) * 1700;
         b.z = Po.z + COS(ta) * 1700;
         b.y = MIN(Po.y, surfY(b.x, b.z) - 380);
@@ -2114,6 +2120,14 @@ class Game extends PS {
     for (const e of me.D) {
       e.t += dt;
       if (e.g) e.g -= dt;
+      // NADA vive tras el borde: lo que aparece, deriva o SALTA afuera —
+      // el destructor incluido — vuelve adentro, a su radio del muro
+      const eh = HYP(e.x, e.z);
+      const el = BND_R - 150 - e.r;
+      if (eh > el) {
+        e.x *= el / eh;
+        e.z *= el / eh;
+      }
       const dx = P.x - e.x;
       const dy = P.y - e.y;
       const dz = P.z - e.z;
