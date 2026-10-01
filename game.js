@@ -123,7 +123,7 @@ const [INK, INK_HI, RUST, RUST_HI, AMB, CRM, BLU, BLD, GRY, SAW, TRI, SQR, FOCAL
   'triangle',
   'square',
   420, 1.6, 560, 250, -5200, 6500, 700,
-  'GOD MODE — NOT RANKED',
+  'GOD MODE - NOT RANKED',
 ];
 // Números con nombre que se usan mucho van en la misma desestructuración:
 // FOCAL = 420
@@ -208,18 +208,20 @@ const surfY = (x, z) => {
 const BH = [2400, -2200, 3600, 420];
 const BHO = { x: BH[0], y: BH[1], z: BH[2] };
 // Los SECTORES: cada 2 minutos uno nuevo, con nombre, bono y otra mezcla —
-// desde el 2 llegan kamikazes, desde el 3 francotiradores
+// desde el 2 llegan kamikazes y francotiradores; en el 3, minas, élites y tormentas
 const TIPS = [
   'LURE SHIPS INTO THE BLACK HOLE',
-  'SHOOT A MINE — IT TAKES THE PACK',
+  'SHOOT A MINE - IT TAKES THE PACK',
   'FLY THROUGH GATES FOR FULL BOOST',
   'NEAR MISSES FEED OVERDRIVE',
   'FIVE GATES IN A ROW: OVERDRIVE',
   'NO HULL LOST: PERFECT SECTOR',
   'HOLD B3: LOCK 4, RELEASE: SALVO',
-  'GRAVITY SURGE: KEEP CLEAR — OR LURE THEM IN',
+  'GRAVITY SURGE: KEEP CLEAR - OR LURE THEM IN',
 ];
-const SEC = ['OUTER RIM', 'THE SWARM', 'SNIPER ALLEY', 'CROSSFIRE', 'THE DEEP', 'EVENT HORIZON'];
+// tres sectores con nombre venezolano (en ASCII: la fuente del gabinete no se
+// arriesga); pasado el tercero vuelven con numeral
+const SEC = ['AVILA', 'CATATUMBO', 'SALTO ANGEL'];
 const BH_PULL = 2700;
 const BH_GRIP = 1500; // aquí ya TE TIENE: el crucero no alcanza — dash o nitro
 const BH_KILL = 240;
@@ -229,7 +231,7 @@ const SCORE_KEY = 'space-explorer:scores';
 
 // Las cuatro piezas del hipersalto
 
-const HINT_MAIN = 'B1 FIRE · B2 DASH · B3 MISSILE · B4/B6 SHIELD · B5 OVERDRIVE';
+const HINT_MAIN = 'B1 FIRE  B2 DASH  B3 MISSILE  B4/B6 SHIELD  B5 OVERDRIVE';
 
 // --------------------------------------------------------------------------
 // Arcade cabinet button → keyboard key mapping.
@@ -632,7 +634,8 @@ class Title extends PS {
     });
     me.Qw = TX(me, CX, H - 52, 'PRESS START', 16, 0, 0.5);
     me.Tp = TX(me, CX, H - 24, '', 12, DIM_CSS, 0.5);
-    me.Gl = TX(me, CX, 140, '', 14, 0, 0.5);
+    TX(me, CX, 128, 'HECHO EN BARQUISIMETO, VENEZUELA', 12, DIM_CSS, 0.5);
+    me.Gl = TX(me, CX, 156, '', 14, 0, 0.5);
   }
 
   update(time) {
@@ -969,7 +972,7 @@ class Game extends PS {
       me.time.paused = me.pa;
       me.pa ? me.tweens.pauseAll() : me.tweens.resumeAll();
       me.tweens.killTweensOf(me.Qe);
-      me.Qe.setText(me.pa ? 'PAUSED\nSECTOR ' + me.Se + ' · ' + me.Kc + ' DOWN · BEST x' + me.Bc : '').setAlpha(me.pa ? 1 : 0);
+      me.Qe.setText(me.pa ? 'PAUSED\nSECTOR ' + me.Se + '  ' + me.Kc + ' DOWN  BEST x' + me.Bc : '').setAlpha(me.pa ? 1 : 0);
     }
     if (me.pa) {
       me.pO = (me.pO || 0) + delta;
@@ -1001,7 +1004,7 @@ class Game extends PS {
     if ((me.St -= dt) <= 0) {
       me.St = 120;
       me.T += 300 * me.Se++ + (me.Pf ? 0 : 2000);
-      me.W('SECTOR ' + me.Se + ' — ' + SEC[(me.Se - 1) % 6] + (me.Se > 6 ? ' ' + 'I'.repeat(1 + FLR((me.Se - 1) / 6)) : '') + (me.Pf ? '' : '\nPERFECT +2000') + '\nDOWN ' + (6 + 2 * me.Se) + ' SHIPS');
+      me.W('SECTOR ' + me.Se + ' - ' + SEC[(me.Se - 1) % 3] + (me.Se > 3 ? ' ' + 'I'.repeat(1 + FLR((me.Se - 1) / 3)) : '') + (me.Pf ? '' : '\nPERFECT +2000') + '\nDOWN ' + (6 + 2 * me.Se) + ' SHIPS');
       me.Cg = me.Pf = 0;
       me.Qp.setAlpha(0.35);
       me.tweens.add({ targets: me.Qp, alpha: 0, duration: 700 });
@@ -1009,7 +1012,7 @@ class Game extends PS {
     }
     Music.G = !!(me.G || me.I);
     if (GOD) me.Ck = 1;
-    Music.Sp = 1 - 0.035 * MIN(6, me.Se - 1); // cada sector, la música aprieta
+    Music.Sp = 1 - 0.07 * MIN(3, me.Se - 1); // cada sector, la música aprieta
     me.Gx = (me.Gm -= dt) > 0 ? 1.8 : 1; // multiplicador del alcance del agujero
     Music.Z6();
 
@@ -1038,13 +1041,13 @@ class Game extends PS {
       const R = me.R;
       // el agujero RESPIRA: cada ~70 s, 5 s tirando con casi el doble de alcance
       if ((me.Gw -= dt) <= 0) {
-        me.Gw = (me.Se - 1) % 6 > 4 ? 35 : 70;
+        me.Gw = me.Se > 2 ? 35 : 70;
         me.Gm = 5;
-        me.W('GRAVITY SURGE — KEEP CLEAR.');
+        me.W('GRAVITY SURGE - KEEP CLEAR.');
         Sfx.O(70, 2, SAW, 0.15, 30);
       }
-      // desde el sector 5, TORMENTAS de meteoritos que vienen de frente
-      if (me.Se > 4 && (me.Ms -= dt) <= 0) {
+      // desde el sector 3, TORMENTAS de meteoritos que vienen de frente
+      if (me.Se > 2 && (me.Ms -= dt) <= 0) {
         me.Ms = 35;
         me.W('METEOR STORM.');
         for (let i = 0; i < 14; i++) {
@@ -1259,12 +1262,12 @@ class Game extends PS {
     const ang = RND() * PI * 2;
     const r = RND();
     const kz = me.Se > 1 && r < 0.35;
-    const sn = !kz && me.Se > 2 && r < 0.6;
+    const sn = !kz && me.Se > 1 && r < 0.6;
     const gun = sn || (me.b > 50 && r > 0.75);
-    const el = me.Se > 4 && !kz && !gun && r < 0.8; // ÉLITE: más casco, fuego rápido
+    const el = me.Se > 2 && !kz && !gun && r < 0.8; // ÉLITE: más casco, fuego rápido
     if (kz) Sfx.O(900, 0.6, SAW, 0.05, 300);
     if (kz && !me.Kw) me.W('KAMIKAZES INBOUND.', (me.Kw = 1));
-    if (sn && !me.Sw) me.W('SNIPERS — KEEP MOVING.', (me.Sw = 1));
+    if (sn && !me.Sw) me.W('SNIPERS - KEEP MOVING.', (me.Sw = 1));
     me.D.push({
       k: gun ? 2 : 1,
       Kz: kz,
@@ -1491,7 +1494,7 @@ class Game extends PS {
     if (!b.Zd && dist < 420 && me.b > (b.Jg || 0)) {
       b.Jg = me.b + 20;
       b.Zd = 1.0;
-      me.W('TOO CLOSE — IT CHARGES A JUMP.');
+      me.W('TOO CLOSE - IT CHARGES A JUMP.');
     }
     // cada domo que pierde también lo saca del apuro: salto corto —
     // desaparece, un silencio, y reaparece lejos con salva
@@ -1644,7 +1647,7 @@ class Game extends PS {
       me.PU(p, (lb || '') + '+' + v);
       // lo que se gana peleando carga el OVERDRIVE
       me.Od = MIN(100, me.Od + 8);
-      if (me.Od >= 100 && !me.Of) me.W('OVERDRIVE READY — PRESS B5.', (me.Of = 1));
+      if (me.Od >= 100 && !me.Of) me.W('OVERDRIVE READY - PRESS B5.', (me.Of = 1));
     }
     const was = me.mu;
     if (me.mt > 0) me.mu = MIN(5, me.mu + 1);
@@ -1857,7 +1860,7 @@ class Game extends PS {
       me.S = MAX(me.S, grip ? 6 : me.Zi * 4);
       if (me.b > me.wa) {
         me.wa = me.b + (grip ? 2.5 : 4);
-        me.W(grip ? 'IT HAS YOU — DASH.' : 'BLACK HOLE — BREAK AWAY.');
+        me.W(grip ? 'IT HAS YOU - DASH.' : 'BLACK HOLE - BREAK AWAY.');
       }
     }
     // el horizonte de sucesos no negocia: ni el escudo ni el modo prueba
@@ -2194,10 +2197,10 @@ class Game extends PS {
           gy = e.y + dy * w;
           gz = e.z + dz * w - (dx / dist) * 600 * e.m;
         } else if (gun2) {
-          // desde el sector 4 la corbeta siembra MINAS a su paso
-          if (me.Se > 3 && (e.Mn = (e.Mn || 5) - dt) <= 0) {
+          // desde el sector 3 la corbeta siembra MINAS a su paso
+          if (me.Se > 2 && (e.Mn = (e.Mn || 5) - dt) <= 0) {
             e.Mn = 6;
-            if (!me.Mw) me.W('MINES — SHOOT THEM.', (me.Mw = 1));
+            if (!me.Mw) me.W('MINES - SHOOT THEM.', (me.Mw = 1));
             me.D.push({ k: 9, x: e.x, y: e.y, z: e.z, r: 30, M: 1, t: 0, E: 0 });
           }
           if (dist < 620) {
@@ -2874,7 +2877,7 @@ class Game extends PS {
 
     me.dk(time);
     me.dz(time);
-    fr(0, 0, W, H, [0, 0x3a1f4a, 0x1f3a4a, 0x4a2a1f, 0x1f4a2a, 0x4a1f2a][(me.Se - 1) % 6], 0.08);
+    fr(0, 0, W, H, [0, 0x1f3a4a, 0x4a1f2a][(me.Se - 1) % 3], 0.08);
     for (const o of me.Pq) {
       const p = o.Wp && o.Tp < 1 && me.p(o.Wp);
       p ? o.setPosition(p[0], p[1] - o.Tp * 50).setAlpha(1 - o.Tp) : o.setAlpha(0);
@@ -3696,8 +3699,8 @@ class Game extends PS {
     me.Q4.setText(String(RD(me.Sv)).padStart(6, '0') + (me.mu > 1 ? '  x' + me.mu : ''));
     // el combo se enfría: lo que le queda, bajo el puntaje
     if (me.mu > 1) fr(W - 12 - 27 * me.mt, 30, 27 * me.mt, 3, INK_HI, 0.6);
-    me.Zh.setText('HULL ' + (GOD ? '∞' : '▸'.repeat(me.Qj) + '·'.repeat(HULL_MAX - me.Qj)));
-    me.Q9.setText('MSL ' + '▴'.repeat(me.am) + '·'.repeat(MISSILE_MAX - me.am));
+    me.Zh.setText('HULL ' + (GOD ? 'INF' : '>'.repeat(me.Qj) + '.'.repeat(HULL_MAX - me.Qj)));
+    me.Q9.setText('MSL ' + '^'.repeat(me.am) + '.'.repeat(MISSILE_MAX - me.am));
     const mm = FLR(me.b / 60);
     me.Zg.setText('S' + me.Se + '  T ' + mm + ':' + String(FLR(me.b % 60)).padStart(2, '0'));
     // el bloque de recursos, junto a las vidas: DASH y SHIELD como barras
@@ -3798,7 +3801,7 @@ class Initials extends PS {
     TX(me, CX, CY - 110, 'TOP 5!', 16, 0, 0.5);
     TX(me, CX, CY - 78, 'SCORE  ' + String(me.T).padStart(6, '0'), 15, DIM_CSS, 0.5);
     me.Qv = [0, 1, 2].map((i) => TX(me, CX - 48 + i * 48, CY + 8, 'A', 32, 0, 0.5));
-    TX(me, CX, CY + 88, 'STICK SELECT · B1 OK', 13, DIM_CSS, 0.5).setAlpha(0.8);
+    TX(me, CX, CY + 88, 'STICK SELECT  B1 OK', 13, DIM_CSS, 0.5).setAlpha(0.8);
   }
 
   update(time) {
