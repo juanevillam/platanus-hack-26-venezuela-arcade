@@ -117,12 +117,13 @@ const CAM_UP = 32;
 // BLU: azul: escudo y recursos TUYOS
 // BLD: azul apagado
 // GRY: gris de escombro: paisaje, no equipo
-const [INK, INK_HI, RUST, RUST_HI, AMB, CRM, BLU, BLD, GRY, SAW, TRI, SQR, FOCAL, SD_SCALE, MISSILE_SPEED, SHOT_SPEED, BND_TOP, BND_R, CELL] = [
+const [INK, INK_HI, RUST, RUST_HI, AMB, CRM, BLU, BLD, GRY, SAW, TRI, SQR, FOCAL, SD_SCALE, MISSILE_SPEED, SHOT_SPEED, BND_TOP, BND_R, CELL, GOD_TXT] = [
   0xf5f5f5, 0xeef2f7, 0xa65240, 0xc97b5a, 0xf6c98a, 0xfff1d6, 0xb8dbe4, 0x8fb0c4, 0x8a9099,
   'sawtooth',
   'triangle',
   'square',
   420, 1.6, 560, 250, -5200, 6500, 700,
+  'GOD MODE — NOT RANKED',
 ];
 // Números con nombre que se usan mucho van en la misma desestructuración:
 // FOCAL = 420
@@ -319,9 +320,16 @@ const getStorage = () => {
 };
 
 // Top 5 con forma validada: el storage sobrevive entre versiones
+// Si el puente del gabinete falla, se juega igual: tabla vacía, y guardar
+// no bloquea la vuelta al título
 async function loadScores() {
-  const res = await getStorage().get(SCORE_KEY);
-  if (!res.found || !res.value || !Array.isArray(res.value.scores)) return [];
+  let res;
+  try {
+    res = await getStorage().get(SCORE_KEY);
+  } catch {
+    return [];
+  }
+  if (!res || !res.found || !res.value || !Array.isArray(res.value.scores)) return [];
   return res.value.scores
     .filter((s) => s && typeof s.n === 'string' && typeof s.s === 'number')
     .map((s) => ({ n: s.n.slice(0, 3).toUpperCase(), s: FLR(s.s) }))
@@ -330,7 +338,9 @@ async function loadScores() {
 }
 
 async function saveScores(scores) {
-  await getStorage().set(SCORE_KEY, { v: 1, scores });
+  try {
+    await getStorage().set(SCORE_KEY, { v: 1, scores });
+  } catch {}
 }
 
 // --------------------------------------------------------------------------
@@ -386,47 +396,47 @@ const Sfx = {
   },
 
   Zz() {
-    this.O(760, 0.07, SQR, 0.09, 320);
+    Sfx.O(760, 0.07, SQR, 0.09, 320);
   },
   Qz() {
-    this.O(520, 0.35, SAW, 0.14, 90);
-    this.Qh(0.25, 0.12);
+    Sfx.O(520, 0.35, SAW, 0.14, 90);
+    Sfx.Qh(0.25, 0.12);
   },
   Qk() {
-    this.Qh(0.3, 0.38);
-    this.O(110, 0.28, SAW, 0.2, 40);
+    Sfx.Qh(0.3, 0.38);
+    Sfx.O(110, 0.28, SAW, 0.2, 40);
   },
   Z3() {
-    this.Qh(0.2, 0.38);
-    this.O(140, 0.3, SAW, 0.3, 55);
+    Sfx.Qh(0.2, 0.38);
+    Sfx.O(140, 0.3, SAW, 0.3, 55);
   },
   Q3() {
-    this.O(660, 0.06, SQR, 0.13);
-    this.O(990, 0.09, SQR, 0.13, 0, this.K && this.K.currentTime + 0.07);
+    Sfx.O(660, 0.06, SQR, 0.13);
+    Sfx.O(990, 0.09, SQR, 0.13, 0, Sfx.K && Sfx.K.currentTime + 0.07);
   },
   Z4() {
-    this.O(440, 0.08, TRI, 0.16);
-    this.O(880, 0.12, TRI, 0.16, 0, this.K && this.K.currentTime + 0.09);
+    Sfx.O(440, 0.08, TRI, 0.16);
+    Sfx.O(880, 0.12, TRI, 0.16, 0, Sfx.K && Sfx.K.currentTime + 0.09);
   },
   Qc() {
-    const t = this.K && this.K.currentTime;
-    [440, 554, 659, 880].forEach((f, i) => this.O(f, 0.5, TRI, 0.15, 0, t + i * 0.09));
+    const t = Sfx.K && Sfx.K.currentTime;
+    [440, 554, 659, 880].forEach((f, i) => Sfx.O(f, 0.5, TRI, 0.15, 0, t + i * 0.09));
   },
   Z0() {
-    this.O(140, 0.22, TRI, 0.13, 520);
+    Sfx.O(140, 0.22, TRI, 0.13, 520);
   },
   Z2() {
-    this.O(330, 0.3, 'sine', 0.12, 160);
+    Sfx.O(330, 0.3, 'sine', 0.12, 160);
   },
   Zv() {
-    this.O(240, 0.28, 'sine', 0.15, 520);
+    Sfx.O(240, 0.28, 'sine', 0.15, 520);
   },
   Z1() {
-    const t = this.K && this.K.currentTime;
-    [330, 440, 554, 659, 880, 1108].forEach((f, i) => this.O(f, 0.4, TRI, 0.15, 0, t + i * 0.09));
+    const t = Sfx.K && Sfx.K.currentTime;
+    [330, 440, 554, 659, 880, 1108].forEach((f, i) => Sfx.O(f, 0.4, TRI, 0.15, 0, t + i * 0.09));
   },
   Z5() {
-    this.O(160, 1.1, SAW, 0.18, 55);
+    Sfx.O(160, 1.1, SAW, 0.18, 55);
   },
 };
 
@@ -601,7 +611,7 @@ const Music = {
 // nave girando, controles, top 5, y nada más.
 class Title extends PS {
   constructor() {
-    super('title');
+    super('T');
   }
 
   create() {
@@ -641,9 +651,9 @@ class Title extends PS {
     sk(CX, 225, 26, 2, 0xfff8ea, 0.7);
     // los consejos, uno cada 3 s: lo que no se adivina solo
     this.Tp.setText(TIPS[FLR(time / 3000) % 8]);
-    this.Gl.setText(GOD ? 'GOD MODE — NOT RANKED' : '');
+    this.Gl.setText(GOD ? GOD_TXT : '');
     this.Qw.setAlpha(FLR(time / 600) % 2 ? 1 : 0.25);
-    if (anyStart()) this.scene.start('game');
+    if (anyStart()) this.scene.start('G');
   }
 }
 
@@ -769,7 +779,7 @@ const drawEarth = (r) => {
 // --------------------------------------------------------------------------
 class Game extends PS {
   constructor() {
-    super('game');
+    super('G');
   }
 
   create() {
@@ -2069,7 +2079,7 @@ class Game extends PS {
     me.XB(me.o, 0, { h: true });
     me.S = 14;
     Sfx.Qk();
-    me.time.delayedCall(1400, () => me.scene.start('over', { T: me.T, Sd: [me.Kc, me.Bc, FLR(me.b), me.Se], Ck: me.Ck }));
+    me.time.delayedCall(1400, () => me.scene.start('O', { T: me.T, Sd: [me.Kc, me.Bc, FLR(me.b), me.Se], Ck: me.Ck }));
   }
 
   hy(time, me = this) {
@@ -3718,7 +3728,7 @@ class Game extends PS {
 // --------------------------------------------------------------------------
 class Over extends PS {
   constructor() {
-    super('over');
+    super('O');
   }
 
   init(data) {
@@ -3746,7 +3756,7 @@ class Over extends PS {
 
     TX(me, CX, CY - 70, 'GAME OVER', 32, 0, 0.5);
     TX(me, CX, CY + 4, 'SCORE  ' + String(me.T).padStart(6, '0'), 16, 0, 0.5);
-    if (me.Ck) TX(me, CX, CY + 150, 'GOD MODE — NOT RANKED', 13, DIM_CSS, 0.5);
+    if (me.Ck) TX(me, CX, CY + 150, GOD_TXT, 13, DIM_CSS, 0.5);
 
     loadScores().then((scores) => {
       me.Q6 = !me.Ck && (scores.length < 5 || me.T > scores[scores.length - 1].s);
@@ -3759,8 +3769,8 @@ class Over extends PS {
     const [me] = [this];
     if (me.Qs) return;
     me.Qs = true;
-    if (me.Q6 && me.T > 0) me.scene.start('initials', { T: me.T });
-    else me.scene.start('title');
+    if (me.Q6 && me.T > 0) me.scene.start('I', { T: me.T });
+    else me.scene.start('T');
   }
 
   update() {
@@ -3771,7 +3781,7 @@ class Over extends PS {
 // --------------------------------------------------------------------------
 class Initials extends PS {
   constructor() {
-    super('initials');
+    super('I');
   }
 
   init(data) {
@@ -3809,7 +3819,7 @@ class Initials extends PS {
         loadScores().then((scores) => {
           scores.push({ n: name, s: me.T });
           scores.sort((a, b) => b.s - a.s);
-          saveScores(scores.slice(0, 5)).then(() => me.scene.start('title'));
+          saveScores(scores.slice(0, 5)).then(() => me.scene.start('T'));
         });
       }
     }
