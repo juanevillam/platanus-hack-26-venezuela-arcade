@@ -2306,7 +2306,7 @@ class Game extends PS {
             e.z = nz2;
           }
         }
-        e.y = surfY(e.x, e.z) - 175; // cuerpo ALTO: por debajo se pasa
+        e.y = surfY(e.x, e.z) - 200; // cuerpo chico y ALTO: por debajo se pasa
         e.P -= dt;
         if (e.P <= 0) {
           if (e.L) {
@@ -3348,7 +3348,7 @@ class Game extends PS {
       : e.k === 1 || e.k === 4 || e.k > 9 ? SHIP_MODEL : e.k === 2 ? GUN_MODEL
       : e.k === 6 ? WALK_MODEL
       : e.Zx;
-    const scale = e.k === 8 ? e.r / 16 : e.k === 5 ? 1.6 : e.k === 1 ? 2.2 : e.k === 4 ? 2 : e.k === 2 ? 3 : 2.4;
+    const scale = e.k === 8 ? e.r / 16 : e.k === 5 ? 1.6 : e.k === 1 ? 2.2 : e.k === 4 ? 2 : e.k === 2 ? 3 : e.k === 6 ? 1 : 2.4;
     const rot = e.k === 8 ? e.t * e.Zw : e.Qo || 0;
     me.dm(model, e, scale, color, a, rot);
 
@@ -3372,8 +3372,9 @@ class Game extends PS {
         const kx = (wxh + wxf) / 2;
         const kz = (wzh + wzf) / 2;
         const ky = (hipY + fy) / 2 - 18;
-        me.J([wxh, hipY, wzh], [kx, ky, kz]);
-        me.J([kx, ky, kz], [wxf, fy, wzf]);
+        // rodilla hacia ATRÁS, como los de Star Wars
+        me.J([wxh, hipY, wzh], [kx - sy3 * 34, ky, kz - cy2 * 34]);
+        me.J([kx - sy3 * 34, ky, kz - cy2 * 34], [wxf, fy, wzf]);
       }
       const eye = me.Q(e.x + SIN(e.E) * 64, e.y, e.z + COS(e.E) * 64);
       if (eye) fcp(eye, MAX(1.5, 700 / eye[2]), e.L ? BLU : RUST_HI, a * (0.6 + 0.4 * SIN(e.t * 5)));
