@@ -1725,8 +1725,10 @@ class Game extends PS {
     // loop dura lo que mantengas el stick, y al soltar la nave se queda donde
     // la dejaste, de cabeza incluido. Izquierda/derecha cambia el rumbo
     // alrededor del vertical del mapa (derecha es derecha en pantalla aun de
-    // cabeza), así las alas nunca se ladean y no hay nada que enderezar. Solo
-    // en la vertical exacta, o en plena maniobra, se gira sobre el techo.
+    // cabeza), así las alas nunca se ladean y no hay nada que enderezar. Aun
+    // en picada casi vertical: girar sobre el techo ahí y re-alinear al salir
+    // daba un salto de 50–70° en un frame. Solo en plena maniobra se gira
+    // sobre el techo.
     me.yv += (turn * YAW_RATE - me.yv) * MIN(1, YAW_EASE * dt);
     me.pv += (pit * PITCH_RATE - me.pv) * MIN(1, YAW_EASE * dt);
     const mv = (me.Jw = me.Jr || me.Jp);
@@ -1736,7 +1738,7 @@ class Game extends PS {
     let U = vmix(me.U, COS(pa), me.F, -SIN(pa));
     const hz = (f) => vmix(WORLD_UP, 1, f, -vdot(WORLD_UP, f));
     const c = hz(F);
-    if (HYP(c.x, c.y, c.z) > 0.08 && !mv) {
+    if (HYP(c.x, c.y, c.z) > 1e-4 && !mv) {
       const s = vdot(U, c) < 0 ? -1 : 1;
       F = rotAxis(F, { x: 0, y: -s, z: 0 }, -ya);
       U = vmix(vnorm(hz(F)), s, F, 0);
