@@ -1097,9 +1097,10 @@ class Game extends PS {
               if (ok && me.D.some((q) => !q.X && (q.k === 5 || q.k === 6) && HYP(q.x - gx2, q.z - gz2) < 220)) ok = false;
             }
             if (!ok) continue;
-            // dos de cada seis son TUYAS: menos, más frágiles — sin tu
-            // ayuda, el frente de abajo se pierde
-            const fr = i >= 4 ? 1 : 0;
+            // UNA de cada seis es TUYA, y nunca más de tres vivas: las
+            // enemigas caen y las tuyas se quedan, así que sin tope el frente
+            // de abajo terminaba azul. Menos, más frágiles — la pelea es tuya
+            const fr = i > 4 && me.D.filter((q) => q.Qm && q.L).length < 3 ? 1 : 0;
             me.D.push({
               k: wk ? 6 : 5, Qm: 1, L: fr,
               x: gx2, y: gy2, z: gz2,
