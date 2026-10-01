@@ -216,7 +216,6 @@ const TIPS = [
   'NEAR MISSES FEED OVERDRIVE',
   'FIVE GATES IN A ROW: OVERDRIVE',
   'NO HULL LOST: PERFECT SECTOR',
-  'HOLD B3: LOCK 4, RELEASE: SALVO',
   'GRAVITY SURGE: KEEP CLEAR - OR LURE THEM IN',
 ];
 // tres sectores con nombre venezolano (en ASCII: la fuente del gabinete no se
@@ -321,7 +320,7 @@ const getStorage = () => {
   );
 };
 
-// Top 5 con forma validada: el storage sobrevive entre versiones
+// Top 3 con forma validada: el storage sobrevive entre versiones
 // Si el puente del gabinete falla, se juega igual: tabla vacía, y guardar
 // no bloquea la vuelta al título
 async function loadScores() {
@@ -336,7 +335,7 @@ async function loadScores() {
     .filter((s) => s && typeof s.n === 'string' && typeof s.s === 'number')
     .map((s) => ({ n: s.n.slice(0, 3).toUpperCase(), s: FLR(s.s) }))
     .sort((a, b) => b.s - a.s)
-    .slice(0, 5);
+    .slice(0, 3);
 }
 
 async function saveScores(scores) {
@@ -610,21 +609,17 @@ const Music = {
 
 // --------------------------------------------------------------------------
 // El título, mínimo a propósito: los bytes son para el JUEGO. Nombre, la
-// nave girando, controles, top 5, y nada más.
+// nave girando, controles, top 3, y nada más.
 class Title extends PS {
-  constructor() {
-    super('T');
-  }
 
   create() {
     const [me] = [this];
-    me.events.on('postupdate', clearPressed);
     Music.on = false;
     GF = me.add.graphics(); // el remolino de la portada, detrás de todo
     TX(me, CX, 96, 'S P A C E  E X P L O R E R', 36, 0, 0.5);
     TX(me, 160, 330, 'STICK\nB1\nB2\nB3\nB4/B6\nB5\nSTART', 14).setOrigin(1, 0).setAlign('right').setLineSpacing(13);
-    TX(me, 180, 330, 'STEER\nFIRE\nDASH\nMISSILE\nSHIELD\nOVERDRIVE\nPAUSE', 13, DIM_CSS).setLineSpacing(14);
-    TX(me, 596, 360, 'TOP 5', 14);
+    TX(me, 180, 330, 'STEER - HOLD UP/DOWN: LOOP\nFIRE\nDASH - 2X: ROLL/LOOP/U-TURN - HOLD: NITRO\nMISSILE - HOLD: LOCK 4, RELEASE: SALVO\nSHIELD ON/OFF\nOVERDRIVE WHEN FULL\nPAUSE', 13, DIM_CSS).setLineSpacing(14);
+    TX(me, 596, 360, 'TOP 3', 14);
     me.Q4 = TX(me, 596, 386, '', 14, DIM_CSS).setLineSpacing(9);
     loadScores().then((scores) => {
       if (!scores.length || !me.scene.isActive()) return;
@@ -634,7 +629,7 @@ class Title extends PS {
     });
     me.Qw = TX(me, CX, H - 52, 'PRESS START', 16, 0, 0.5);
     me.Tp = TX(me, CX, H - 24, '', 12, DIM_CSS, 0.5);
-    TX(me, CX, 128, 'HECHO EN BARQUISIMETO, VENEZUELA', 12, DIM_CSS, 0.5);
+    TX(me, CX, 128, 'HECHO EN BARQUISIMETO, VENEZUELA, POR JUANEVILLAM', 12, DIM_CSS, 0.5);
     me.Gl = TX(me, CX, 156, '', 14, 0, 0.5);
   }
 
@@ -653,7 +648,7 @@ class Title extends PS {
     fc(CX, 225, 24, 0, 1);
     sk(CX, 225, 26, 2, 0xfff8ea, 0.7);
     // los consejos, uno cada 3 s: lo que no se adivina solo
-    this.Tp.setText(TIPS[FLR(time / 3000) % 8]);
+    this.Tp.setText(TIPS[FLR(time / 3000) % 7]);
     this.Gl.setText(GOD ? GOD_TXT : '');
     this.Qw.setAlpha(FLR(time / 600) % 2 ? 1 : 0.25);
     if (anyStart()) this.scene.start('G');
@@ -781,13 +776,9 @@ const drawEarth = (r) => {
 
 // --------------------------------------------------------------------------
 class Game extends PS {
-  constructor() {
-    super('G');
-  }
 
   create() {
     const [me] = [this];
-    me.events.on('postupdate', clearPressed);
     GF = me.gfx = me.add.graphics();
 
     // la nave, en coordenadas de MUNDO (y positivo = hacia abajo). Su actitud
@@ -3744,9 +3735,6 @@ class Game extends PS {
 
 // --------------------------------------------------------------------------
 class Over extends PS {
-  constructor() {
-    super('O');
-  }
 
   init(data) {
     this.T = data.T || 0;
@@ -3758,7 +3746,6 @@ class Over extends PS {
     const [me] = [this];
     const T = me.T;
     const [k, c, s, se] = me.Sd;
-    me.events.on('postupdate', clearPressed);
     Music.on = false;
     // la partida, en números — y un rango para querer otra
     TX(me, CX, CY - 130, 'RANK ' + (T >= 20000 ? 'S' : T >= 10000 ? 'A' : T >= 4000 ? 'B' : 'C'), 20, 0, 0.5);
@@ -3776,7 +3763,7 @@ class Over extends PS {
     if (me.Ck) TX(me, CX, CY + 150, GOD_TXT, 13, DIM_CSS, 0.5);
 
     loadScores().then((scores) => {
-      me.Q6 = !me.Ck && (scores.length < 5 || me.T > scores[scores.length - 1].s);
+      me.Q6 = !me.Ck && (scores.length < 3 || me.T > scores[scores.length - 1].s);
       me.time.delayedCall(1200, () => (me.Qx = true));
     });
     me.time.delayedCall(9000, () => me.Qg());
@@ -3797,9 +3784,6 @@ class Over extends PS {
 
 // --------------------------------------------------------------------------
 class Initials extends PS {
-  constructor() {
-    super('I');
-  }
 
   init(data) {
     this.T = data.T || 0;
@@ -3807,12 +3791,11 @@ class Initials extends PS {
 
   create() {
     const [me] = [this];
-    me.events.on('postupdate', clearPressed);
     me.lt = [0, 0, 0];
     me.i = 0;
     me.Qy = false;
 
-    TX(me, CX, CY - 110, 'TOP 5!', 16, 0, 0.5);
+    TX(me, CX, CY - 110, 'TOP 3!', 16, 0, 0.5);
     TX(me, CX, CY - 78, 'SCORE  ' + String(me.T).padStart(6, '0'), 15, DIM_CSS, 0.5);
     me.Qv = [0, 1, 2].map((i) => TX(me, CX - 48 + i * 48, CY + 8, 'A', 32, 0, 0.5));
     TX(me, CX, CY + 88, 'STICK SELECT  B1 OK', 13, DIM_CSS, 0.5).setAlpha(0.8);
@@ -3836,7 +3819,7 @@ class Initials extends PS {
         loadScores().then((scores) => {
           scores.push({ n: name, s: me.T });
           scores.sort((a, b) => b.s - a.s);
-          saveScores(scores.slice(0, 5)).then(() => me.scene.start('T'));
+          saveScores(scores.slice(0, 3)).then(() => me.scene.start('T'));
         });
       }
     }
@@ -3857,8 +3840,10 @@ const config = {
   backgroundColor: '#070709',
   antialias: true,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [Title, Game, Over, Initials],
+  // cada escena nace con su clave: sin un constructor por clase
+  scene: [new Title('T'), new Game('G'), new Over('O'), new Initials('I')],
 };
 
-new Phaser.Game(config);
+// los toques por flanco se limpian UNA vez por frame, tras todas las escenas
+new Phaser.Game(config).events.on('poststep', clearPressed);
 })();
