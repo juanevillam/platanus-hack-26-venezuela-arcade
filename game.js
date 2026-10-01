@@ -1728,17 +1728,25 @@ class Game extends PS {
     const ya = me.yv * dt;
     let F = vmix(me.F, COS(pa), me.U, SIN(pa));
     let U = vmix(me.U, COS(pa), me.F, -SIN(pa));
-    // El giro es de PANTALLA: derecha lleva la nariz a la derecha de lo que
-    // ves, en picada, de cabeza o ladeado. Solo casi nivelado se gira sobre
-    // la vertical del sector, para que el horizonte no se ladee; entre ambos,
-    // una mezcla suave. (Antes era siempre la vertical, y en una picada de
-    // 70° "derecha" movía la nariz 14°, desviada 20°, y rodaba la vista 38°.)
-    // Fuera de lo nivelado gira un 30% más: las evasivas responden
-    const upness = vdot(U, WORLD_UP);
-    const w = CLP((ABS(upness) - 0.9) / 0.095, 0, 1);
-    const A = vnorm(vmix(U, 1 - w, upness > 0 ? WORLD_UP : { x: 0, y: 1, z: 0 }, w));
-    F = rotAxis(F, A, -ya * (1.3 - 0.3 * w));
-    U = rotAxis(U, A, -ya * (1.3 - 0.3 * w));
+    // El giro mueve la nariz EN PANTALLA (sobre el techo de la propia nave) y
+    // después devuelve el LADEO que traías respecto del horizonte: girando
+    // nivelado sigues nivelado, así que abajo+izquierda baja hacia la
+    // izquierda en vez de entrar en tirabuzón con un ala arriba. Muy empinado,
+    // conservar el ladeo obligaría a rodar la vista (una picada de 70° con
+    // "derecha" rodaba 38°), así que con el giro SOLO, entre ~46° y ~66° de
+    // inclinación se suelta y manda la pantalla; con cabeceo + giro (una
+    // diagonal) se conserva casi hasta la vertical. Fuera de lo nivelado gira
+    // un 30% más.
+    const hz = (f, u) => {
+      const p = vmix(WORLD_UP, 1, f, -vdot(WORLD_UP, f));
+      const pn = vnorm(p);
+      return [AT2(vdot(f, vcross(pn, u)), vdot(pn, u)), HYP(p.x, p.y, p.z)];
+    };
+    [F, U] = orthoBasis(F, U);
+    const [b0, hl] = hz(F, U);
+    F = rotAxis(F, U, -ya * (1.3 - 0.3 * CLP((ABS(vdot(U, WORLD_UP)) - 0.9) / 0.095, 0, 1)));
+    [F, U] = orthoBasis(F, U);
+    U = rotAxis(U, F, AWR(b0 - hz(F, U)[0]) * CLP((hl - (pit ? 0.1 : 0.4)) / 0.3, 0, 1));
     let R;
     [F, U, R] = orthoBasis(F, U);
 
