@@ -217,6 +217,7 @@ const TIPS = [
   'FIVE GATES IN A ROW: OVERDRIVE',
   'NO HULL LOST: PERFECT SECTOR',
   'HOLD B3: LOCK 4, RELEASE: SALVO',
+  'GRAVITY SURGE: KEEP CLEAR — OR LURE THEM IN',
 ];
 const SEC = ['OUTER RIM', 'THE SWARM', 'SNIPER ALLEY', 'CROSSFIRE', 'THE DEEP', 'EVENT HORIZON'];
 const BH_PULL = 2700;
@@ -640,7 +641,7 @@ class Title extends PS {
     fc(CX, 225, 24, 0, 1);
     sk(CX, 225, 26, 2, 0xfff8ea, 0.7);
     // los consejos, uno cada 3 s: lo que no se adivina solo
-    this.Tp.setText(TIPS[FLR(time / 3000) % 7]);
+    this.Tp.setText(TIPS[FLR(time / 3000) % 8]);
     this.Gl.setText(GOD ? 'GOD MODE — NOT RANKED' : '');
     this.Qw.setAlpha(FLR(time / 600) % 2 ? 1 : 0.25);
     if (anyStart()) this.scene.start('game');
@@ -1029,7 +1030,7 @@ class Game extends PS {
       if ((me.Gw -= dt) <= 0) {
         me.Gw = (me.Se - 1) % 6 > 4 ? 35 : 70;
         me.Gm = 5;
-        me.W('GRAVITY SURGE.');
+        me.W('GRAVITY SURGE — KEEP CLEAR.');
         Sfx.O(70, 2, SAW, 0.15, 30);
       }
       // desde el sector 5, TORMENTAS de meteoritos que vienen de frente
@@ -1632,7 +1633,7 @@ class Game extends PS {
       me.PU(p, (lb || '') + '+' + v);
       // lo que se gana peleando carga el OVERDRIVE
       me.Od = MIN(100, me.Od + 8);
-      if (me.Od >= 100 && !me.Of) me.W('OVERDRIVE READY — B5.', (me.Of = 1));
+      if (me.Od >= 100 && !me.Of) me.W('OVERDRIVE READY — PRESS B5.', (me.Of = 1));
     }
     const was = me.mu;
     if (me.mt > 0) me.mu = MIN(5, me.mu + 1);
@@ -1727,21 +1728,17 @@ class Game extends PS {
     const ya = me.yv * dt;
     let F = vmix(me.F, COS(pa), me.U, SIN(pa));
     let U = vmix(me.U, COS(pa), me.F, -SIN(pa));
-    // Turning happens around the sector's vertical while the ship is roughly
-    // upright (or inverted), like a banked aircraft: the view pans and never
-    // rolls, so the sky stays put. Near vertical there is no sensible
-    // "vertical", so it falls back to the ship's own axis.
+    // El giro es de PANTALLA: derecha lleva la nariz a la derecha de lo que
+    // ves, en picada, de cabeza o ladeado. Solo casi nivelado se gira sobre
+    // la vertical del sector, para que el horizonte no se ladee; entre ambos,
+    // una mezcla suave. (Antes era siempre la vertical, y en una picada de
+    // 70° "derecha" movía la nariz 14°, desviada 20°, y rodaba la vista 38°.)
+    // Fuera de lo nivelado gira un 30% más: las evasivas responden
     const upness = vdot(U, WORLD_UP);
-    if (ABS(upness) > 0.15) {
-      const A = upness > 0 ? WORLD_UP : { x: 0, y: 1, z: 0 };
-      F = rotAxis(F, A, -ya);
-      U = rotAxis(U, A, -ya);
-    } else {
-      // en picada el vertical degenera: giro sobre el propio eje, con MÁS
-      // autoridad — las evasivas nariz abajo responden
-      const ya2 = ya * 1.3;
-      F = vmix(F, COS(ya2), vcross(F, U), SIN(ya2));
-    }
+    const w = CLP((ABS(upness) - 0.9) / 0.095, 0, 1);
+    const A = vnorm(vmix(U, 1 - w, upness > 0 ? WORLD_UP : { x: 0, y: 1, z: 0 }, w));
+    F = rotAxis(F, A, -ya * (1.3 - 0.3 * w));
+    U = rotAxis(U, A, -ya * (1.3 - 0.3 * w));
     let R;
     [F, U, R] = orthoBasis(F, U);
 
