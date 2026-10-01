@@ -48,7 +48,7 @@
 // Zs=sdSaid Zt=bgSaid Zu=boltVsBoss Zv=shieldUp Zw=spin Zx=model Zy=say
 // Zz=fire Z0=dash Z1=jump Z2=turn Z3=hurt Z4=ammo Z5=over Z6=tick Z7=wave
 // Z8=foe Z9=ally Ja=draw Jb=cam Jc=die Jd=dwb Je=dsk Jf=bnk Jg=tpCd Jh=hRt
-// Ji=svT Jj=mz2 Jk=lvT Jl=rmb Jr=rollLeft Js=rollSide
+// Ji=svT Jj=mz2 Jk=lvT Jl=rmb Jr=rollLeft Js=rollSide Jp=loopLeft
 // Tercera pasada, a UNA letra (los más usados; la de la izquierda gana
 // sobre las listas de arriba): A=vx B=vz C=vy D=en E=yw G=Bo H=sp I=Bt J=wl
 // K=Qa L=fr M=hp N=lf O=tn P=fA Q=pj S=sh T=sc V=bw W=Zy Y=tr Z=kd b=ep
@@ -785,6 +785,7 @@ class Game extends PS {
     me.R = { x: 1, y: 0, z: 0 };
     me.yv = 0;
     me.pv = 0;
+    me.Jr = me.Jp = 0;
     me.cu = 220;
     me.H = me.cu;
     me.u = BOOST_MAX;
@@ -1720,26 +1721,38 @@ class Game extends PS {
       }
     }
 
-    // cabeceo sobre el ala de la nave: arriba es arriba de la pantalla aun de cabeza
+    // HORIZONTE BLOQUEADO, como Star Fox: arriba/abajo cabecea sobre el ala
+    // hasta ±75°, izquierda/derecha cambia el rumbo alrededor del vertical del
+    // mapa. Las alas nunca se ladean y la nave nunca queda de cabeza, así que
+    // no hay nada que enderezar. Lo acrobático son MANIOBRAS de B2 (abajo),
+    // y mientras dura una el stick no la tuerce.
     me.yv += (turn * YAW_RATE - me.yv) * MIN(1, YAW_EASE * dt);
     me.pv += (pit * PITCH_RATE - me.pv) * MIN(1, YAW_EASE * dt);
-    const pa = me.pv * dt;
-    const ya = me.yv * dt;
+    const mv = me.Jr || me.Jp;
+    const ph = Math.asin(CLP(vdot(me.F, WORLD_UP), -1, 1));
+    const pa = mv ? 0 : CLP(ph + me.pv * dt, -1.31, 1.31) - ph;
     let F = vmix(me.F, COS(pa), me.U, SIN(pa));
     let U = vmix(me.U, COS(pa), me.F, -SIN(pa));
-    // Todo es de la NAVE, nunca del mapa: arriba/abajo cabecea sobre su ala,
-    // izquierda/derecha gira sobre su techo, y nada la endereza sola — si la
-    // dejas de cabeza, se queda de cabeza. El horizonte no manda.
-    F = rotAxis(F, U, -ya);
+    if (!mv) {
+      F = rotAxis(F, WORLD_UP, -me.yv * dt);
+      U = vmix(WORLD_UP, 1, F, -vdot(WORLD_UP, F));
+    }
     let R;
     [F, U, R] = orthoBasis(F, U);
     // B2 + lado: TONEL — una vuelta entera sobre la nariz y un paso hacia
-    // ese lado, dentro de la invulnerabilidad del dash: el esquive de verdad
+    // ese lado. B2 + arriba: LOOP completo. B2 + abajo: MEDIA VUELTA — medio
+    // tonel y medio loop hacia el suelo, sales derecho en sentido contrario.
+    // Todo dentro de la invulnerabilidad del dash: el giro primero, luego el
+    // cabeceo.
     if (me.Jr) {
       const th = Math.sign(me.Jr) * MIN(ABS(me.Jr), 13 * dt);
       me.Jr -= th;
       [F, U, R] = orthoBasis(F, vmix(U, COS(th), R, SIN(th)));
       Object.assign(Po, vmix(Po, 1, me.Js, th * 45));
+    } else if (me.Jp) {
+      const th = MIN(me.Jp, 4.5 * dt);
+      me.Jp -= th;
+      [F, U, R] = orthoBasis(vmix(F, COS(th), U, SIN(th)), vmix(U, COS(th), F, -SIN(th)));
     }
     me.F = F;
     me.U = U;
@@ -1752,8 +1765,9 @@ class Game extends PS {
       me.u -= DASH_COST;
       me.H = MAX(me.H, me.cu) + DASH_KICK;
       me.du = time + DASH_INVULN_MS;
-      me.Jr = turn * 6.283;
-      me.Js = me.R;
+      me.Jp = pit > 0 ? 6.283 : pit ? 3.1416 : 0;
+      me.Jr = pit < 0 ? (turn || 1) * 3.1416 : pit ? 0 : turn * 6.283;
+      me.Js = vmix(me.R, pit ? 0 : 1, me.R, 0);
       Sfx.Z0();
     }
     if (sceneHold) {
