@@ -48,7 +48,7 @@
 // Zs=sdSaid Zt=bgSaid Zu=boltVsBoss Zv=shieldUp Zw=spin Zx=model Zy=say
 // Zz=fire Z0=dash Z1=jump Z2=turn Z3=hurt Z4=ammo Z5=over Z6=tick Z7=wave
 // Z8=foe Z9=ally Ja=draw Jb=cam Jc=die Jd=dwb Je=dsk Jf=bnk Jg=tpCd Jh=hRt
-// Ji=svT Jj=mz2 Jk=lvT Jl=rmb Jr=rollLeft Js=rollSide Jp=loopLeft Jt=lastDashTap
+// Ji=svT Jj=mz2 Jk=lvT Jl=rmb Jr=rollLeft Js=rollSide Jp=loopLeft Jt=lastDashTap Jw=inManeuver
 // Tercera pasada, a UNA letra (los más usados; la de la izquierda gana
 // sobre las listas de arriba): A=vx B=vz C=vy D=en E=yw G=Bo H=sp I=Bt J=wl
 // K=Qa L=fr M=hp N=lf O=tn P=fA Q=pj S=sh T=sc V=bw W=Zy Y=tr Z=kd b=ep
@@ -1721,28 +1721,29 @@ class Game extends PS {
       }
     }
 
-    // HORIZONTE BLOQUEADO, como Star Fox: arriba/abajo cabecea sobre el ala
-    // hasta ±75°, izquierda/derecha cambia el rumbo alrededor del vertical del
-    // mapa. Las alas nunca se ladean y la nave nunca queda de cabeza, así que
-    // no hay nada que enderezar. Lo acrobático son MANIOBRAS (abajo),
-    // y mientras dura una el stick no la tuerce.
+    // HORIZONTE BLOQUEADO: arriba/abajo cabecea sobre el ala, sin tope — un
+    // loop dura lo que mantengas el stick, y al soltar la nave se queda donde
+    // la dejaste, de cabeza incluido. Izquierda/derecha cambia el rumbo
+    // alrededor del vertical del mapa (derecha es derecha en pantalla aun de
+    // cabeza), así las alas nunca se ladean y no hay nada que enderezar. Solo
+    // en la vertical exacta, o en plena maniobra, se gira sobre el techo.
     me.yv += (turn * YAW_RATE - me.yv) * MIN(1, YAW_EASE * dt);
     me.pv += (pit * PITCH_RATE - me.pv) * MIN(1, YAW_EASE * dt);
-    const mv = me.Jr || me.Jp;
-    const ph = Math.asin(CLP(vdot(me.F, WORLD_UP), -1, 1));
-    const pa = mv ? 0 : CLP(ph + me.pv * dt, -1.31, 1.31) - ph;
-    // stick sostenido CONTRA el tope: la nave sigue de largo y da el loop
-    // entero (hacia abajo, por fuera) y sale nivelada con el mismo rumbo
-    if (!mv && pit * ph > 1.3) me.Jp = pit * 4.97;
+    const mv = (me.Jw = me.Jr || me.Jp);
+    const pa = mv ? 0 : me.pv * dt;
+    const ya = mv ? 0 : me.yv * dt;
     let F = vmix(me.F, COS(pa), me.U, SIN(pa));
     let U = vmix(me.U, COS(pa), me.F, -SIN(pa));
-    if (!mv) {
-      F = rotAxis(F, WORLD_UP, -me.yv * dt);
-      U = vmix(WORLD_UP, 1, F, -vdot(WORLD_UP, F));
-    }
+    const hz = (f) => vmix(WORLD_UP, 1, f, -vdot(WORLD_UP, f));
+    const c = hz(F);
+    if (HYP(c.x, c.y, c.z) > 0.08 && !mv) {
+      const s = vdot(U, c) < 0 ? -1 : 1;
+      F = rotAxis(F, { x: 0, y: -s, z: 0 }, -ya);
+      U = vmix(vnorm(hz(F)), s, F, 0);
+    } else F = rotAxis(F, U, -ya);
     let R;
     [F, U, R] = orthoBasis(F, U);
-    // Maniobras (doble B2, o el stick contra el tope): TONEL — una vuelta
+    // Maniobras (doble B2): TONEL — una vuelta
     // entera sobre la nariz y un paso hacia ese lado; LOOP completo; MEDIA
     // VUELTA — medio tonel y medio loop hacia el suelo, sales derecho en
     // sentido contrario. Primero el giro, luego el cabeceo.
@@ -1752,7 +1753,7 @@ class Game extends PS {
       [F, U, R] = orthoBasis(F, vmix(U, COS(th), R, SIN(th)));
       Object.assign(Po, vmix(Po, 1, me.Js, th * 45));
     } else if (me.Jp) {
-      const th = Math.sign(me.Jp) * MIN(ABS(me.Jp), 3.2 * dt);
+      const th = MIN(me.Jp, 4.5 * dt);
       me.Jp -= th;
       [F, U, R] = orthoBasis(vmix(F, COS(th), U, SIN(th)), vmix(U, COS(th), F, -SIN(th)));
     }
@@ -2743,7 +2744,9 @@ class Game extends PS {
   // La cámara hereda la base de la nave con un pelo de retraso — incluida la
   // inclinación, así la pantalla siempre coincide con el stick
   uc(dt, me = this) {
-    const k = MIN(1, 8 * dt);
+    // en plena maniobra la cámara va PEGADA a la nave: si se arrastrara,
+    // el tonel terminaría y la pantalla seguiría asentándose un rato
+    const k = me.Jw ? 1 : MIN(1, 8 * dt);
     [me.Zp, me.Zo, me.Zq] = orthoBasis(vmix(me.Zp, 1 - k, me.F, k), vmix(me.Zo, 1 - k, me.U, k));
     if (me.S > 0) me.S = MAX(0, me.S - 34 * dt);
   }
