@@ -48,7 +48,7 @@
 // Zs=sdSaid Zt=bgSaid Zu=boltVsBoss Zv=shieldUp Zw=spin Zx=model Zy=say
 // Zz=fire Z0=dash Z1=jump Z2=turn Z3=hurt Z4=ammo Z5=over Z6=tick Z7=wave
 // Z8=foe Z9=ally Ja=draw Jb=cam Jc=die Jd=dwb Je=dsk Jf=bnk Jg=tpCd Jh=hRt
-// Ji=svT Jj=mz2 Jk=lvT Jl=rmb
+// Ji=svT Jj=mz2 Jk=lvT Jl=rmb Jr=rollLeft Js=rollSide
 // Tercera pasada, a UNA letra (los más usados; la de la izquierda gana
 // sobre las listas de arriba): A=vx B=vz C=vy D=en E=yw G=Bo H=sp I=Bt J=wl
 // K=Qa L=fr M=hp N=lf O=tn P=fA Q=pj S=sh T=sc V=bw W=Zy Y=tr Z=kd b=ep
@@ -1765,6 +1765,14 @@ class Game extends PS {
         [F, U, R] = orthoBasis(F, vmix(U, COS(th), R, SIN(th)));
       }
     }
+    // B2 + lado: TONEL — una vuelta entera sobre la nariz y un paso hacia
+    // ese lado, dentro de la invulnerabilidad del dash: el esquive de verdad
+    if (me.Jr) {
+      const th = Math.sign(me.Jr) * MIN(ABS(me.Jr), 13 * dt);
+      me.Jr -= th;
+      [F, U, R] = orthoBasis(F, vmix(U, COS(th), R, SIN(th)));
+      Object.assign(Po, vmix(Po, 1, me.Js, th * 45));
+    }
     me.F = F;
     me.U = U;
     me.R = R;
@@ -1776,6 +1784,8 @@ class Game extends PS {
       me.u -= DASH_COST;
       me.H = MAX(me.H, me.cu) + DASH_KICK;
       me.du = time + DASH_INVULN_MS;
+      me.Jr = turn * 6.283;
+      me.Js = me.R;
       Sfx.Z0();
     }
     if (sceneHold) {
