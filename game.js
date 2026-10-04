@@ -1,1 +1,3849 @@
-(()=>{const CABINET_KEYS={P1_U:["w"],P1_D:["s"],P1_L:["a"],P1_R:["d"],P1_1:["u"],P1_2:["i"],P1_3:["o"],P1_4:["j"],P1_5:["k"],P1_6:["l"],P2_U:["ArrowUp"],P2_D:["ArrowDown"],P2_L:["ArrowLeft"],P2_R:["ArrowRight"],P2_1:["r"],P2_2:["t"],P2_3:["y"],P2_4:["f"],P2_5:["g"],P2_6:["h"],START1:["Enter"],START2:["2"]};let e,t=Math.sin,l=Math.cos,i=Math.hypot,f=Math.random,s=Math.min,r=Math.max,o=Math.floor,n=Math.abs,x=Math.atan2,a=Math.PI,y=Phaser.Math.Clamp,z=Phaser.Scene,h=Phaser.Math.Wrap,u=Phaser.Math.Angle.Wrap,c=Math.round,d=()=>f()-.5,p=Math.sqrt,E=(e,t)=>i(e.x-t.x,e.y-t.y,e.z-t.z),S=(e,t,l,i=E(t,e)||1)=>({A:(t.x-e.x)/i*l,C:(t.y-e.y)/i*l,B:(t.z-e.z)/i*l}),Q=(e,t)=>{let l=[];for(let t=0;t<e.length;t+=3)l.push(e.slice(t,t+3));let i=[];for(let e=0;e<t.length;e+=2)i.push([t.charCodeAt(e)-48,t.charCodeAt(e+1)-48]);return[l,i]},[k,O,A,m,T,b,g,R,L,P,Z,C,w,B,D,I,G,M,J,H]=[0xf5f5f5,0xeef2f7,0xa65240,0xc97b5a,0xf6c98a,0xfff1d6,0xb8dbe4,9416900,9080985,"sawtooth","triangle","square",420,1.6,560,250,-5200,6500,700,"GOD MODE - NOT RANKED"],N=(e,t)=>((1103*e+12793*t)%97+97)%97,K="#8a9099",U=!1,X="",v=(e,t)=>{let l=64e6-e*e-t*t;return l>0?9800-p(l):1e9},W=[2400,-2200,3600,420],V={x:W[0],y:W[1],z:W[2]},F=["LURE SHIPS INTO THE BLACK HOLE","SHOOT A MINE - IT TAKES THE PACK","FLY THROUGH GATES FOR FULL BOOST","NEAR MISSES FEED OVERDRIVE","FIVE GATES IN A ROW: OVERDRIVE","NO HULL LOST: PERFECT SECTOR","GRAVITY SURGE: KEEP CLEAR - OR LURE THEM IN"],_=["AVILA","CATATUMBO","SALTO ANGEL"],j="space-explorer:scores",q={};for(let[e,t]of Object.entries(CABINET_KEYS))for(let l of t)q[1===l.length?l.toLowerCase():l]=e;let Y=Object.create(null),$=Object.create(null);window.addEventListener("keydown",e=>{let t=q[1===e.key.length?e.key.toLowerCase():e.key];t&&!Y[t]&&(Y[t]=!0,$[t]=!0,ef.init(),(X=(X+t.slice(3)).slice(-40)).endsWith("UUDDLRLR21")&&(X="",U=!U,ef.O(U?880:220,.4,C,.08,U?1760:110)))}),window.addEventListener("keyup",e=>{let t=q[1===e.key.length?e.key.toLowerCase():e.key];t&&(Y[t]=!1)});let ee=()=>$.START1||$.START2||$.P1_1,et=()=>window.platanusArcadeStorage||{async get(e){try{let t=localStorage.getItem(e);return null===t?{found:!1}:{found:!0,value:JSON.parse(t)}}catch{return{found:!1}}},async set(e,t){try{localStorage.setItem(e,JSON.stringify(t))}catch{}}};async function el(){let e;try{e=await et().get(j)}catch{return[]}return e&&e.found&&e.value&&Array.isArray(e.value.scores)?e.value.scores.filter(e=>e&&"string"==typeof e.n&&"number"==typeof e.s).map(e=>({n:e.n.slice(0,3).toUpperCase(),s:o(e.s)})).sort((e,t)=>t.s-e.s).slice(0,3):[]}async function ei(e){try{await et().set(j,{v:1,scores:e})}catch{}}let ef={K:null,out:null,init(){let[e]=[this];if(e.K){"suspended"===e.K.state&&e.K.resume();return}let t=window.AudioContext||window.webkitAudioContext;t&&(e.K=new t,e.out=e.K.createGain(),e.out.gain.value=.45,e.out.connect(e.K.destination))},O(e,t,l,i,f,s,r=this){if(!r.K)return;let o=(s||r.K.currentTime)+.001,n=r.K.createOscillator(),x=r.K.createGain();n.type=l||C,n.frequency.setValueAtTime(e,o),f&&n.frequency.linearRampToValueAtTime(f,o+t),x.gain.setValueAtTime(i||.2,o),x.gain.exponentialRampToValueAtTime(.001,o+t),n.connect(x),x.connect(r.out),n.start(o),n.stop(o+t+.02)},Qh(e,t,l,i=this){if(!i.K)return;let s=l||i.K.currentTime,r=o(i.K.sampleRate*e),n=i.K.createBuffer(1,r,i.K.sampleRate),x=n.getChannelData(0);for(let e=0;e<r;e++)x[e]=(2*f()-1)*(1-e/r);let a=i.K.createBufferSource(),y=i.K.createGain();a.buffer=n,y.gain.value=t,a.connect(y),y.connect(i.out),a.start(s)},Zz(){ef.O(760,.07,C,.09,320)},Qz(){ef.O(520,.35,P,.14,90),ef.Qh(.25,.12)},Qk(){ef.Qh(.3,.38),ef.O(110,.28,P,.2,40)},Z3(){ef.Qh(.2,.38),ef.O(140,.3,P,.3,55)},Q3(){ef.O(660,.06,C,.13),ef.O(990,.09,C,.13,0,ef.K&&ef.K.currentTime+.07)},Z4(){ef.O(440,.08,Z,.16),ef.O(880,.12,Z,.16,0,ef.K&&ef.K.currentTime+.09)},Qc(){let e=ef.K&&ef.K.currentTime;[440,554,659,880].forEach((t,l)=>ef.O(t,.5,Z,.15,0,e+.09*l))},Z0(){ef.O(140,.22,Z,.13,520)},Z2(){ef.O(330,.3,"sine",.12,160)},Zv(){ef.O(240,.28,"sine",.15,520)},Z1(){let e=ef.K&&ef.K.currentTime;[330,440,554,659,880,1108].forEach((t,l)=>ef.O(t,.4,Z,.15,0,e+.09*l))},Z5(){ef.O(160,1.1,P,.18,55)}},es=Q([0,0,26,0,-3.5,14,0,-5.5,2,0,-4,-8,0,-11,-17,0,0,-16,-5,-1,8,5,-1,8,-22,1,-13,22,1,-13,-22,-4,-15,22,-4,-15,0,3,-6,-9,1,-2,9,1,-2,-11,1,-15,11,1,-15,-3,-1.5,19,3,-1.5,19],"0112233445350607687985958:9;0<<56<7<6==?7>>@?5@50AA60BB72627"),er=Q([-22,14,-22,22,14,-22,22,14,22,-22,14,22,0,-26,0],"01122330041424340213"),eo=(1+p(5))/2,en=[[-1,eo,0],[1,eo,0],[-1,-eo,0],[1,-eo,0],[0,-1,eo],[0,1,eo],[0,-1,-eo],[0,1,-eo],[eo,0,-1],[eo,0,1],[-eo,0,-1],[-eo,0,1]],ex=[];for(let e=0;e<12;e++)for(let t=e+1;t<12;t++){let[l,f]=[en[e],en[t]];.01>n(i(l[0]-f[0],l[1]-f[1],l[2]-f[2])-2)&&ex.push([e,t])}let ea=()=>{let e=16/i(1,eo);return[en.map(([t,l,i])=>{let s=(.68+.5*f())*e;return[t*s,l*s*.8,i*s]}),ex]},ey=[ea(),ea(),ea(),ea()],ez=Q([-26,-28,-34,26,-28,-34,26,-28,34,-26,-28,34,-26,28,-34,26,28,-34,26,28,34,-26,28,34,0,0,58],"01122330455667740415263728386878"),eh=Q([-24,0,-24,24,0,-24,24,0,24,-24,0,24,-14,-18,-14,14,-18,-14,14,-18,14,-14,-18,14,0,-30,0,-3,-26,8,3,-26,8,-3,-38,52,3,-38,52],"011223300415263745566774485868789;:<;<"),eu=Q([0,-2,70,-16,-8,30,16,-8,30,-20,8,24,20,8,24,-22,0,-20,22,0,-20,-14,-6,-64,14,-6,-64,-16,8,-58,16,8,-58,0,-16,-14,0,-12,-44,-30,2,-48,30,2,-48],"01020304152635465768596:789:798:1;2;;<<7<85==96>>:"),ec=Q([0,0,560,-300,0,-400,300,0,-400,0,-80,-400,0,70,-400,-280,24,-400,280,24,-400,0,-45,80,-80,-70,-250,80,-70,-250,80,-70,-400,-80,-70,-400,-60,-150,-290,60,-150,-290,60,-150,-400,-60,-150,-400,-130,-165,-340,130,-165,-340,-150,-40,-400,150,-40,-400,-36,-30,420,36,-30,420,-56,-56,-250,56,-56,-250,-60,38,60,60,38,60,-60,44,-120,60,44,-120,-110,-180,-340,110,-180,-340,-150,-6,180,150,-6,180,-95,-142,-338,95,-142,-338,-70,-110,-272,70,-110,-272,70,-110,-400,-70,-110,-400],"010207730413231526546405060B0C899::;;8<==>>??<8<9=:>;?@A<@=ADFEGDEHIIKKJJH<L=M0NN10OO2PQRSSTTUUR"),ed=[[0,90,-14,150,2],[0,-90,-14,150,2],[0,140,-20,-80,2],[0,-140,-20,-80,2],[0,190,-25,-300,2],[0,-190,-25,-300,2],[1,110,-185,-340,6],[1,-110,-185,-340,6],[2,0,-150,-345,14]],ep=[42*B,46*B,72*B],eE=Q([0,0,16,0,0,-12,-3,0,8,3,0,8,0,-3,8,0,3,8,-8,0,-14,8,0,-14,0,-8,-14,0,8,-14,-3,0,-6,3,0,-6,0,-3,-6,0,3,-6],"020304052:3;4<5=:6;7<8=961718191"),eS=(e,t,l,i,f,s,r)=>e.add.text(t,l,i,{fontFamily:"monospace",fontSize:f+"px",color:s||"#eef2f7"}).setOrigin(r||0),eQ=(t,l,i,f,s)=>{e.fillStyle(f,s),e.fillCircle(t,l,i)},ek=(t,l,i,f,s,r)=>{e.fillStyle(s,r),e.fillRect(t,l,i,f)},eO=(t,l,i,f,s,r)=>{eA(f,s,r),e.strokeCircle(t,l,i)},eA=(t,l,i)=>{e.lineStyle(t,l,i)},em=(...t)=>{e.beginPath(),e.moveTo(t[0],t[1]);for(let l=2;l<t.length;l+=2)e.lineTo(t[l],t[l+1]);e.strokePath()},eT=(e,t,l,i)=>eQ(e[0],e[1],t,l,i),eb=(e,t,l,i,f)=>eO(e[0],e[1],t,l,i,f),eg=(e,t)=>em(e[0],e[1],t[0],t[1]),eR={Qg:0,step:0,on:!1,G:!1,Z6(e=this){if(!e.on||!ef.K)return;let t=ef.K.currentTime;for(e.Qg<t&&(e.Qg=t+.05);e.Qg<t+.4;){let t=e.Qg,l=e.step++;if(e.G){let i=l%16,f=[36.7,36.7,34.6,38.9][o(l/16)%4];ef.O(f,.32,P,.1,0,t),ef.O(2*f,.32,C,.03,0,t),i%4==0&&ef.O(3*f,.6,Z,.065,0,t),8===i&&ef.O(4.76*f,.9,P,.05,4*f,t),12===i&&ef.O(6*f,.5,Z,.045,5.6*f,t),i%2==0&&ef.Qh(.03,.028,t),e.Qg+=.21*(eR.Sp||1)}else{let i=l%16,f=[41.2,32.7,36.7,30.9][o(l/16)%4];i%4!=3&&ef.O(i%4==2?2*f:f,.14,Z,.1,0,t),0===i&&ef.O(3*f,1.2,P,.028,0,t),(4===i||12===i)&&ef.O(4.8*f,.22,C,.04,0,t),8===i&&ef.O(5.66*f,.5,"sine",.045,4.9*f,t),i%2==0&&ef.Qh(.025,.03,t),i%8==4&&ef.Qh(.09,.055,t),e.Qg+=.19*(eR.Sp||1)}}}},eL=(e,t)=>e.x*t.x+e.y*t.y+e.z*t.z,eP=(e,t)=>({x:e.y*t.z-e.z*t.y,y:e.z*t.x-e.x*t.z,z:e.x*t.y-e.y*t.x}),eZ=(e,t,l,i)=>({x:e.x*t+l.x*i,y:e.y*t+l.y*i,z:e.z*t+l.z*i}),eC=e=>{let t=i(e.x,e.y,e.z)||1;return{x:e.x/t,y:e.y/t,z:e.z/t}},ew={x:0,y:-1,z:0},eB=(e,i,f)=>{let s=l(f),r=t(f),o=eL(i,e)*(1-s),n=eP(i,e);return{x:e.x*s+n.x*r+i.x*o,y:e.y*s+n.y*r+i.y*o,z:e.z*s+n.z*r+i.z*o}},eD=(e,t)=>{let l=eC(e),i=eC(eZ(t,1,l,-eL(t,l)));return[l,i,eP(l,i)]},eI=(e,i)=>({x:t(e)*l(i),y:-t(i),z:l(e)*l(i)}),eG=(e,t)=>{let l=[];for(let i=0;i<e.length;i++){let f=e[i],s=e[(i+1)%e.length],r=t(f),o=t(s);if(r>=0&&l.push(f),r>=0!=o>=0){let e=r/(r-o);l.push([f[0]+(s[0]-f[0])*e,f[1]+(s[1]-f[1])*e])}}return l},eM=(e,t,l)=>{let i=r(22,o(e/1.5));for(let f=0;f<i;f++){let s=-e+2*e*f/i,n=s+2*e/i,x=(s+n)/2,a=p(r(0,e*e-x*x));if(a<2)continue;t&&ek(-a,s,2*a,n-s+1,t[o(f/i*t.length)],1);let y=a*l;ek(y,s,a-y,n-s+1,329226,.72)}},eJ=i=>{let f=f=>{for(let s=0;s<4;s++){eA(r(1.5,i*(1===s?.05:.025)),[0xe8d4a8,0xd6b47e,0xb89462,9072720][s],.6),e.beginPath();for(let r=0;r<=24;r++){let o=f+r/24*a,n=i*(1.55+.18*s)*l(o),x=i*(.32+.035*s)*t(o)-.28*n;0===r?e.moveTo(n,x):e.lineTo(n,x)}e.strokePath()}};f(a),eO(0,0,1.04*i,.06*i+2,0xe8d4a8,.12),eM(i,[0xe6d2a0,0xc9a86a,0xd8bb80,0xb8955a,0xe0c890,0xc9a86a,0xd8bb80],.3),eO(0,0,i,1.5,0xe8d4a8,.5),f(0)},eH=e=>{eO(0,0,1.04*e,.06*e+2,0xe0c8a8,.12),eM(e,[0xe8dcc8,0xc49a6c,0xe6d6bc,0xa87a54,0xdcc4a4,0xb88a60,0xe8dcc8,0xc49a6c,0xe0d0b8],.3),eQ(.05*e,.3*e,.15*e,0xc0603c,.85)},eN=e=>{for(let[t,l,i,f]of(eQ(0,0,1.1*e,7320800,.12),eQ(0,0,e,2054802,1),[[-.45,-.35,.18,0],[-.35,-.15,.16,0],[-.25,.15,.12,0],[-.2,.35,.14,0],[.15,-.3,.2,0],[.3,-.12,.18,0],[.2,.15,.16,0],[.1,.4,.12,0],[0,-.88,.1,1],[0,.88,.1,1],[0,-.5,.2,1],[-.05,.1,.1,1]]))eQ(t*e,l*e,i*e,f?O:5212746,f?.45:.9);eM(e,0,.3),eO(0,0,e,2,0x9fd4f0,.5)},eK={type:Phaser.AUTO,width:800,height:600,parent:"game-root",backgroundColor:"#070709",antialias:!0,scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:[new class extends z{create(){let[t]=[this];eR.on=!1,e=t.add.graphics(),eS(t,400,96,"S P A C E  E X P L O R E R",36,0,.5),eS(t,160,330,"STICK\nB1\nB2\nB3\nB4/B6\nB5\nSTART",14).setOrigin(1,0).setAlign("right").setLineSpacing(13),eS(t,180,330,"STEER - HOLD UP/DOWN: LOOP\nFIRE\nDASH - 2X: ROLL/LOOP/U-TURN - HOLD: NITRO\nMISSILE - HOLD: LOCK 4, RELEASE: SALVO\nSHIELD ON/OFF\nOVERDRIVE WHEN FULL\nPAUSE",13,K).setLineSpacing(14),eS(t,596,360,"TOP 3",14),t.Q4=eS(t,596,386,"",14,K).setLineSpacing(9),el().then(e=>{e.length&&t.scene.isActive()&&t.Q4.setText(e.map((e,t)=>`${t+1}  ${e.n.padEnd(3)}  ${String(e.s).padStart(6,"0")}`).join("\n"))}),t.Qw=eS(t,400,548,"PRESS START",16,0,.5),t.Tp=eS(t,400,576,"",12,K,.5),eS(t,400,128,"HECHO EN BARQUISIMETO, VENEZUELA, POR JUANEVILLAM",12,K,.5),t.Gl=eS(t,400,156,"",14,0,.5)}update(i){e.clear();for(let e=0;e<7;e++){let f=(e/7+8e-5*i)%1,r=30+110*(1-f);eA(1+2*f,[9067592,A,0xe89a5c,T,b][o(5*f)],(.2+.6*f)*s(1,(1-f)*8));for(let f=0;f<9;f++){let s=.084*i/r+.698*f+e;em(400+l(s)*r*1.9,225+t(s)*r*.5,400+l(s+.25)*r*1.9,225+t(s+.25)*r*.5,400+l(s+.5)*r*1.9,225+t(s+.5)*r*.5)}}eQ(400,225,24,0,1),eO(400,225,26,2,0xfff8ea,.7),this.Tp.setText(F[o(i/3e3)%7]),this.Gl.setText(U?H:""),this.Qw.setAlpha(o(i/600)%2?1:.25),ee()&&this.scene.start("G")}}("T"),new class extends z{create(){let[t]=[this];e=t.gfx=t.add.graphics(),t.o={x:0,y:0,z:-1600},t.F={x:0,y:0,z:1},t.U={x:0,y:-1,z:0},t.R={x:1,y:0,z:0},t.yv=0,t.pv=0,t.Jr=t.Jp=t.Jt=0,t.cu=220,t.H=t.cu,t.u=100,t.Ql=0,t.su=0,t.sw=0,t.du=0,t.fy=0,t.iu=0,t.Qj=5,t.am=5,t.ar=0,t.Zp={...t.F},t.Zo={...t.U},t.Zq={...t.R},t.fz="play",t.bq=75,t.Zb=0,t.Zm=50,t.Za=5,t.Ji=0,t.wvN=0,t.ht=0,t.wa=0,t.T=0,t.Ck=0,t.Kc=t.Sl=t.Hs=0,t.Bc=t.Se=1,t.St=120,t.Od=t.Ou=t.Gc=0,t.Gt=null,t.Gs=8,t.Xh=1e4,t.Ks=t.Kt=0,t.Sv=t.Cg=0,t.Lh=t.Lf=0,t.Lk=[],t.Gw=60,t.Ms=10,t.Gd=40,t.Gm=t.Pf=t.Kw=t.Sw=t.Mw=t.Of=0,t.Hi=null,el().then(e=>t.Hi=e.length?e[0].s:null),t.b=0,t.Q7=10,t.S=0,t.D=[],t.bl=[],t.ms=[],t.q=[],t.w=[],t.sz=[],t.pa=!1,t.mu=1,t.mt=0,t.Jh=0,t.Jj=0,t.G=null,t.I=null,t.po(),t.bs(),t.bu(),t.Qp=t.add.rectangle(400,300,800,600,0xffffff).setAlpha(0).setDepth(10),eR.on=!0}po(){let e=(e,t)=>e+f()*(t-e);for(let t=0;t<10;t++){let t=this.ri(2850);this.D.push({k:8,x:t[0],y:.5*t[1],z:t[2],r:42,M:2,t:e(0,9),Zx:ey[o(4*f())],Zw:e(-.5,.5),A:e(-16,16),C:e(-10,10),B:e(-16,16),E:0})}}ri(e){let i=f()*a*2,s=300+f()*(e-300);return[t(i)*s,2*d()*e*.5,l(i)*s]}bs(e=this){e.sn=[];for(let t=0;t<320;t++){let t=eC({x:f()-.5,y:f()-.5,z:f()-.5});e.sn.push({v:t,s:.1>f()?3:.4>f()?2:1,a:.25+.45*f(),tw:.25>f()?1+2*f():0,ph:6.3*f()})}e.Qu=[];for(let t=0;t<260;t++){let t=f()+f()+f()-1.5;e.Qu.push({E:f()*a*2,el:26*t/w,s:.2>f()?2:1,a:.2+.45*f()})}e.Qt=[];for(let t=0;t<96;t++)e.Qt.push({x:560*d(),y:560*d(),z:560*d()})}bu(e=this){e.Zk=eS(e,12,10,"",15).setAlpha(.9),e.Zl=eS(e,12,30,"",13,K),e.Q4=eS(e,788,10,"",15).setOrigin(1,0).setAlpha(.9),e.Zg=eS(e,788,572,"",15,K).setOrigin(1,0),e.Zh=eS(e,12,570,"",17),e.Q9=eS(e,168,570,"",17),eS(e,136,548,"DASH",10,K).setOrigin(0,.5),eS(e,136,534,"SHIELD",10,K).setOrigin(0,.5),eS(e,136,520,"OVERDRIVE",10,K).setOrigin(0,.5),e.Zc=eS(e,400,64,"",16,0,.5).setAlpha(.95),e.Qq=eS(e,0,0,"",14,0,.5).setVisible(!1),e.Qe=eS(e,400,168,"",16,0,.5).setAlpha(0).setAlign("center"),e.hint=eS(e,400,496,"B1 FIRE  B2 DASH  B3 MISSILE  B4/B6 SHIELD  B5 OVERDRIVE",13,K,.5).setAlpha(.6),e.time.delayedCall(9e3,()=>e.tweens.add({targets:e.hint,alpha:0,duration:800})),e.Pq=[0,1,2,3,4,5].map(()=>eS(e,0,0,"",14,0,.5).setAlpha(0)),e.Pi=0,e.W("SURVIVE. SCORE.")}W(e){this.Qe.setText(e).setAlpha(1),this.tweens.add({targets:this.Qe,alpha:0,delay:2e3,duration:700})}update(e,n){let[x]=[this];if($.START1&&"out"!==x.fz&&(x.pa=!x.pa,x.time.paused=x.pa,x.pa?x.tweens.pauseAll():x.tweens.resumeAll(),x.tweens.killTweensOf(x.Qe),x.Qe.setText(x.pa?"PAUSED\nSECTOR "+x.Se+"  "+x.Kc+" DOWN  BEST x"+x.Bc:"").setAlpha(+!!x.pa)),x.pa){x.pO=(x.pO||0)+n;return}x.vt=e-=x.pO||0;let y=s(n,50)/1e3;x.Sl-=y,x.Hs-=y;let z=y*(x.Sl>0?.3:x.Hs>0?.1:1);for(let e of(x.b+=z,x.Pq))e.Tp+=y;x.T>=x.Xh&&(x.Xh+=1e4,x.Qj=s(5,x.Qj+1),x.W("HULL UP."),ef.Q3()),x.Hi&&x.T>x.Hi&&x.W("NEW HIGH SCORE.",x.Hi=null),1===x.Qj&&(x.Lw=(x.Lw||0)-z)<=0&&(x.Lw=1.2,ef.O(880,.12,C,.05)),(x.St-=z)<=0&&(x.St=120,x.T+=300*x.Se+++2e3*!x.Pf,x.W("SECTOR "+x.Se+" - "+_[(x.Se-1)%3]+(x.Se>3?" "+"I".repeat(1+o((x.Se-1)/3)):"")+(x.Pf?"":"\nPERFECT +2000")+"\nDOWN "+(6+2*x.Se)+" SHIPS"),x.Cg=x.Pf=0,x.Qp.setAlpha(.35),x.tweens.add({targets:x.Qp,alpha:0,duration:700}),ef.Z1()),eR.G=!!(x.G||x.I),U&&(x.Ck=1),eR.Sp=1-.07*s(3,x.Se-1),x.Gx=(x.Gm-=z)>0?1.8:1,eR.Z6(),x.mt-=z,x.mt<=0&&(x.mu=1),x.Jj-=z,x.ht=r(0,x.ht-z);let h=x.G&&x.G.f&&x.G||x.I&&x.I.f&&x.I,u=x.G||x.I;if("play"===x.fz&&!h){if(u)x.sd(z,1,16);else{x.sd(z,s(5,1+o(x.b/50)),r(5,12-x.b/50)),x.Zm-=z,x.Zm<=0&&(x.Zm=45,x.Z7(s(5,2+o(x.b/90))));let e=x.o,n=x.F,y=x.R;if((x.Gw-=z)<=0&&(x.Gw=x.Se>2?35:70,x.Gm=5,x.W("GRAVITY SURGE - KEEP CLEAR."),ef.O(70,2,P,.15,30)),x.Se>2&&(x.Ms-=z)<=0){x.Ms=35,x.W("METEOR STORM.");for(let t=0;t<14;t++){let l=2e3+900*f(),i=300+200*f();x.D.push({k:8,Mt:1,r:40,M:2,t:0,E:0,Zx:ey[t%4],Zw:2*d(),x:e.x+n.x*l+y.x*d()*1600,y:e.y+n.y*l+1e3*d(),z:e.z+n.z*l+y.z*d()*1600,A:-n.x*i,C:-n.y*i,B:-n.z*i})}}if((x.Gd-=z)<=0&&(x.Gd=45+30*f(),x.W("GOLD RUNNER."),x.D.push({k:10,r:50,M:3,t:0,E:0,x:e.x+1800*y.x+1300*n.x,y:e.y-150,z:e.z+1800*y.z+1300*n.z,A:-(560*y.x),C:0,B:-(560*y.z)})),x.Za-=z,x.Za<=0&&(x.Za=13,x.D.filter(e=>e.Qm).length<12)){x.Zt||(x.Zt=1,x.W("SURFACE GUNS BELOW."));for(let e=0;e<6;e++){let s=.4>f(),r=0,n=0,y=0,z=!1;for(let e=0;e<6&&!z;e++){let e=f()*a*2;r=x.o.x+t(e)*(700+600*f()),n=x.o.z+l(e)*(700+600*f());let h=o(r/J)*J,u=o(n/J)*J,c=N(h,u);c>=48?(y=v(r,n)-(s?175:26),z=!0):!s&&c<22&&(y=v(r=h+350,n=u+350)-((c<8?300:90)+c%5*70)-26,z=!0),z&&(i(r,n)>M-300||x.D.some(e=>!e.X&&(5===e.k||6===e.k)&&220>i(e.x-r,e.z-n)))&&(z=!1)}if(!z)continue;let h=+(e>4&&x.D.filter(e=>e.Qm&&e.L).length<3);x.D.push({k:s?6:5,Qm:1,L:h,x:r,y:y,z:n,r:s?80:44,M:h?s?3:2:s?5:3,t:6*f(),E:6.3*f(),P:1+2*f()})}}if(x.Zj=(x.Zj??22)-z,x.Zj<=0){x.Zj=14;let e=s(3,o(x.D.filter(e=>e.k<3&&!e.X).length/4));x.D.filter(e=>4===e.k&&!e.X).length<e&&x.Zr(1)}if(!u){let e=x.bq;x.bq-=z,e>2.5&&x.bq<=2.5&&x.W("MASSIVE SIGNAL."),x.bq<=0&&(x.W("HYPERSPACE RUPTURE."),x.Ze(),x.Zr(1))}}x.Qj<5&&(x.Jh+=z,x.Jh>=28&&(x.Jh=0,x.Qj++,ef.Q3())),x.Ji+=z,x.Ji>=5&&(x.Ji-=5,x.T+=25)}"out"!==x.fz&&x.up(e,z),x.ue(e,z),x.ux(z),x.um(z,e),x.uc(z),x.Ja(e),x.uh()}Z8(e,t){let l=null,i=t;for(let t of this.D){if(t.X||t.L||1!==t.k&&2!==t.k&&5!==t.k&&6!==t.k)continue;let f=E(t,e);f<i&&(i=f,l=t)}return l}Z9(e,t){let l=null,i=t;for(let t of this.D){if(t.X||!t.L&&4!==t.k)continue;let f=E(t,e);f<i&&(i=f,l=t)}return l}Zr(e){let i=this.o;for(let s=0;s<e;s++){if(this.D.filter(e=>4===e.k).length>=3)return;let e=f()*a*2;this.D.push({k:4,x:i.x+500*t(e),y:i.y-120,z:i.z+500*l(e),r:40,M:4,t:0,E:0,P:1,m:.5>f()?1:-1,A:0,C:0,B:0})}}Z7(e){let i=this.o,s=this.Se>1,r=f()*a*2;this.W(s?"SQUADRON.":"AMBUSH."),ef.Z2(),this.wvN=e;for(let o=0;o<e;o++){let n=s?r:o/e*a*2+.8*f(),x=s?(o%2?-150:150)*(o+1>>1):0,y=1500+(s?(o+1>>1)*160:0),z=2===o&&e>=4;this.D.push({k:z?2:1,x:i.x+t(n)*y+l(n)*x,y:i.y+(s?0:600*d()),z:i.z+l(n)*y-t(n)*x,r:z?130:66,M:z?8:4,t:0,E:0,P:2+2*f(),m:.5>f()?1:-1,A:s?-(320*t(n)):0,C:0,B:s?-(320*l(n)):0,wv:1})}}sd(e,i,s){let[r]=[this],o=r.o;r.Q7-=e;let n=r.D.filter(e=>e.k<3).length;if(r.Q7>0||n>=i)return;r.Q7=s;let x=f()*a*2,y=f(),z=r.Se>1&&y<.35,h=!z&&r.Se>1&&y<.6,u=h||r.b>50&&y>.75,c=r.Se>2&&!z&&!u&&y<.8;z&&ef.O(900,.6,P,.05,300),z&&!r.Kw&&r.W("KAMIKAZES INBOUND.",r.Kw=1),h&&!r.Sw&&r.W("SNIPERS - KEEP MOVING.",r.Sw=1),r.D.push({k:u?2:1,Kz:z,Sn:h,Et:c,x:o.x+1300*t(x),y:o.y+500*d(),z:o.z+1300*l(x),r:h?70:u?130:(z?16:22)*3,M:h?3:u?8:z?1:c?7:4,t:0,E:0,P:h?4:z?1e9:2,m:.5>f()?1:-1,A:0,C:0,B:0})}Ze(e,r=this){let o=r.o,n=r.F,y=i(n.x,n.z)||1,z=e?2400:r.Zb?2200:2600,h=e?f()*a*2:0,u=o.x+(e?t(h):n.x/y)*z,d=o.z+(e?l(h):n.z/y)*z,p=s(1,(M-1e3)/i(u,d));u*=p,d*=p;let E={k:7,x:u,y:s(o.y,v(u,d)-380),z:d,r:520*B,t:0,E:x(o.x-u,o.z-d),ha:8,ca:12,ma:6,cg:0,d:1,f:1,Q2:0,Qb:e||r.Zb?1:0,Zd:0,Q5:0,Qn:+!!e,j:ed.filter(([t],l)=>!e||2===t||l<4).map(([t,l,i,s,o])=>(o=e&&2===t?8:c(o*(1+r.Zb/2)),{Z:t,ox:l,oy:i,oz:s,M:o,max:o,P:1+3*f(),Qi:0}))};if(e)r.I=E;else{for(let e of(r.G=E,r.D))e.k<5&&(e.X=!0,r.bm(e));r.q.length=0,r.XB(E,0,{h:!0,r:1100}),r.W("EMP BLAST.")}r.D.push(E)}V(e,i,f,s){let r=l(e.E)*B,o=t(e.E)*B;return[e.x+i*r+s*o,e.y+f*B,e.z-i*o+s*r]}wb(e,i,f,s){let r=l(e.E)/B,o=t(e.E)/B,n=i-e.x,x=s-e.z;return[n*r-x*o,(f-e.y)/B,n*o+x*r]}ib(e,t,l,i,f){let[s,r,o]=this.wb(e,t,l,i);if(o>560+f||o<-400-f)return!1;let x=(560-o)/960;return n(s)<300*x+f&&r>-80*x-f&&r<70*x+f||n(s)<90+f&&r>-175-f&&r<-60&&o<-240+f}bo(e,t){return!(t.M<=0)&&(2!==t.Z||!e.j.some(e=>1===e.Z&&e.M>0))}ba(e,t){let l=this.o,f=null,s=-2;for(let r of e.j){if(!this.bo(e,r))continue;let[o,n,x]=this.V(e,r.ox,r.oy,r.oz),a=i(o-l.x,n-l.y,x-l.z)||1,y=((o-l.x)*t.x+(n-l.y)*t.y+(x-l.z)*t.z)/a;y>s&&(s=y,f=r)}return f}bp(e,t,l,i=this){if(!i.bo(e,t))return;t.M-=l,e.g=.06,t.g=.1;let[f,s,r]=i.V(e,t.ox,t.oy,t.oz);if(t.M>0)return void i.w.push({wx:f,wy:s,wz:r,t:.3});if(i.w.push({wx:f,wy:s,wz:r,t:0,h:!0}),i.sy(f,s,r,8),ef.Qk(),0===t.Z)i.ad(60);else if(1===t.Z){i.ad(150);let t=e.j.some(e=>1===e.Z&&e.M>0);i.W(t?"DOME DOWN.":"HIT THE BRIDGE."),e.Zd=.7,t||i.I||e.Qn||!(i.Zb>=1)||(i.W("IT CALLS FOR BACKUP."),i.Ze(1))}else i.kb(e)}ub(e,o,n,a,y,z=this){let h=z.o;if(e.f){e.Q2+=y;let i=e.Q2,s=e.Qb?.8:1;if(e.Q8=i<1.2*s?i/(1.2*s):i<4.4*s?1:r(0,1-(i-4.4*s)/(1.8*s)),e.d&&i>=1.2*s&&(e.d=0,z.Qp.setAlpha(.7),z.tweens.add({targets:z.Qp,alpha:0,duration:700}),z.S=12,ef.Qk(),z.W(e.Qb?"IT'S BACK.":"DESTROYER AHEAD.")),!e.d&&i>1.5*s&&i<4.1*s&&(e.Q5-=y,e.Q5<=0&&z.D.filter(e=>3===e.k).length<6)){e.Q5=.26,e.Zf||e.Qb||(e.Zf=1,z.W("SALVO INBOUND."));let i=e.sN=(e.sN||0)+1,s=2.4*i,r=i%4==3,[o,n,x]=z.V(e,160*d(),-175,-330),a=.45+.3*f();z.D.push({k:3,x:o,y:n,z:x,r:22,M:1,t:0,E:0,A:l(s)*(260+300*f()),C:-(r?260:300+180*f())*(e.Qb?.7:1),B:t(s)*(260+300*f()),Qr:(r?.6:2.2+1.2*f())*(e.Qb?.6:1),fast:r,mid:+!r,gx:e.x+(h.x-e.x)*a+700*d(),gy:h.y+300*d(),gz:e.z+(h.z-e.z)*a+700*d(),N:12}),.35>f()&&ef.Qz()}i>6.4*s&&(e.f=0,e.Q8=0,e.Qb||(z.Zj=4));return}if(!e.Zd&&a<420&&z.b>(e.Jg||0)&&(e.Jg=z.b+20,e.Zd=1,z.W("TOO CLOSE - IT CHARGES A JUMP.")),e.Zd>0&&(e.Zd-=y,e.Zd<=0)){for(let e of z.D)3===e.k&&(e.X=!0,z.bm(e));let i=0;for(let t of z.ms)t.Qd===e&&!t.X&&(t.X=!0,i++);i&&(z.am=s(5,z.am+i),z.W("MISSILES RECALLED."));let f=x(-h.x,-h.z)+1.4*d();e.x=h.x+1700*t(f),e.z=h.z+1700*l(f),e.y=s(h.y,v(e.x,e.z)-380),e.E=x(h.x-e.x,h.z-e.z),e.d=1,e.Qb=1,e.f=1,e.Q2=0,e.Q5=0,ef.Z1(),z.W("IT JUMPED.");return}for(let t of e.j)t.g&&(t.g-=y);e.E+=u(x(o,n)-e.E)*s(1,.11*y);let c=90*(a>1900);for(let s of(e.x+=t(e.E)*c*y,e.z+=l(e.E)*c*y,e.y+=6*t(.4*e.t)*y,e.j))if(0===s.Z&&!(s.M<=0)&&!(a>2600))if(s.P-=y,s.Qi>0&&s.P<=0){s.Qi--,s.P=s.Qi?.2:4.6+1.8*f();let[t,l,r]=z.V(e,s.ox,s.oy-30,s.oz),o=null;if(.5>f()){for(let e of z.D)if(e.k<3&&!e.X&&2e3>i(e.x-t,e.y-l,e.z-r)){o=e;break}}if(o){let e=o.x-t,f=o.y-l,s=o.z-r,n=i(e,f,s)||1;z.w.push({wx:t,wy:l,wz:r,t:.28,Q1:!0}),z.q.push({x:t,y:l,z:r,A:e/n*I,C:f/n*I,B:s/n*I,N:8,sd:1}),z.Zs||(z.Zs=1,z.W("IT HUNTS THEM TOO."))}else z.sa({x:t,y:l,z:r},I)}else 0===s.Qi&&s.P<=0&&(s.Qi=2);if(e.ha-=y,e.ha<=0&&(e.ha=16,z.D.filter(e=>1===e.k).length<3)){let[t,l,i]=z.V(e,0,100,-100);z.D.push({k:1,x:t,y:l,z:i,r:66,M:4,t:0,E:e.E,P:2,m:1,A:0,C:120,B:0})}if(e.ma-=y,e.ma<=0&&a<2600&&z.D.filter(e=>3===e.k).length<4){for(let t of(e.ma=15,[-1,1])){let[l,i,f]=z.V(e,60*t,-170,-330),[s,,r]=z.V(e,400*t,0,-330),o=(s-e.x)*.3,n=(r-e.z)*.3;z.D.push({k:3,x:l,y:i,z:f,r:22,M:1,t:0,E:0,A:o,C:-160,B:n,N:9})}ef.Qz()}if(e.cg>0){if(e.cg-=y,e.cg<=0){let[t,l,i]=z.V(e,0,10,560);z.sa({x:t,y:l,z:i},190,!0),z.S=6,ef.Qz()}}else e.ca-=y,e.ca<=0&&a<2800&&(e.ca=14,e.cg=1.8)}kb(e,t=this){e.X=!0,t.G===e&&(t.G=null),t.I===e&&(t.I=null);for(let l=0;l<9;l++){let[i,s,r]=t.V(e,400*d(),(f()-.7)*150,-400+900*f());t.w.push({wx:i,wy:s,wz:r,t:-(.12*l),h:!0})}for(let l of(t.sy(e.x,e.y,e.z,24),t.S=16,t.Sl=1.2,t.D))l.k<4&&!l.X&&2500>E(l,e)&&t.Qf(l,99);t.T+=e.Qn?800:1500,ef.Qk(),t.Zb++,t.bq=50,t.W(e.Qn?"BACKUP DOWN. +800":"DESTROYER DOWN. +1500")}ad(e,t,l,i=this){let f=e*i.mu;i.T+=f,t&&(i.PU(t,(l||"")+"+"+f),i.Od=s(100,i.Od+8),i.Od>=100&&!i.Of&&i.W("OVERDRIVE READY - PRESS B5.",i.Of=1));let o=i.mu;i.mt>0?i.mu=s(5,i.mu+1):i.mu=2,i.mu>4&&o<5&&i.W("MAX COMBO x5"),i.mt=i.mu>4?6:4,i.Bc=r(i.Bc,i.mu)}PU(e,t){let l=this.Pq[this.Pi++%6];l.setText(t).setAlpha(1),l.Wp={x:e.x,y:e.y,z:e.z},l.Tp=0}sy(e,i,s,r){for(let o=0;o<r;o++){let r=f()*a*2,o=d()*a,n=120+240*f();this.sz.push({x:e,y:i,z:s,A:t(r)*l(o)*n,C:t(o)*n,B:l(r)*l(o)*n,N:.5+.3*f()})}}fw(){return this.F}up(e,x,a=this){let z,h=a.o,u=a.G&&a.G.f&&a.G||a.I&&a.I.f&&a.I,c=!!u&&!u.Qb;if(c){let e=eC({x:u.x-h.x,y:u.y-500-h.y,z:u.z-h.z}),t=s(1,2.2*x),[l,i,f]=eD(eZ(a.F,1-t,e,t),eZ(a.U,1-t,ew,t));a.F=l,a.U=i,a.R=f,a.yv=0,a.pv=0}let p=c?0:!!Y.P1_R-!!Y.P1_L,S=c?0:!!Y.P1_U-!!Y.P1_D;$.P1_5&&a.Od>=100&&!c&&(a.Od=a.Of=0,a.Ou=a.iu=e+6e3,a.W("OVERDRIVE!"),a.q.length=0,ef.Z1()),($.P1_4||$.P1_6)&&(e<a.su?(a.su=e,a.sw=e+4e3):e>=a.sw&&(a.su=e+2600,a.sw=e+2600+4e3,ef.Zv())),a.yv+=(2.4*p-a.yv)*s(1,13*x),a.pv+=(2.5*S-a.pv)*s(1,13*x);let Q=a.Jw=a.Jr||a.Jp,k=Q?0:a.pv*x,O=Q?0:a.yv*x,A=eZ(a.F,l(k),a.U,t(k)),m=eZ(a.U,l(k),a.F,-t(k)),T=e=>eZ(ew,1,e,-eL(ew,e)),b=T(A);if(i(b.x,b.y,b.z)>1e-4&&!Q){let e=0>eL(m,b)?-1:1;m=eZ(eC(T(A=eB(A,{x:0,y:-e,z:0},-O))),e,A,0)}else A=eB(A,m,-O);if([A,m,z]=eD(A,m),a.Jr){let e=Math.sign(a.Jr)*s(n(a.Jr),13*x);a.Jr-=e,[A,m,z]=eD(A,eZ(m,l(e),z,t(e))),Object.assign(h,eZ(h,1,a.Js,45*e))}else if(a.Jp){let e=s(a.Jp,4.5*x);a.Jp-=e,[A,m,z]=eD(eZ(A,l(e),m,t(e)),eZ(m,l(e),A,-t(e)))}a.F=A,a.U=m,a.R=z,!c&&$.P1_2&&a.u>=16&&(a.u-=16,a.H=r(a.H,a.cu)+260,a.du=e+450,e-a.Jt<320&&(a.Jp=S>0?6.283:3.1416*!!S,a.Jr=S<0?3.1416*(p||1):S?0:6.283*(p||1),a.Js=eZ(a.R,+!S,a.R,0)),a.Jt=e,ef.Z0()),c?(a.u=s(100,a.u+28*x),a.H+=(6-a.H)*s(1,4*x)):Y.P1_2&&a.u>0?(a.u=r(0,a.u-16*x),a.H=s(760,a.H+260*x)):(Y.P1_2||(a.u=s(100,a.u+28*x)),a.H+=(a.cu-a.H)*s(1,3*x));let g=a.fw();h.x+=g.x*a.H*x,h.y+=g.y*a.H*x,h.z+=g.z*a.H*x;let R=i(h.x,h.z);for(let[e,t,l]of[[R-M,{x:h.x/R,y:0,z:h.z/R},a.R],[G-h.y,{x:0,y:-1,z:0},a.U]]){if(e<=0)continue;h.x-=t.x*e,h.y-=t.y*e,h.z-=t.z*e;let i=eL(a.F,t),f=s(1,6*x)*i;i>0&&([a.F,a.U,a.R]=eD(eZ(eZ(a.F,1,t,-1.5*f),1,l,f),a.U)),a.b>a.wa&&(a.wa=a.b+3,a.W("SECTOR EDGE."))}let L=W[0]-h.x,Z=W[1]-h.y,w=W[2]-h.z,B=i(L,Z,w);if(a.Zi=y(1-(B-240)/(2700*a.Gx-240),0,1),a.Jf=y(1-B/9e3,0,1),a.bT=(a.bT||0)+x*(.25+2.2*a.Jf*a.Jf),B<2700*a.Gx){a.b>(a.Jl||0)&&(a.Jl=a.b+.8,ef.O(26+22*a.Zi,.9,P,.11*a.Zi,18));let e=B<1500;e&&!Y.P1_2&&(a.H+=(60-a.H)*s(1,8*x));let t=(e?290:650*a.Zi*a.Zi)*x/B;h.x+=L*t,h.y+=Z*t,h.z+=w*t,a.S=r(a.S,e?6:4*a.Zi),a.b>a.wa&&(a.wa=a.b+(e?2.5:4),a.W(e?"IT HAS YOU - DASH.":"BLACK HOLE - BREAK AWAY."))}B<240&&a.Jc();let I=v(h.x,h.z)-h.y;if(I<46&&(U?h.y-=46-I:a.Jc()),I<620){let t=o(h.x/J)*J,l=o(h.z/J)*J,i=N(t,l);if(i<22){let f=(i<8?300:90)+i%5*70,s=t+.3*J,r=l+.3*J,o=.4*J,n=v(s+o/2,r+o/2);h.y>n-f&&h.x>s&&h.x<s+o&&h.z>r&&h.z<r+o&&(a.hy(e),h.y=n-f-70)}else if(i>=22&&i<30){let f=l+J/2,s=v(t+J/2,f)-(230+i%4*40);40>n(h.z-f)&&h.x>t+60&&h.x<t+J-60&&h.y>s-20&&h.y<s+60&&(a.hy(e),h.y=s-90)}else if(i>=42&&i<48){let i=l+J/2,f=v(t+J/2,i);34>n(h.z-i)&&h.x>t+40&&h.x<t+J-40&&h.y>f-120&&(a.hy(e),h.y=f-190)}}let H=a.Gt;if(H){let e=h.x-H.x,t=h.y-H.y,l=h.z-H.z,f=i(e,t,l);(e*H.n.x+t*H.n.y+l*H.n.z>0||f>4e3)&&(a.Gt=null,f<120?(a.ad(100*++a.Gc,H,"GATE "),5===a.Gc&&(a.Od=100),a.u=100,a.Gs=0,ef.Q3()):a.Gc=0)}else if((a.Gs-=x)<=0){a.Gs=16;let e=1200+400*f(),t=h.x+a.F.x*e+a.R.x*d()*600,l=h.z+a.F.z*e+a.R.z*d()*600,r=s(1,5800/(i(t,l)||1));t*=r,l*=r;let o=y(h.y+a.F.y*e+400*d(),G+300,v(t,l)-300),n=r<1?eC({x:t-h.x,y:o-h.y,z:l-h.z}):a.F,x=r<1?eC(eP(n,ew)):a.R;a.Gt={x:t,y:o,z:l,n,e1:x,e2:eP(n,x)}}let K=.34*a.yv;if(a.Ql+=(K-a.Ql)*s(1,8*x),Y.P1_1&&e>=a.fy&&!u){a.fy=e+(e<a.Ou?70:160),a.Jj=.05,ef.Zz();let t=980+a.H,l=a.R,i=g;for(let e of[a.G,a.I]){if(!e||e.d)continue;let t=a.ba(e,g);if(t){let[l,f,s]=a.V(e,t.ox,t.oy,t.oz),r=eC({x:l-h.x,y:f-h.y,z:s-h.z});if(eL(r,g)>.93){i=r;break}}}if(i===g){let e=a.bt(g);if(e&&7!==e.k){let t=(E(e,h)||1)/(980+a.H),l=eC({x:e.x+(e.A||0)*t-h.x,y:e.y+(e.C||0)*t-h.y,z:e.z+(e.B||0)*t-h.z});eL(l,g)>.985&&(i=l)}}for(let f of e<a.Ou?[-20,-7,7,20]:[-9,9])a.bl.push({x:h.x+24*g.x+l.x*f,y:h.y+24*g.y+l.y*f,z:h.z+24*g.z+l.z*f,A:i.x*t,C:i.y*t,B:i.z*t,N:3.2})}if(a.am<5?(a.ar+=x,a.ar>=10&&(a.ar=0,a.am++,ef.Z4())):a.ar=0,Y.P1_3&&a.am>0&&!u){if(a.Lh+=x,a.Lh>.4&&a.Lk.length<s(4,a.am)&&(a.Lf-=x)<=0){a.Lf=.25;let e=a.bt(g,a.Lk);e&&(a.Lk.push(e),ef.O(1400,.06,C,.05))}}else if(a.Lh){let e=a.Lh>.4?a.Lk.filter(e=>!e.X):[a.bt(g)];for(let t of e.length?e:[null]){if(a.am<=0||u)break;a.am--,a.ms.push({x:h.x+26*g.x-6*a.U.x,y:h.y+26*g.y-6*a.U.y,z:h.z+26*g.z-6*a.U.z,A:g.x*D,C:g.y*D,B:g.z*D,Qd:t,Qc:t&&7===t.k?a.ba(t,g):null,Y:[],N:7})}ef.Qz(),a.Lh=a.Lf=0,a.Lk=[]}}bt(e,t){let l=this.o,f=null,s=.75;for(let o of this.D){if(4===o.k||o.L||o.X||t&&t.includes(o))continue;let n=o.x-l.x,x=o.y-l.y,a=o.z-l.z,y=i(n,x,a);if(y>(7===o.k?3600:2800))continue;let z=(n*e.x+x*e.y+a*e.z)/r(y,1)+.45*(7===o.k);z>s&&(s=z,f=o)}return f}Jc(e=this){U||"out"===e.fz||e.G&&e.G.f||e.I&&e.I.f||(e.fz="out",e.Sl=1.3,e.XB(e.o,0,{h:!0}),e.S=14,ef.Qk(),e.time.delayedCall(1400,()=>e.scene.start("O",{T:e.T,Sd:[e.Kc,e.Bc,o(e.b),e.Se],Ck:e.Ck})))}hy(e,t=this){if("out"!==t.fz&&(!t.G||!t.G.f)&&(!t.I||!t.I.f)){if(e<t.su){t.ht=.3;return}e<t.iu||e<t.du||(t.iu=e+2600,t.S=9,ef.Z3(),t.sy(t.o.x,t.o.y,t.o.z,8),t.Qp.setAlpha(.25),t.tweens.add({targets:t.Qp,alpha:0,duration:300}),!U&&(t.Qj--,t.Pf=1,t.Jh=0,t.Qj<=0&&t.Jc()))}}ue(e,n,z=this){let h=z.o;for(let r of z.D){r.t+=n,r.g&&(r.g-=n);let c=i(r.x,r.z),p=M-150-r.r;c>p&&(r.x*=p/c,r.z*=p/c);let Q=h.x-r.x,k=h.y-r.y,O=h.z-r.z,A=i(Q,k,O);if(r.k<5||r.k>7){let e=E(r,V);if(e<2700*z.Gx){let t=(1-e/2700/z.Gx)**2*900*n/e;if(r.x+=(V.x-r.x)*t,r.y+=(V.y-r.y)*t,r.z+=(V.z-r.z)*t,e<420){r.X=!0,z.bm(r),r.k<3&&z.ad(200,r,"SWALLOWED ");continue}}}if(1===r.k||2===r.k||4===r.k){let t=2===r.k,l=t?165:r.Kz?470:320,o=h.x,a=h.y,c=h.z,p=null;if(4===r.k){let e=1e9;for(let t of z.D)if(t.k<4&&!t.X){let l=E(t,r);l<e&&(e=l,p=t)}r.fl>0?(r.fl-=n,o=r.x+900*z.R.x*r.m,a=r.y-300,c=r.z+900*z.R.z*r.m):p&&e<300?r.fl=1+.5*f():p?(o=p.x,a=p.y,c=p.z):(o=h.x+380*z.R.x*r.m,a=h.y-100,c=h.z+380*z.R.z*r.m),r.Zn=(r.Zn??8)-n;let t=z.G||z.I;r.Zn<=0&&t&&!t.d&&(r.Zn=15,z.ms.push({x:r.x,y:r.y,z:r.z,...S(r,t,D),Qd:t,Qc:7===t.k?z.ba(t,z.F):null,Y:[],N:5}),ef.Qz())}else if(r.Sn){let e=(A-2e3)/A;o=r.x+Q*e+O/A*600*r.m,a=r.y+k*e,c=r.z+O*e-Q/A*600*r.m}else t?(z.Se>2&&(r.Mn=(r.Mn||5)-n)<=0&&(r.Mn=6,z.Mw||z.W("MINES - SHOOT THEM.",z.Mw=1),z.D.push({k:9,x:r.x,y:r.y,z:r.z,r:30,M:1,t:0,E:0})),A<620?(o=r.x-Q/A*1200,a=r.y-k/A*400,c=r.z-O/A*1200):A<1100&&(o=r.x+O/A*900*r.m,c=r.z-Q/A*900*r.m,a=h.y)):r.fl>0?(r.fl-=n,o=r.x-Q/A*1500+O/A*500*r.m,a=r.y-k/A*600,c=r.z-O/A*1500-Q/A*500*r.m):!r.Kz&&(A<650||A<1e3&&(z.F.x*Q+z.F.y*k+z.F.z*O)/A<-.93)&&(r.fl=1.2+.8*f());let m=i(r.A,r.C,r.B);m<40&&(r.A=Q/A*l,r.C=k/A*l,r.B=O/A*l,m=l);let T=o-r.x,b=a-r.y,g=c-r.z,R=i(T,b,g)||1,L=s(1,(t?.9:r.Kz?1.5:r.fl>0?3.6:2.3)*n),P=x(r.A,r.B),Z=r.A/m+(T/R-r.A/m)*L,w=r.C/m+(b/R-r.C/m)*L,B=r.B/m+(g/R-r.B/m)*L,G=i(Z,w,B)||1;if(r.A=Z/G*l,r.C=w/G*l,r.B=B/G*l,r.x+=r.A*n,r.y+=r.C*n,r.z+=r.B*n,r.E=x(r.A,r.B),r.Qo=(r.Qo||0)+(y(14*u(r.E-P),-.9,.9)-(r.Qo||0))*s(1,6*n),r.P-=n,4===r.k){if(p&&r.P<=0){let e=E(p,r)||1;e<1300&&(r.P=3.4,z.bl.push({x:r.x,y:r.y,z:r.z,A:(p.x-r.x)/e*900+180*d(),C:(p.y-r.y)/e*900+180*d(),B:(p.z-r.z)/e*900+180*d(),N:1.6,L:1}),ef.Zz())}}else if(r.Sn){if(r.Bf-=n,r.P>.4&&(r.Am={x:h.x,y:h.y,z:h.z}),r.P<1.6&&!r.Ch&&A<3400&&(r.Ch=1,ef.O(200,1.4,C,.04,900)),r.P<=0){r.P=4,r.Bf=.15,r.Ch=0;let t=eC({x:r.Am.x-r.x,y:r.Am.y-r.y,z:r.Am.z-r.z}),l=Q*t.x+k*t.y+O*t.z;l>0&&l<3400&&40>i(Q-t.x*l,k-t.y*l,O-t.z*l)&&(e<z.su?(z.Qf(r,99),z.ad(300,r,"REFLECTED ")):z.hy(e)),ef.Qz()}}else r.P<=0&&A<(t?1500:1300)&&(r.P=t?1.6:r.Et?1.1:2.2,z.sa(r,I))}else if(6===r.k){let e=Q,t=O,l=A;if(r.L){let f=z.Z8(r,2400);f&&(l=i(e=f.x-r.x,t=f.z-r.z)||1)}let s=i(e,t)||1;if(r.E=x(e,t),l>500){let l=r.x+e/s*55*n,i=r.z+t/s*55*n,f=N(o(l/J)*J,o(i/J)*J);(f>=48||f>=22&&f<42)&&(r.x=l,r.z=i)}if(r.y=v(r.x,r.z)-200,r.P-=n,r.P<=0){if(r.L){let e=z.Z8(r,1500);e&&(r.P=2.6,z.bl.push({x:r.x,y:r.y-20,z:r.z,...S(r,e,620),N:2.4,L:1}))}else if(A<1500){r.P=2.6;let e=.4>f()?z.Z9(r,1400):null;e?z.q.push({x:r.x,y:r.y-20,z:r.z,...S(r,e,I),N:7,ow:r}):z.sa(r,I)}}A>4200&&(r.X=!0)}else if(3===r.k){if(r.Qr>0)r.Qr-=n;else{let e=Q,t=k,l=O,f=A;r.mid&&(e=r.gx-r.x,(f=i(e,t=r.gy-r.y,l=r.gz-r.z)||1)<180&&(r.mid=0));let o=r.fast?640:300,x=s(1,(r.fast?.55:.9)*n);r.A+=(e/f*o-r.A)*x,r.C+=(t/f*o-r.C)*x,r.B+=(l/f*o-r.B)*x}r.x+=r.A*n,r.y+=r.C*n,r.z+=r.B*n,r.N-=n,r.N<=0&&(r.X=!0,z.bm(r))}else if(7===r.k)z.ub(r,Q,O,A,n);else if(5===r.k){if(A>4200&&(r.X=!0),r.E+=.5*n,r.y+=8*t(1.1*r.t)*n,r.P-=n,r.L){if(r.P<=0){let e=z.Z8(r,1500);e&&(r.P=2.4,z.bl.push({x:r.x,y:r.y-30,z:r.z,...S(r,e,620),N:2.4,L:1}))}}else if(r.P<=0&&A<1600){r.P=r.Qm?2.1:3.2;let e=.5>f()?z.Z9(r,1400):null;e?(z.w.push({wx:r.x,wy:r.y-26,wz:r.z,t:.28,Q1:!0}),z.q.push({x:r.x,y:r.y-26,z:r.z,...S(r,e,I),N:7,ow:r})):A<1e3&&z.sa(r,I)}}else if(9===r.k)A<120&&(r.X=!0,z.XB(r,0,{h:!0}),z.hy(e)),r.t>40&&(r.X=!0);else if(r.k>7){if(r.x+=r.A*n,r.y+=r.C*n,r.z+=r.B*n,r.E=x(r.A,r.B),r.Mt||r.k>8)r.t>(r.Mt?14:8)&&(r.X=!0);else if(A>2600){let e=f()*a*2;r.x=h.x+1600*t(e),r.y=h.y+900*d(),r.z=h.z+1600*l(e)}}void 0!==r.A&&8!==r.k&&(r.tt=(r.tt||0)+n,r.tt>.05&&(r.tt=0,(r.Y=r.Y||[]).push([r.x,r.y,r.z]),r.Y.length>(3===r.k?26:12)&&r.Y.shift())),!r.X&&4!==r.k&&r.k<10&&!r.L&&A<r.r+16&&((z.H>430||e<z.du||e<z.su)&&r.k<4?(z.Qf(r,2===r.k?3:99),z.S=7):(r.k<3?r.Kz?(r.X=!0,z.bm(r)):z.Qf(r,99):((r.k<5||r.k>7)&&(r.X=!0),z.bm(r)),z.hy(e)))}let c=e<z.su;for(let t of z.q){if(t.x+=t.A*n,t.y+=t.C*n,t.z+=t.B*n,t.N-=n,t.ow&&t.ow.X){t.X=!0,z.XB(t,.32);continue}let l=E(h,t);if(c&&l<52+40*!!t.h){t.X=!0,z.ht=.3,z.XB(t,.32);continue}if(l<(t.h?60:22)?(t.X=!0,z.Rv=t.ow,z.hy(e)):l<(t.Md??1e9)?t.Md=l:t.Md<90&&!t.Nm&&(t.Nm=1,z.ad(50,t,"CLOSE "),ef.O(1200,.15,Z,.05,300),z.Sl=r(z.Sl,.3)),!t.X){for(let e of z.D)if((4===e.k||e.L)&&!e.X&&E(e,t)<(6===e.k?90:50)){t.X=!0,e.M--,e.M<=0?(e.X=!0,z.bm(e),z.sy(e.x,e.y,e.z,5),4===e.k&&z.W("WINGMAN DOWN.")):z.XB(t,.32,{L:1});break}}if(t.sd&&!t.X){for(let e of z.D)if(e.k<3&&!e.X&&60>E(e,t)){t.X=!0,z.Qf(e,1);break}}}for(let e of z.bl){let t=!1;for(let l of[z.G,z.I])if(l&&!l.d&&z.Zu(l,e)){t=!0;break}if(!t){for(let t of z.D)if(!t.X&&7!==t.k&&4!==t.k&&!t.L&&E(e,t)<t.r+10){e.X=!0,z.Qf(t,1,e.x,e.y,e.z),t.X&&t.k<3&&!e.L&&E(t,z.o)>2400&&z.ad(100,t,"LONG SHOT ");break}}}for(let e of z.sz)e.x+=e.A*n,e.y+=e.C*n,e.z+=e.B*n,e.N-=n;for(let e of(z.sz=z.sz.filter(e=>e.N>0),z.w))e.t+=n;z.D=z.D.filter(e=>!e.X),z.q=z.q.filter(e=>!e.X&&e.N>0),z.w=z.w.filter(e=>e.t<.5)}Zu(e,t,l=this){for(let f of e.j){if(f.M<=0)continue;let[s,r,o]=l.V(e,f.ox,f.oy,f.oz);if(i(t.x-s,t.y-r,t.z-o)<ep[f.Z])return t.X=!0,l.bo(e,f)?l.bp(e,f,1):l.XB(t,.35),!0}return!!l.ib(e,t.x,t.y,t.z,0)&&(t.X=!0,l.XB(t,.38),!0)}Qf(e,t){let[l]=[this];if(e.M-=t,e.g=.08,e.M>0)return void l.XB(e,.3);if(e.X=!0,e.L){l.bm(e),l.sy(e.x,e.y,e.z,4),ef.Qk();return}if(e.wv&&(e.wv=0,--l.wvN<=0&&(l.W("WAVE CLEAR."),l.ad(100))),l.bm(e),l.sy(e.x,e.y,e.z,6),9===e.k||e.Kz){let t=e.Kz?200:260;for(let i of(l.XB(e,0,{h:!0,r:t}),l.D))!i.X&&7!==i.k&&4!==i.k&&!i.L&&E(i,e)<t&&l.Qf(i,99)}if(l.ad(e.k>9?1e3:6===e.k?120:5===e.k?e.Qm?80:40:8===e.k?15:2===e.k?150:1===e.k?60:25,e),e.k>9&&(l.am=5,l.Od=100),e.k<3&&(l.Kc++,l.Hs=.05,e===l.Rv&&(l.Rv=0,l.ad(200,e,"REVENGE ")),++l.Cg==6+2*l.Se&&(l.T+=1e3*l.Se,l.W("SECTOR CHALLENGE +"+1e3*l.Se)),l.Ks=l.b-l.Kt<2?l.Ks+1:1,l.Kt=l.b,l.Ks>1&&(l.T+=100*l.Ks,l.W(["DOUBLE KILL.","TRIPLE KILL.","RAMPAGE."][s(3,l.Ks)-2]+" +"+100*l.Ks))),ef.Qk(),8===e.k&&e.r>20)for(let t=0;t<2;t++)l.D.push({k:8,x:e.x,y:e.y,z:e.z,r:18,M:1,t:0,E:0,Zx:ey[o(4*f())],Zw:3*d(),A:120*d(),C:80*d(),B:120*d()})}sa(e,t,l,f=this){let s=f.o;f.XB(e,.28,{Q1:!0});let r=E(s,e)/t,o=f.fw(),n=s.x+o.x*f.H*r*.7,x=s.y+o.y*f.H*r*.7,a=s.z+o.z*f.H*r*.7,y=n-e.x,z=x-e.y,h=a-e.z,u=i(y,z,h);f.q.push({x:e.x,y:e.y-26*(5===e.k),z:e.z,A:y/u*t,C:z/u*t,B:h/u*t,N:l?12:6,h:l,ow:e})}bm(e){this.XB(e,0,{L:4===e.k||e.L})}XB(e,t,l){this.w.push({wx:e.x,wy:e.y,wz:e.z,t,...l})}ux(e){for(let t of this.bl)t.x+=t.A*e,t.y+=t.C*e,t.z+=t.B*e,t.N-=e;this.bl=this.bl.filter(e=>!e.X&&e.N>0)}um(e){let[t]=[this];for(let l of t.ms){let f=l.Qd;if(f&&!f.X){let[r,o,n]=[f.x,f.y,f.z],x=f.r+16;l.Qc&&l.Qc.M>0&&([r,o,n]=t.V(f,l.Qc.ox,l.Qc.oy,l.Qc.oz),x=ep[l.Qc.Z]);let a=r-l.x,y=o-l.y,z=n-l.z,h=i(a,y,z),u=s(1,3.4*e);l.A+=(a/h*D-l.A)*u,l.C+=(y/h*D-l.C)*u,l.B+=(z/h*D-l.B)*u,h<x&&t.dn(l)}for(let e of[t.G,t.I])!l.X&&e&&!e.d&&t.ib(e,l.x,l.y,l.z,0)&&t.dn(l);l.Y.push([l.x,l.y,l.z]),l.Y.length>14&&l.Y.shift(),l.x+=l.A*e,l.y+=l.C*e,l.z+=l.B*e,l.N-=e}t.ms=t.ms.filter(e=>!e.X&&e.N>0)}dn(e,t=this){for(let l of(e.X=!0,t.XB(e,0,{h:!0,r:150}),t.S=r(t.S,5),ef.Qk(),[t.G,t.I]))if(l)for(let f of l.j){let[s,r,o]=t.V(l,f.ox,f.oy,f.oz);(f===e.Qc||150>i(e.x-s,e.y-r,e.z-o))&&t.bp(l,f,f===e.Qc?3:1)}for(let l of t.D){if(l.X||7===l.k||4===l.k||l.L)continue;let i=E(e,l);(l===e.Qd||i<150+l.r)&&t.Qf(l,l===e.Qd?4:2)}}uc(e,t=this){let l=t.Jw?1:s(1,8*e);[t.Zp,t.Zo,t.Zq]=eD(eZ(t.Zp,1-l,t.F,l),eZ(t.Zo,1-l,t.U,l)),t.S>0&&(t.S=r(0,t.S-34*e))}Jb(e=this){let t=e.o,l=e.Zp,i=e.Zo,f=104+.09*r(0,e.H-e.cu);return{x:t.x-l.x*f+32*i.x,y:t.y-l.y*f+32*i.y,z:t.z-l.z*f+32*i.z,F:l,U:i,R:e.Zq}}czOf(e,t,l){let i=this.cm;return(e-i.x)*i.F.x+(t-i.y)*i.F.y+(l-i.z)*i.F.z}Q(e,t,l,i=this){let f=i.cm,s={x:e-f.x,y:t-f.y,z:l-f.z},r=eL(s,f.F);if(r<14)return null;let o=i.S?d()*i.S:0,n=i.S?d()*i.S:0;return[400+eL(s,f.R)*w/r+o,300-eL(s,f.U)*w/r+n,r]}p(e){return void 0===e.x?this.Q(e[0],e[1],e[2]):this.Q(e.x,e.y,e.z)}pd(e){let t=this.cm,l=eL(e,t.F);return l<.08?null:[400+eL(e,t.R)*w/l,300-eL(e,t.U)*w/l]}J(e,t,l=this){l.gfx;let i=l.p(e),f=l.p(t);if(i||f){if(!i||!f){let[s,r]=i?[e,t]:[t,e],o=l.czOf(s[0],s[1],s[2]),n=(o-14-.01)/(o-l.czOf(r[0],r[1],r[2])),x=s[0]+(r[0]-s[0])*n,a=s[1]+(r[1]-s[1])*n,y=s[2]+(r[2]-s[2])*n;if(i=l.p(s),f=l.Q(x,a,y),!i||!f)return}eg(i,f)}}fg(e){return y(1.25-e/2600,0,1)}dm(e,i,f,s,r,o,n){let[x,a]=e,y=l(i.E||0),z=t(i.E||0),h=l(o||0),u=t(o||0),c=l(n||0),d=t(n||0),p=[];for(let[e,t,l]of x){let s=e*h-t*u,r=e*u+t*h,o=l,n=r*c-o*d;o=r*d+o*c,r=n;let x=i.x+(s*y+o*z)*f,a=i.y+r*f,E=i.z+(-s*z+o*y)*f;p.push([x,a,E])}this.sg(p,a,s,r)}sg(e,t,l,i){for(let[f,s]of(eA(4.5,l,.18*i),t))this.J(e[f],e[s]);for(let[f,s]of(eA(1.5,l,i),t))this.J(e[f],e[s])}Ja(i,f=this){let s=f.gfx;s.clear(),f.cameras.main.setBackgroundColor(460553);let o=f.Jb();for(let e of(f.cm=o,f.dk(i),f.dz(i),ek(0,0,800,600,[0,2046538,4857642][(f.Se-1)%3],.08),f.Pq)){let t=e.Wp&&e.Tp<1&&f.p(e.Wp);t?e.setPosition(t[0],t[1]-50*e.Tp).setAlpha(1-e.Tp):e.setAlpha(0)}f.de2(),f.Jd(i),f.dd(),f.Qq.setVisible(!1);let n=f.G&&f.G.f&&f.G||f.I&&f.I.f&&f.I,x=n&&n.Q8||0;for(let e of f.D)x>0&&(7===e.k||3===e.k)||f.de(e,i);if(x>0)for(let e of(ek(0,0,800,600,0,.85*x),f.D))(7===e.k||3===e.k)&&f.de(e,i);for(let e of f.bl){let t=f.p(e),l=f.Q(e.x-.03*e.A,e.y-.03*e.C,e.z-.03*e.B);t&&l&&(eA(2,e.L?g:O,.9),eg(t,l))}for(let e of f.ms){for(let t=1;t<e.Y.length;t++){let l=e.Y[t-1],i=e.Y[t];eA(1+.3*t,O,t/e.Y.length*.45),f.J(l,i)}let t=eC({x:e.A,y:e.C,z:e.B}),l=eC(eZ(ew,1,t,-eL(ew,t)));f.db(eE,e,t,l,1.5,O,1,9*e.N);let i=f.Q(e.x-20*t.x,e.y-20*t.y,e.z-20*t.z);i&&eT(i,r(2.5,1400/i[2]),T,.9)}for(let e of f.q){let t=f.p(e);if(!t)continue;let l=f.Q(e.x-.35*e.A,e.y-.35*e.C,e.z-.35*e.B),i=y((e.h?48:7)*w/t[2],e.h?6:3,e.h?70:14);l&&(eA(.9*i,A,.45),eg(t,l)),eT(t,1.8*i,A,.4),eT(t,i,m,.95),eT(t,.45*i,b,.9)}for(let e of f.w){if(e.t<0)continue;let t=f.Q(e.wx,e.wy,e.wz);if(!t)continue;let l=w/t[2];if(e.Q1){eT(t,r(4,30*l),m,(.5-e.t)*3.5);continue}let i=(4+e.t*(e.r?2.4*e.r:e.h?260:150))*l;e.r&&eT(t,.8*i,T,.35*(1-e.t/.5)),eb(t,i,e.r?3:1.5,e.h?O:e.L?g:A,1-e.t/.5)}for(let e of f.sz){let t=f.p(e),l=f.Q(e.x-.05*e.A,e.y-.05*e.C,e.z-.05*e.B);t&&l&&(eA(1,k,1.6*e.N),eg(t,l))}f.Zi>.02&&ek(0,0,800,600,0xe89a5c,f.Zi*(.1+.06*t(.004*i)));let a=f.Gt;if(a)for(let e of(eA(3,O,.55+.35*t(.008*i)),[120,100]))for(let i=0;i<20;i++){let s=i=>[a.x+(a.e1.x*l(i)+a.e2.x*t(i))*e,a.y+(a.e1.y*l(i)+a.e2.y*t(i))*e,a.z+(a.e1.z*l(i)+a.e2.z*t(i))*e];f.J(s(.314*i),s(.314*i+.314))}for(let l of(f.Ou>f.vt&&ek(0,0,800,600,g,.07+.04*t(.02*i)),f.Gx>1&&ek(0,0,800,600,0xe89a5c,.05+.04*t(.01*i)),1===f.Qj&&(eA(14,A,.25+.2*t(.01*i)),e.strokeRect(0,0,800,600)),eA(2,m,.9),f.Lk)){let t=!l.X&&f.p(l);t&&e.strokeRect(t[0]-16,t[1]-16,32,32)}if(f.dj(i),f.dv(),f.di(i),f.G&&!f.G.d||f.I&&!f.I.d){let e=0,t=0;for(let l of[f.G,f.I])if(l&&!l.d)for(let i of l.j)0!==i.Z&&(e+=r(0,i.M),t+=i.max);eA(1.5,A,.9),s.strokeRect(240,30,320,10),ek(242,32,e/t*316,6,m,.9)}}dh(){let{R:t,U:l,F:f}=this.cm,s=i(t.y,l.y);if(s<.02)return;let r=e=>((e[0]-400)*t.y-(e[1]-300)*l.y+w*f.y)/s,o=(t,l,i,f)=>{let s=eG([[0,0],[800,0],[800,600],[0,600]],e=>r(e)-t);void 0!==l&&(s=eG(s,e=>l-r(e))),s.length<3||(e.fillStyle(i,f),e.fillPoints(s.map(([e,t])=>({x:e,y:t})),!0))};for(let e=0;e<10;e++)o(e*e*7,void 0,2898502,.1-.009*e);for(let e of(o(-18,18,3818578,.1),o(-6,6,5924984,.1),o(-.7,.7,k,.28),this.Qu)){let t=this.pd(eI(e.E,e.el));t&&ek(t[0],t[1],e.s,e.s,k,e.a)}}kr(){let e=this.cm;return x(-e.R.y,-e.U.y)}dk(e,t=this){for(let[e,l,i,f,s]of(t.dh(),[[.25,.5,280,4863328,.06],[.9,.14,300,3362922,.05],[4.1,.1,260,3362922,.04],[5.3,.33,220,6176824,.05]])){let r=t.pd(eI(e,l));r&&(eT(r,i,f,s),eQ(r[0]+.4*i,r[1]-.25*i,.6*i,f,.7*s))}t.so(3.4,.3,46,eN),t.so(4.32,.14,64,eJ),t.so(1.9,.24,58,eH),t.dl(e)}so(t,l,i,f){let s=this.pd(eI(t,l));!s||s[0]<-3*i||s[0]>800+3*i||s[1]<-3*i||s[1]>600+3*i||(e.save(),e.translateCanvas(s[0],s[1]),e.rotateCanvas(this.kr()),f(i),e.restore())}Jd(t){this.Je();let l=this.p(W);if(!l)return;let i=W[3]*w/l[2];l[0]<-3*i||l[0]>800+3*i||l[1]<-3*i||l[1]>600+3*i||(e.save(),e.translateCanvas(l[0],l[1]),e.rotateCanvas(this.kr()),this.bh(i,.001*t),e.restore())}bh(e,l){let i=this.Zi||0;eQ(0,0,3.2*e,0xe8a060,.04+.05*i),eQ(0,0,1.9*e,0xe8a060,.07+.08*i),eQ(0,0,e,0,1),eO(0,0,1.1*e,.16*e,b,.12+.1*i),eO(0,0,1.04*e,r(1.5,.04*e),0xfff8ea,.7+.3*t(3*l))}Je(e=this){let[i,f,r,n]=W,x=e.Zi||0,a=e.o,y=e.bT||0,z=e.Jf||0,h=eC(eZ(eC({x:a.x-i,y:a.y-f,z:a.z-r}),1,ew,1.1)),u=eC(eP(h,{x:.01,y:1,z:0})),c=eP(h,u),d=(e,s)=>[i+(u.x*l(e)+c.x*t(e))*s,f+(u.y*l(e)+c.y*t(e))*s,r+(u.z*l(e)+c.z*t(e))*s];for(let t=0;t<7;t++){let l=(t/7+.09*y)%1,i=1.5+5.5*(1-l);eA((1.5+2.5*l)*(.4+z)+2*x,[9067592,A,0xe89a5c,T,b][o(5*l)],s(1,(.15+.6*l)*(1+x)*s(1,(1-l)*8)));for(let l=0;l<9;l++){let f=3/i*y+.698*l+t;for(let t=0;t<3;t++)e.J(d(f+.16*t,i*n),d(f+.16*t+.16,i*n))}}}de2(e=this){let f=e.o,s=1-(M-i(f.x,f.z))/1800,n=150*o(f.y/150),a=(e,i)=>[t(e)*M,i,l(e)*M];if(s>0){eA(1.5,g,.55*s);let t=o(40*x(f.x,f.z))/40;for(let l=-9;l<=9;l++){e.J(a(t+l/40,r(G,n-1400)),a(t+l/40,n+1400));let i=n+150*l;if(i>=G)for(let l=-9;l<9;l++)e.J(a(t+l/40,i),a(t+(l+1)/40,i))}}let y=1-(f.y-G)/1800;if(y>0){eA(1.5,g,.55*y);let t=200*o(f.x/200),l=200*o(f.z/200);for(let i=-12;i<=12;i++)e.J([t+200*i,G,l-2400],[t+200*i,G,l+2400]),e.J([t-2400,G,l+200*i],[t+2400,G,l+200*i])}}dl(e,f=this){let n=f.o,x=s(9500,p(16e3*r(60,v(n.x,n.z)-n.y)));for(let[e,i]of[[5,.1],[1.5,.5]]){eA(e,R,i);let s=null;for(let e=0;e<=26;e++){let i=e/26*a*2,r=n.x+t(i)*x,o=n.z+l(i)*x,y=[r,v(r,o),o];if(y[1]>8e8){s=null;continue}s&&f.J(s,y),s=y}}let y=o(n.x/J),z=o(n.z/J);for(let t=-4;t<=4;t++)for(let l=-4;l<=4;l++){let s=(y+t)*J,x=(z+l)*J,a=v(s,x);if(a>9e8)continue;let h=.5*r(0,1-i(s-n.x,x-n.z)/3200)+.06;eA(1.5,R,h),f.J([s,a,x],[s+J,v(s+J,x),x]),f.J([s,a,x],[s,v(s,x+J),x+J]);let u=N(s,x);if(u>=42&&u<48){let e=x+J/2;eA(1.5,L,1.3*h);let t=v(s+40,e),l=v(s+J-40,e);f.J([s+40,t,e],[s+40,t-120,e]),f.J([s+J-40,l,e],[s+J-40,l-120,e]),f.J([s+40,t-120,e],[s+J-40,l-120,e])}if(u>=22&&u<30){let e=x+J/2,t=v(s+90,e),l=v(s+J-90,e),i=230+u%4*40;eA(1.5,L,1.4*h),f.J([s+90,t,e],[s+90,t-i,e]),f.J([s+J-90,l,e],[s+J-90,l-i,e]),f.J([s+90,t-i,e],[s+J-90,l-i,e]),f.J([s+90,t-i+26,e],[s+J-90,l-i+26,e]),eA(2,R,1.6*h),f.J([s+110,t-6,e],[s+J-110,l-6,e])}if(u<22){let t=(u<8?300:90)+u%5*70,l=s+.3*J,i=x+.3*J,n=.4*J,a=v(l+n/2,i+n/2);for(let[e,s]of(eA(1.5,L,1.3*h),[[0,0],[n,0],[n,n],[0,n]]))f.J([l+e,a,i+s],[l+e,a-t,i+s]);if(f.J([l,a-t,i],[l+n,a-t,i]),f.J([l+n,a-t,i],[l+n,a-t,i+n]),f.J([l+n,a-t,i+n],[l,a-t,i+n]),f.J([l,a-t,i+n],[l,a-t,i]),u<8&&o(e/500+u)%3){let e=f.Q(l+n/2,a-t-14,i+n/2);e&&eT(e,r(1.2,700/e[2]),m,1.6*h)}}}}dz(e){for(let l of this.sn){let i=this.pd(l.v);if(!i||i[0]<-4||i[0]>804||i[1]<-4||i[1]>604)continue;let f=l.a;l.tw&&(f*=.6+.4*t(.001*e*l.tw+l.ph)),ek(i[0],i[1],l.s,l.s,k,f),3===l.s&&(eA(1,k,.5*f),em(i[0]-4,i[1]+1,i[0]+6,i[1]+1),em(i[0]+1,i[1]-4,i[0]+1,i[1]+6))}}dd(e=this){let t=e.o,l=e.fw(),f=.016+e.H/470*.065;for(let s of e.Qt){let r=t.x+h(s.x-t.x,-280,280),o=t.y+h(s.y-t.y,-280,280),n=t.z+h(s.z-t.z,-280,280),x=e.Q(r,o,n),a=e.Q(r+l.x*e.H*f,o+l.y*e.H*f,n+l.z*e.H*f);if(!x||!a)continue;let z=.5*y(1-i(r-t.x,o-t.y,n-t.z)/420,0,1)*(e.H/470+.3);z<=.02||(eA(1,k,z),eg(x,a))}}de(i,f,s=this){let o=E(i,s.o);if(i.Y&&o<2200){let e=i.Y.length;for(let t=1;t<e;t++)eA(3===i.k?3:2,4===i.k||i.L?g:i.k>9?T:m,t/e*.5),s.J(i.Y[t-1],t===e-1?[i.x,i.y,i.z]:i.Y[t])}if(i.Sn&&i.Am&&(i.P<1.6||i.Bf>0)){let e=eC({x:i.Am.x-i.x,y:i.Am.y-i.y,z:i.Am.z-i.z});eA(i.Bf>0?5:1+(1.6-i.P)*1.5,i.Bf>0?O:m,i.Bf>0?1:.3+(1.6-i.P)*.4),s.J([i.x,i.y,i.z],[i.x+3400*e.x,i.y+3400*e.y,i.z+3400*e.z])}let n=s.p(i);if(!n)return;let x=s.fg(o);if(i.Kz&&eb(n,r(8,60*w/n[2])*(1+.2*t(14*i.t)),2,m,.8),9===i.k){let e=r(4,34*w/n[2]);eA(2,m,r(x,.4)),em(n[0],n[1]-e,n[0]+e,n[1],n[0],n[1]+e,n[0]-e,n[1],n[0],n[1]-e),t(i.t*(o<500?30:8))>0&&eT(n,.45*e,m,.9);return}if(3===i.k){let e=eC({x:i.A,y:i.C,z:i.B}),l=eC(eZ(ew,1,e,-eL(ew,e)));s.db(eE,i,e,l,1.6,i.g>0?O:m,1,8*i.t),eT(n,r(3,16*w/n[2]),m,.5+.4*t(20*i.t));return}if(7===i.k){i.d||s.dr(i,r(x,.6),i.g>0);return}if(x<=.03){(1===i.k||2===i.k||5===i.k)&&!i.L&&o<3200&&ek(n[0],n[1],2.5,2.5,m,.6);return}let y=i.g>0,z=y?O:4===i.k||i.L?g:8===i.k?L:i.k>9?T:i.Et?m:A;8!==i.k||y||(x*=.7);let h=5===i.k?i.Qm?eh:er:1===i.k||4===i.k||i.k>9?es:2===i.k?eu:6===i.k?ez:i.Zx,u=8===i.k?i.r/16:5===i.k?1.6:1===i.k?2.2:4===i.k?2:2===i.k?3:6===i.k?1:2.4,c=8===i.k?i.t*i.Zw:i.Qo||0;if(s.dm(h,i,u,z,x,c),6===i.k){let e=l(i.E),f=t(i.E);eA(1.5,i.L?g:A,x);for(let l=0;l<4;l++){let o=l<2?-26:26,n=l%2?22:-22,x=5*i.t+(0===l||3===l?0:a),y=34*t(x),z=i.x+(o*e+n*f)*1.1,h=i.z+(-o*f+n*e)*1.1,u=i.y+31,c=i.x+(1.7*o*e+(n+y)*f)*1.1,d=i.z+(-(1.7*o)*f+(n+y)*e)*1.1,p=v(c,d)-16*r(0,t(x+a/2)),E=(z+c)/2,S=(h+d)/2,Q=(u+p)/2-18;s.J([z,u,h],[E-34*f,Q,S-34*e]),s.J([E-34*f,Q,S-34*e],[c,p,d])}let o=s.Q(i.x+64*t(i.E),i.y,i.z+64*l(i.E));o&&eT(o,r(1.5,700/o[2]),i.L?g:m,x*(.6+.4*t(5*i.t)))}if(i.k<3){let e=2===i.k?200:50,f=s.Q(i.x+t(i.E)*e,i.y-4,i.z+l(i.E)*e);f&&eT(f,r(1.5,600/f[2]),m,x*(.6+.4*t(6*i.t)))}if(5===i.k){let l=.5+.5*t(3*i.t);e.fillStyle(i.L?g:m,x*(.6+.4*l));let f=s.Q(i.x,i.y-20,i.z);f&&e.fillCircle(f[0],f[1],r(3,1100/n[2])),i.L||eb(n,(70+10*l)*(w/n[2]),1.5,A,x*(.25+.3*l))}}dr(l,i,f,s=this){for(let e of(s.dm(ec,l,B,f?O:A,i),[[0,-6,560],[-300,-4,-400],[300,-4,-400],[-130,-168,-340],[130,-168,-340],[0,-48,80]].forEach(([e,t,f],n)=>{if(o(1.6*l.t+.7*n)%3==0)return;let[x,a,y]=s.V(l,e,t,f),z=s.Q(x,a,y);z&&eT(z,r(1.5,1100/z[2]),n<3?m:g,.9*i)}),[-130,0,130])){let[t,i,f]=s.V(l,e,18,-406),r=s.Q(t,i,f);if(!r)continue;let o=34*B*w/r[2];eT(r,1.6*o,T,.25),eT(r,.7*o,b,.85)}let n=l.j.some(e=>1===e.Z&&e.M>0),x=s.ba(l,s.F);for(let f of l.j){if(f.M<=0)continue;let[o,a,y]=s.V(l,f.ox,f.oy,f.oz),z=s.Q(o,a,y);if(!z)continue;let h=B*w/z[2],u=f.g>0?O:m;if(s.bo(l,f)){let i=0!==f.Z,s=r(i?20:16,ep[f.Z]*(w/z[2])*.8),o=.4*s;for(let[e,f]of(eA(2,i?O:m,i?.6+.4*t(6*l.t):.7),[[-1,-1],[1,-1],[1,1],[-1,1]]))em(z[0]+e*s,z[1]+f*(s-o),z[0]+e*s,z[1]+f*s,z[0]+e*(s-o),z[1]+f*s);if(f===x){e.fillStyle(O,.9);for(let t=0;t<f.M;t++)e.fillRect(z[0]-3*f.max+6*t,z[1]-s-10,4,4)}}if(0===f.Z)s.dm(er,{x:o,y:a-12*B,z:y,E:l.E},1.1*B,f.g>0?O:A,i),eQ(z[0],z[1]-34*h,r(2,7*h),u,i);else if(1===f.Z)eb(z,36*h,1.5,f.g>0?O:R,.9),e.strokeEllipse(z[0],z[1],72*h,26*h),eT(z,36*h,R,.12+.08*t(4*l.t));else{let e=.5+.5*t(l.t*(n?2:7));n?eb(z,90*h,1.5,R,.25+.2*e):(eT(z,30*h,u,.45+.45*e),eb(z,(50+20*e)*h,2,m,.6*e))}}if(l.cg>0){let[e,t,i]=s.V(l,0,10,560),f=s.Q(e,t,i);if(f){let e=1-l.cg/1.8,t=B*w/f[2];eT(f,(10+40*e)*t,m,.3+.5*e),eb(f,(60-40*e)*t,2,b,e)}}}db(e,i,f,s,r,o,n,x){let a=eP(f,s),y=l(x||0),z=t(x||0),h=e[0].map(([e,t,l])=>{let o=(e*y-t*z)*r,n=(e*z+t*y)*r,x=l*r;return[i.x+a.x*o-s.x*n+f.x*x,i.y+a.y*o-s.y*n+f.y*x,i.z+a.z*o-s.z*n+f.z*x]});this.sg(h,e[1],o,n)}dj(i,f=this){let x=f.o;if("out"===f.fz||i<f.iu&&o(i/95)%2==0)return;let y=f.fw();if(i<f.du)for(let e=1;e<=3;e++){let t={x:x.x-22*y.x*e,y:x.y-22*y.y*e,z:x.z-22*y.z*e};f.db(es,t,f.F,f.U,1,O,.4/e,f.Ql)}if(f.db(es,x,f.F,f.U,1,k,1,f.Ql),f.H>430){let e=f.Q(x.x+22*y.x,x.y+22*y.y,x.z+22*y.z);if(e){let l=s(1,(f.H-430)/150);eb(e,20*w/e[2],2,O,.5*l+.2*t(.05*i)),eT(e,20*w/e[2],O,.18*l)}}let z=f.p(x);if(i<f.su&&z){let t=(f.su-i)/2600<.22&&o(i/90)%2==0,s=.85*52*(w/z[2]);if(!t){eT(z,s,R,.1),eb(z,s,1.5,g,.85),eb(z,1.1*s,3.5,R,.2);let t=.0021*i;eA(1,g,.4),e.strokeEllipse(z[0],z[1],2*s*n(l(t)),2*s),e.strokeEllipse(z[0],z[1],2*s,2*s*n(l(.8*t+1.2)));let f=.004*i;eA(2.5,O,.9);for(let t=0;t<3;t++){let l=f+t*a*2/3;e.beginPath(),e.arc(z[0],z[1],s,l,l+.7),e.strokePath()}}if(f.ht>0){let e=1-f.ht/.3;eb(z,s*(1+.55*e),2.5,O,.9*(1-e))}}if(f.Jj>0){let e=f.Q(x.x+26*y.x,x.y+26*y.y-2,x.z+26*y.z);e&&eT(e,r(2,500/e[2]),O,.9)}let h=n(f.H)/470;if(h>.05){eA(2,O,.3+.5*h*(.6+.4*t(.04*i)));let e=20+26*h;f.J([x.x-14*y.x,x.y-14*y.y+1,x.z-14*y.z],[x.x-y.x*e,x.y-y.y*e+1,x.z-y.z*e])}let u=f.Q(x.x+620*y.x,x.y+620*y.y,x.z+620*y.z);if(u){let e=f.am>0&&f.bt(y);eb(u,e?10:7,1.5,e?m:k,.6),ek(u[0]-1,u[1]-1,2,2,e?m:k,.6)}}di(e,f=this){let s=f.cm,r=f.o,o=0;for(let e of f.D){if(e.k>2||e.X)continue;if(o>=2)break;let n={x:e.x-r.x,y:e.y-r.y,z:e.z-r.z};if(i(n.x,n.y,n.z)>1100)continue;let a=f.p(e);if(a&&a[0]>30&&a[0]<770&&a[1]>30&&a[1]<570)continue;o++;let y=x(-eL(n,s.U),eL(n,s.R)||.001),z=400+376*l(y),h=300+276*t(y);eA(2,m,.55),em(z-11*l(y+.5),h-11*t(y+.5),z,h,z-11*l(y-.5),h-11*t(y-.5))}for(let o of f.q.concat(f.D.filter(e=>3===e.k))){let n={x:r.x-o.x,y:r.y-o.y,z:r.z-o.z},a=i(n.x,n.y,n.z);if(a>1500||n.x*o.A+n.y*o.C+n.z*o.B<=0)continue;let y=f.p(o);if(y&&y[0]>30&&y[0]<770&&y[1]>30&&y[1]<570)continue;let z={x:-n.x,y:-n.y,z:-n.z},h=x(-eL(z,s.U),eL(z,s.R)||.001),u=400+372*l(h),c=300+272*t(h);eA(3,m,(.55+.45*t(.02*e))*(1-a/1600)),em(u-16*l(h+.6),c-16*t(h+.6),u,c,u-16*l(h-.6),c-16*t(h-.6))}}dv(e=this){let f,s=e.cm,r=e.o,o=null,n="";if(e.G||e.I){let t=1e9;for(let l of[e.G,e.I])if(l&&!l.d)for(let f of l.j){if(0===f.Z||!e.bo(l,f))continue;let[s,x,a]=e.V(l,f.ox,f.oy,f.oz),y=i(s-r.x,x-r.y,a-r.z);y<t&&(t=y,o={x:s,y:x,z:a},n=1===f.Z?"DOME":"BRIDGE")}}if(!o)return void e.Zc.setText("");let a=o,y=E(a,r);e.Zc.setText(n+"  "+c(y)+" M");let z=e.p(a);if(z&&z[0]>46&&z[0]<754&&z[1]>46&&z[1]<554){let l=22+2*t(5*e.b),i=.45*l;for(let[e,t]of(eA(2.5,O,.9),[[-1,-1],[1,-1],[1,1],[-1,1]]))em(z[0]+e*l,z[1]+t*(l-i),z[0]+e*l,z[1]+t*l,z[0]+e*(l-i),z[1]+t*l);return}if(z)f=x(z[1]-300,z[0]-400);else{let e={x:a.x-s.x,y:a.y-s.y,z:a.z-s.z};f=x(-eL(e,s.U),eL(e,s.R)||1)}let h=400+340*l(f),u=300+240*t(f);for(let[e,i,s]of[[7,.25,1.3],[2.5,.95,1]]){eA(e,O,i);let r=[h+20*l(f)*s,u+20*t(f)*s];em(...r,h+14*l(f+2.5)*s,u+14*t(f+2.5)*s,h+14*l(f-2.5)*s,u+14*t(f-2.5)*s,...r)}}uh(e=this){e.Zk.setText("SPD "+String(n(c(e.H))).padStart(3,"0"));let l=e.o;e.Zl.setText("ALT "+c(1800-l.y)+" / "+(1800-G)+"\nEDGE "+c(M-i(l.x,l.z))),e.Sv+=y((e.T-e.Sv)*.2,1,1e9)*(e.Sv<e.T),e.Q4.setText(String(c(e.Sv)).padStart(6,"0")+(e.mu>1?"  x"+e.mu:"")),e.mu>1&&ek(788-27*e.mt,30,27*e.mt,3,O,.6),e.Zh.setText("HULL "+(U?"INF":">".repeat(e.Qj)+".".repeat(5-e.Qj))),e.Q9.setText("MSL "+"^".repeat(e.am)+".".repeat(5-e.am));let f=o(e.b/60);e.Zg.setText("S"+e.Se+"  T "+f+":"+String(o(e.b%60)).padStart(2,"0"));let s=e.gfx;eA(1,k,.5),s.strokeRect(12,544,118,8),ek(13,545,116*(e.u/100),6,O,.75);let x=e.vt,a=x>=e.sw?1:1-(e.sw-x)/6600;eA(1,k,.5),s.strokeRect(12,530,118,8),ek(13,531,116*r(0,a),6,g,a>=1?.9:.35);let z=e.Ou>x;eA(1,k,.5),s.strokeRect(12,516,118,8),ek(13,517,116*(z?(e.Ou-x)/6e3:e.Od/100),6,z||e.Od>=100?g:O,e.Od>=100?.6+.4*t(10*e.b):.7),e.am<5&&(eA(1,k,.4),s.strokeRect(169,592,118,4),ek(170,593,116*(e.ar/10),2,O,.7))}}("G"),new class extends z{init(e){this.T=e.T||0,this.Sd=e.Sd||[0,1,0,1],this.Ck=e.Ck}create(){let[e]=[this],t=e.T,[l,i,f,s]=e.Sd;eR.on=!1,eS(e,400,170,"RANK "+(t>=2e4?"S":t>=1e4?"A":t>=4e3?"B":"C"),20,0,.5),eS(e,400,336,"SHIPS DOWNED  "+l+"\nBEST COMBO  x"+i+"\nTIME  "+o(f/60)+":"+String(f%60).padStart(2,"0")+"\nSECTOR  "+s,13,K,.5).setOrigin(.5,0).setAlign("center").setLineSpacing(6),e.Qx=!1,e.Qs=!1,e.Q6=!1,ef.Z5(),eS(e,400,230,"GAME OVER",32,0,.5),eS(e,400,304,"SCORE  "+String(e.T).padStart(6,"0"),16,0,.5),e.Ck&&eS(e,400,450,H,13,K,.5),el().then(t=>{e.Q6=!e.Ck&&(t.length<3||e.T>t[t.length-1].s),e.time.delayedCall(1200,()=>e.Qx=!0)}),e.time.delayedCall(9e3,()=>e.Qg())}Qg(){let[e]=[this];e.Qs||(e.Qs=!0,e.Q6&&e.T>0?e.scene.start("I",{T:e.T}):e.scene.start("T"))}update(){this.Qx&&ee()&&this.Qg()}}("O"),new class extends z{init(e){this.T=e.T||0}create(){let[e]=[this];e.lt=[0,0,0],e.i=0,e.Qy=!1,eS(e,400,190,"TOP 3!",16,0,.5),eS(e,400,222,"SCORE  "+String(e.T).padStart(6,"0"),15,K,.5),e.Qv=[0,1,2].map(t=>eS(e,352+48*t,308,"A",32,0,.5)),eS(e,400,388,"STICK SELECT  B1 OK",13,K,.5).setAlpha(.8)}update(e){let[t]=[this];if(t.Qy)return;let l="ABCDEFGHIJKLMNOPQRSTUVWXYZ";if($.P1_U&&(t.lt[t.i]=(t.lt[t.i]+25)%26),$.P1_D&&(t.lt[t.i]=(t.lt[t.i]+1)%26),$.P1_L&&(t.i=r(0,t.i-1)),$.P1_R&&(t.i=s(2,t.i+1)),($.P1_U||$.P1_D)&&ef.Q3(),$.P1_1||$.START1)if(t.i<2)t.i++;else{t.Qy=!0;let e=t.lt.map(e=>l[e]).join("");el().then(l=>{l.push({n:e,s:t.T}),l.sort((e,t)=>t.s-e.s),ei(l.slice(0,3)).then(()=>t.scene.start("T"))})}t.Qv.forEach((i,f)=>{i.setText(l[t.lt[f]]),i.setAlpha(f===t.i?o(e/300)%2?1:.35:.8)})}}("I")]};new Phaser.Game(eK).events.on("poststep",()=>{for(let e in $)$[e]=!1})})();
+// Space Explorer — Platanus Hack 26: Caracas Arcade Challenge
+// Tu nave quedó varada en un sector alienígena. Encuentra las tres piezas del
+// hipersalto entre los restos, y vuelve a casa.
+//
+// Vuelo libre 3D con proyección propia: la nave siempre avanza y el stick
+// la dirige, con loops completos; la cámara va pegada a ella. MODO ARCADE
+// INFINITO: sin niveles ni final — sobrevive y puntúa. El sector es un
+// cilindro con techo (el HUD dice cuánto queda); la Tierra y Saturno son
+// cielo, y un agujero negro que tira y traga flota en él; los cazadores aprietan
+// con los minutos, hay emboscadas periódicas, torretas de la base flotando
+// sobre el disco del agujero (bajar a cazarlas paga powerup seguro), y un
+// destructor recurrente que llega del hiperespacio a oscuras — el primero
+// con toda la ceremonia, los siguientes al grano — y paga +1500. Morir es
+// el único final. Texto en inglés, corto, voz arcade. Wireframe luminoso;
+// el óxido marca el peligro.
+
+// Todo va dentro de una IIFE: en el scope global el minificador no puede
+// renombrar ni inlinear las constantes y clases de arriba; aquí sí (~3.4 KB).
+(() => {
+
+
+// DICCIONARIO DE NOMBRES CORTOS — el minificador (SWC) no acorta nombres
+// top-level ni PROPIEDADES, así que estos se acortaron a mano. Métodos:
+// pj=project pd=projectDir wl=worldLine sg=strokeEdges bw=bossToWorld
+// wb=worldToBoss bo=bossPartOpen ba=bossAimPart bp=bossHitPart ib=insideBoss
+// db=drawBasisModel dm=drawWorldModel de=drawEnt dr=drawDestroyer
+// so=skyObject sd=spawnDrones sa=shootAtPlayer bt=bestTarget up=updatePlayer
+// ue=updateEnts ux=updateBolts um=updateMissiles uc=updateCamera uh=updateHud
+// ub=updateBoss bs=buildStars bu=buildHud po=populate ri=randIn sj=startJump
+// kb=killBoss hy=hitPlayer ad=addScore dp=dropPow sy=spray bm=boomAt
+// dn=detonate fg=fogAlpha kr=skyRoll dh=drawHorizon dl=drawHole dk=drawSky
+// dz=drawStars dd=drawDust dw=drawWarp dj=drawShip dv=drawNav di=drawIncoming
+// fw=forward dwb=drawBodies bh=drawBlackHole dsk=drawAccretionDisk
+// de2=drawEdges LS=lineStyle
+// Propiedades: o=pos X=dead Bo=boss Bt=boss2 fA=fireAt lf=life sl=slot
+// ci=cine lt=letters or=orbit pz=parts kd=kind sc=score yw=yaw am=ammo
+// tn=tone bhx=blackHoleProximity. Tipos (k), NÚMEROS ordenados para
+// comparar por rango: 1=ace 2=gun 3=emis 4=wing 5=sentry 6=walk 7=boss 8=rock
+// (k<3: naves enemigas; k<4: + misiles; k<5: + ala); piezas (kd): 0=turret 1=dome 2=bridge
+// Segunda pasada (Q*/Z*/J*, métodos incluidos): Qa=ctx Qb=short Qc=part
+// Qd=target Qe=notice Qf=damage Qg=next Qh=noise Qi=burst Qj=hull Qk=boom
+// Ql=roll Qm=base Qn=mini Qo=bank Qp=flash Qq=label Qr=rise Qs=left Qt=dust
+// Qu=band Qv=slots Qw=press Qx=ready Qy=saving Qz=missile Q0=big Q1=muzzle
+// Q2=cineT Q3=pickup Q4=scoreText Q5=salvoAt Q6=qualifies Q7=droneAt
+// Q8=cineDark Q9=missileText Za=baseAt Zb=bossN Zc=navText Zd=tpAt
+// Ze=spawnBoss Zf=salvoSaid Zg=partText Zh=hullText Zi=bhx Zj=wgAt
+// Zk=velText Zl=altText Zm=wvAt Zn=msAt Zo=camU Zp=camF Zq=camR Zr=wingUp
+// Zs=sdSaid Zt=bgSaid Zu=boltVsBoss Zv=shieldUp Zw=spin Zx=model Zy=say
+// Zz=fire Z0=dash Z1=jump Z2=turn Z3=hurt Z4=ammo Z5=over Z6=tick Z7=wave
+// Z8=foe Z9=ally Ja=draw Jb=cam Jc=die Jd=dwb Je=dsk Jf=bnk Jg=tpCd Jh=hRt
+// Ji=svT Jj=mz2 Jk=lvT Jl=rmb Jr=rollLeft Js=rollSide Jp=loopLeft Jt=lastDashTap Jw=inManeuver
+// Tercera pasada, a UNA letra (los más usados; la de la izquierda gana
+// sobre las listas de arriba): A=vx B=vz C=vy D=en E=yw G=Bo H=sp I=Bt J=wl
+// K=Qa L=fr M=hp N=lf O=tn P=fA Q=pj S=sh T=sc V=bw W=Zy Y=tr Z=kd b=ep
+// d=hd f=ci g=ft h=Q0 i=sl j=pz m=or p=Pj q=ss u=bz w=bx. Los métodos
+// grandes leen `this` como `me` (parámetro por defecto o `const [me] =
+// [this]`: desestructurado para que el minificador no lo vuelva a
+// inlinear), y la nave como `Po`.
+// Estado: sp=speed cu=cruise fz=phase en=ents sh=shake bx=booms tr=trail
+// ft=flashT bz=boost hd=hidden ss=shots bl=bolts ms=missiles sz=shards
+// sn=stars yv=yawVel pv=pitchVel su=shieldUntil sw=shieldReady ht=shieldHitT
+// ea=shieldEats iu=invulnUntil du=dashUntil fy=fireReadyAt ar=ammoRegen
+// sq=scrapRun tl=twinUntil mz2=muzzleT mt=multT mu=mult cg=charging ch=charge
+// pg=partsGot ep=elapsed pa=paused jg=jumping jt=jumpT ts=tutStep tu=tutWait
+// bq=bossAt kA=skipArm wa=bhWarnAt et=enterT ha=hangarAt ca=cannonAt
+// ma=missileAt
+// Alias cortos: SWC no acorta nombres top-level ni Math.* — esto sí cuenta
+const SIN = Math.sin;
+const COS = Math.cos;
+const HYP = Math.hypot;
+const RND = Math.random;
+const MIN = Math.min;
+const MAX = Math.max;
+const FLR = Math.floor;
+const ABS = Math.abs;
+const AT2 = Math.atan2;
+const PI = Math.PI;
+const CLP = Phaser.Math.Clamp;
+const PS = Phaser.Scene;
+const WRP = Phaser.Math.Wrap;
+const AWR = Phaser.Math.Angle.Wrap;
+const RD = Math.round;
+const RH = () => RND() - 0.5; // azar centrado en cero
+const SQ = Math.sqrt;
+const D3 = (a, b) => HYP(a.x - b.x, a.y - b.y, a.z - b.z);
+// la velocidad de a hacia b, a rapidez sp
+const VT = (a, b, sp, d = D3(b, a) || 1) => ({ A: ((b.x - a.x) / d) * sp, C: ((b.y - a.y) / d) * sp, B: ((b.z - a.z) / d) * sp });
+
+// Modelos comprimidos: vértices planos de a 3, y las aristas como un string
+// (cada char es un índice + 48) — el minificador no comprime arrays de pares
+const mdl = (flat, es) => {
+  const V = [];
+  for (let i = 0; i < flat.length; i += 3) V.push(flat.slice(i, i + 3));
+  const E = [];
+  for (let i = 0; i < es.length; i += 2) E.push([es.charCodeAt(i) - 48, es.charCodeAt(i + 1) - 48]);
+  return [V, E];
+};
+
+// --- Resolución nativa 800x600: líneas y texto nítidos ---
+const W = 800;
+const H = 600;
+const CX = W / 2;
+const CY = H / 2;
+
+// --- Proyección (cámara de persecución) ---
+const NEAR = 14;
+const CAM_BACK = 104;
+const CAM_UP = 32;
+
+// --- Paleta: neutros de marca + óxido hostil ---
+// La paleta, DESESTRUCTURADA a propósito: como const suelto el minificador
+// pega el hex (8 chars) en cada uso; así queda una variable de una letra
+// RUST: peligro
+// RUST_HI: peligro, variante clara (disparos, ojos)
+// AMB: ámbar del disco
+// CRM: crema caliente
+// BLU: azul: escudo y recursos TUYOS
+// BLD: azul apagado
+// GRY: gris de escombro: paisaje, no equipo
+const [INK, INK_HI, RUST, RUST_HI, AMB, CRM, BLU, BLD, GRY, SAW, TRI, SQR, FOCAL, SD_SCALE, MISSILE_SPEED, SHOT_SPEED, BND_TOP, BND_R, CELL, GOD_TXT] = [
+  0xf5f5f5, 0xeef2f7, 0xa65240, 0xc97b5a, 0xf6c98a, 0xfff1d6, 0xb8dbe4, 0x8fb0c4, 0x8a9099,
+  'sawtooth',
+  'triangle',
+  'square',
+  420, 1.6, 560, 250, -5200, 6500, 700,
+  'GOD MODE - NOT RANKED',
+];
+// Números con nombre que se usan mucho van en la misma desestructuración:
+// FOCAL = 420
+// SD_SCALE = 1.6 — todo el destructor, a esta escala
+// MISSILE_SPEED = 560
+// SHOT_SPEED = 250
+// BND_TOP = -5200
+// BND_R = 6500
+// CELL = 700 — el lado de una celda de la superficie de la estación
+// El hash de una celda de la superficie (por su esquina): decide qué
+// estructura lleva — el mismo en colisión, dibujo y spawn
+const HSH = (x0, z0) => (((x0 * 1103 + z0 * 12793) % 97) + 97) % 97;
+const INK_CSS = '#eef2f7';
+const DIM_CSS = '#8a9099';
+
+// MODO PRUEBA (sin muerte): nada te mata — ni golpes, ni el suelo, ni el
+// agujero negro (de él se sale con nitro). Para recorrer todas las fases.
+// Apagado por defecto; lo enciende y apaga en CUALQUIER momento el código
+// secreto de abajo. El HUD lo delata con 'HULL ∞', y una partida jugada con
+// él no entra al ranking.
+let GOD = false;
+// El código: la secuencia de controles, cada uno por su letra — U D L R es
+// el stick, 1–6 son B1–B6. Por defecto, el Konami de la máquina:
+// ↑ ↑ ↓ ↓ ← → ← → B2 B1
+const CHEAT = 'UUDDLRLR21';
+let cheatKeys = '';
+
+// --- Vuelo: la nave SIEMPRE avanza; el stick dirige, el turbo se recarga.
+// Arriba/abajo cabecea sin tope: mantenlo y das la vuelta completa. La cámara
+// va pegada a la nave, así que izquierda es izquierda aun de cabeza. ---
+const YAW_RATE = 2.4; // rad/s tope
+const YAW_EASE = 13; // 1/s, el giro responde YA
+const PITCH_RATE = 2.5; // rad/s de cabeceo
+const CRUISE = 235; // crucero constante — la nave NUNCA se detiene
+const TURBO_SPEED = 470; // referencia de "rápido" para estelas y cámara
+const NITRO_MAX = 760; // manteniendo B2 la nave acelera sin parar hasta aquí
+const NITRO_ACCEL = 260; // unidades/s²
+const SPEED_EASE = 3; // 1/s de vuelta al crucero
+const BOOST_MAX = 100;
+const BOOST_DRAIN = 16; // por segundo de nitro — la reserva da ~6 s seguidos
+const BOOST_REGEN = 28; // por segundo de recarga
+const DASH_COST = 16; // cada toque de B2: un dash, intocable un instante
+const DASH_KICK = 260;
+const DASH_INVULN_MS = 450;
+const RAM_SPEED = 430; // por encima, embistes a los cazadores y los destrozas
+// B4/B6: ESCUDO — una burbuja que come todo lo que te llega mientras dura.
+// La respuesta a las ráfagas del destructor: levantarlo en el momento justo.
+const SHIELD_MS = 2600;
+const SHIELD_COOLDOWN_MS = 4000;
+const SHIELD_R = 52; // radio en mundo dentro del que la burbuja come disparos
+
+const MAGNET_R = 240; // lo recogible viene hacia ti
+const FIRE_MS = 160;
+const BOLT_SPEED = 980;
+const BOLT_LIFE = 3.2; // ~3800 de alcance: se pelea desde lejos
+const MISSILE_TURN = 3.4; // 1/s de corrección hacia el blanco
+const MISSILE_MAX = 5;
+const MISSILE_DMG = 4;
+const MISSILE_SPLASH = 150; // todo lo que esté cerca del impacto también cae
+const MISSILE_REGEN = 10; // segundos por misil recuperado solo
+
+// --- Enemigos: pocos, grandes, disparos lentos que se pueden esquivar ---
+
+// --- El sector: una esfera de juego alrededor del origen ---
+const SECTOR_R = 3000;
+// El suelo es la ESTACIÓN: una esfera colosal asomando bajo el sector — no
+// infinita, pero a escala de juego siempre está. Su superficie es pared.
+const ST_R = 8000; // radio de la estación — chica: SE VE esfera
+const ST_CY = 9800; // centro: la superficie queda a y=1800 bajo el origen
+const surfY = (x, z) => {
+  const q = ST_R * ST_R - x * x - z * z;
+  return q > 0 ? ST_CY - SQ(q) : 1e9;
+};
+
+// EL SECTOR TIENE BORDES: un cilindro de radio BND_R alrededor del centro y
+// un techo a y=BND_TOP. Al tocarlos la nave resbala por la pared y gira
+// hacia adentro; cerca, la pared se dibuja y el HUD dice cuánto queda.
+// El agujero negro está ANCLADO al mundo, a la derecha del arranque: se
+// puede ir hasta él y alejarse [x, y, z, radio]. Tira más cuanto más cerca y
+// te traga ya DENTRO de la sombra — la caída dura. La Tierra y Saturno son
+// cielo, fijos al fondo del lado opuesto (sur y suroeste).
+const BH = [2400, -2200, 3600, 420];
+const BHO = { x: BH[0], y: BH[1], z: BH[2] };
+// Los SECTORES: cada 2 minutos uno nuevo, con nombre, bono y otra mezcla —
+// desde el 2 llegan kamikazes y francotiradores; en el 3, minas, élites y tormentas
+const TIPS = [
+  'LURE SHIPS INTO THE BLACK HOLE',
+  'SHOOT A MINE - IT TAKES THE PACK',
+  'FLY THROUGH GATES FOR FULL BOOST',
+  'NEAR MISSES FEED OVERDRIVE',
+  'FIVE GATES IN A ROW: OVERDRIVE',
+  'NO HULL LOST: PERFECT SECTOR',
+  'GRAVITY SURGE: KEEP CLEAR - OR LURE THEM IN',
+];
+// tres sectores con nombre venezolano (en ASCII: la fuente del gabinete no se
+// arriesga); pasado el tercero vuelven con numeral
+const SEC = ['AVILA', 'CATATUMBO', 'SALTO ANGEL'];
+const BH_PULL = 2700;
+const BH_GRIP = 1500; // aquí ya TE TIENE: el crucero no alcanza — dash o nitro
+const BH_KILL = 240;
+
+const HULL_MAX = 5;
+const SCORE_KEY = 'space-explorer:scores';
+
+// Las cuatro piezas del hipersalto
+
+const HINT_MAIN = 'B1 FIRE  B2 DASH  B3 MISSILE  B4/B6 SHIELD  B5 OVERDRIVE';
+
+// --------------------------------------------------------------------------
+// Arcade cabinet button → keyboard key mapping.
+// DO NOT modify this mapping — it matches the real arcade cabinet wiring.
+// To add local testing shortcuts, append extra keys to any array.
+const CABINET_KEYS = {
+  P1_U: ['w'],
+  P1_D: ['s'],
+  P1_L: ['a'],
+  P1_R: ['d'],
+  P1_1: ['u'],
+  P1_2: ['i'],
+  P1_3: ['o'],
+  P1_4: ['j'],
+  P1_5: ['k'],
+  P1_6: ['l'],
+  P2_U: ['ArrowUp'],
+  P2_D: ['ArrowDown'],
+  P2_L: ['ArrowLeft'],
+  P2_R: ['ArrowRight'],
+  P2_1: ['r'],
+  P2_2: ['t'],
+  P2_3: ['y'],
+  P2_4: ['f'],
+  P2_5: ['g'],
+  P2_6: ['h'],
+  START1: ['Enter'],
+  START2: ['2'],
+};
+
+const KEY_TO_ARCADE = {};
+for (const [code, keys] of Object.entries(CABINET_KEYS)) {
+  for (const key of keys) {
+    KEY_TO_ARCADE[key.length === 1 ? key.toLowerCase() : key] = code;
+  }
+}
+
+const held = Object.create(null);
+const pressed = Object.create(null); // por flanco, se limpia cada frame
+
+window.addEventListener('keydown', (e) => {
+  const code = KEY_TO_ARCADE[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+  if (code && !held[code]) {
+    held[code] = true;
+    pressed[code] = true;
+    Sfx.init(); // el audio solo puede arrancar con un gesto
+    // los últimos controles, por su letra: si terminan en el código, GOD cambia
+    cheatKeys = (cheatKeys + code.slice(3)).slice(-40);
+    if (cheatKeys.endsWith(CHEAT)) {
+      cheatKeys = '';
+      GOD = !GOD;
+      Sfx.O(GOD ? 880 : 220, 0.4, SQR, 0.08, GOD ? 1760 : 110);
+    }
+  }
+});
+window.addEventListener('keyup', (e) => {
+  const code = KEY_TO_ARCADE[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+  if (code) held[code] = false;
+});
+
+const clearPressed = () => {
+  for (const k in pressed) pressed[k] = false;
+};
+
+const anyStart = () => {
+  return pressed.START1 || pressed.START2 || pressed.P1_1;
+};
+
+// --- Persistencia (puente arcade, con localStorage de respaldo) ---
+const getStorage = () => {
+  return (
+    window.platanusArcadeStorage || {
+      async get(key) {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw === null ? { found: false } : { found: true, value: JSON.parse(raw) };
+        } catch {
+          return { found: false };
+        }
+      },
+      async set(key, value) {
+        try {
+          localStorage.setItem(key, JSON.stringify(value));
+        } catch {}
+      },
+    }
+  );
+};
+
+// Top 3 con forma validada: el storage sobrevive entre versiones
+// Si el puente del gabinete falla, se juega igual: tabla vacía, y guardar
+// no bloquea la vuelta al título
+async function loadScores() {
+  let res;
+  try {
+    res = await getStorage().get(SCORE_KEY);
+  } catch {
+    return [];
+  }
+  if (!res || !res.found || !res.value || !Array.isArray(res.value.scores)) return [];
+  return res.value.scores
+    .filter((s) => s && typeof s.n === 'string' && typeof s.s === 'number')
+    .map((s) => ({ n: s.n.slice(0, 3).toUpperCase(), s: FLR(s.s) }))
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 3);
+}
+
+async function saveScores(scores) {
+  try {
+    await getStorage().set(SCORE_KEY, { v: 1, scores });
+  } catch {}
+}
+
+// --------------------------------------------------------------------------
+// Audio: solo efectos puntuales, sintetizados. La música llega al final.
+const Sfx = {
+  K: null,
+  out: null,
+
+  init() {
+    const [me] = [this];
+    if (me.K) {
+      if (me.K.state === 'suspended') me.K.resume();
+      return;
+    }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    me.K = new AC();
+    me.out = me.K.createGain();
+    me.out.gain.value = 0.45;
+    me.out.connect(me.K.destination);
+  },
+
+  O(f0, dur, type, vol, f1, at, me = this) {
+    if (!me.K) return;
+    const t = (at || me.K.currentTime) + 0.001;
+    const osc = me.K.createOscillator();
+    const g = me.K.createGain();
+    osc.type = type || SQR;
+    osc.frequency.setValueAtTime(f0, t);
+    if (f1) osc.frequency.linearRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol || 0.2, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(g);
+    g.connect(me.out);
+    osc.start(t);
+    osc.stop(t + dur + 0.02);
+  },
+
+  Qh(dur, vol, at, me = this) {
+    if (!me.K) return;
+    const t = at || me.K.currentTime;
+    const len = FLR(me.K.sampleRate * dur);
+    const buf = me.K.createBuffer(1, len, me.K.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (RND() * 2 - 1) * (1 - i / len);
+    const src = me.K.createBufferSource();
+    const g = me.K.createGain();
+    src.buffer = buf;
+    g.gain.value = vol;
+    src.connect(g);
+    g.connect(me.out);
+    src.start(t);
+  },
+
+  Zz() {
+    Sfx.O(760, 0.07, SQR, 0.09, 320);
+  },
+  Qz() {
+    Sfx.O(520, 0.35, SAW, 0.14, 90);
+    Sfx.Qh(0.25, 0.12);
+  },
+  Qk() {
+    Sfx.Qh(0.3, 0.38);
+    Sfx.O(110, 0.28, SAW, 0.2, 40);
+  },
+  Z3() {
+    Sfx.Qh(0.2, 0.38);
+    Sfx.O(140, 0.3, SAW, 0.3, 55);
+  },
+  Q3() {
+    Sfx.O(660, 0.06, SQR, 0.13);
+    Sfx.O(990, 0.09, SQR, 0.13, 0, Sfx.K && Sfx.K.currentTime + 0.07);
+  },
+  Z4() {
+    Sfx.O(440, 0.08, TRI, 0.16);
+    Sfx.O(880, 0.12, TRI, 0.16, 0, Sfx.K && Sfx.K.currentTime + 0.09);
+  },
+  Qc() {
+    const t = Sfx.K && Sfx.K.currentTime;
+    [440, 554, 659, 880].forEach((f, i) => Sfx.O(f, 0.5, TRI, 0.15, 0, t + i * 0.09));
+  },
+  Z0() {
+    Sfx.O(140, 0.22, TRI, 0.13, 520);
+  },
+  Z2() {
+    Sfx.O(330, 0.3, 'sine', 0.12, 160);
+  },
+  Zv() {
+    Sfx.O(240, 0.28, 'sine', 0.15, 520);
+  },
+  Z1() {
+    const t = Sfx.K && Sfx.K.currentTime;
+    [330, 440, 554, 659, 880, 1108].forEach((f, i) => Sfx.O(f, 0.4, TRI, 0.15, 0, t + i * 0.09));
+  },
+  Z5() {
+    Sfx.O(160, 1.1, SAW, 0.18, 55);
+  },
+};
+
+// --------------------------------------------------------------------------
+// Modelos wireframe: [vértices, aristas]. +z es la nariz; -y es arriba.
+
+// La nave: caza esbelto — parabrisas marcado, alas en flecha con winglets,
+// timón alto y dos góndolas de motor bajo las alas
+const SHIP_MODEL = mdl([0, 0, 26, 0, -3.5, 14, 0, -5.5, 2, 0, -4, -8, 0, -11, -17, 0, 0, -16, -5, -1, 8, 5, -1, 8, -22, 1, -13, 22, 1, -13, -22, -4, -15, 22, -4, -15, 0, 3, -6, -9, 1, -2, 9, 1, -2, -11, 1, -15, 11, 1, -15, -3, -1.5, 19, 3, -1.5, 19], '0112233445350607687985958:9;0<<56<7<6==?7>>@?5@50AA60BB72627');
+
+// Centinela: pirámide vigilante, con ojo
+const SENTRY_MODEL = mdl([-22, 14, -22, 22, 14, -22, 22, 14, 22, -22, 14, 22, 0, -26, 0], '01122330041424340213');
+
+const HUNTER_SCALE = 3; // cazadores e interceptores: grandes, fáciles de seguir
+
+// Mina: octaedro
+
+
+
+// Asteroide: icosaedro con cada vértice desplazado — cada roca es única,
+// facetada como piedra en vez de un contorno plano
+const ICO_PHI = (1 + SQ(5)) / 2;
+const ICO_VERTS = [
+  [-1, ICO_PHI, 0], [1, ICO_PHI, 0], [-1, -ICO_PHI, 0], [1, -ICO_PHI, 0],
+  [0, -1, ICO_PHI], [0, 1, ICO_PHI], [0, -1, -ICO_PHI], [0, 1, -ICO_PHI],
+  [ICO_PHI, 0, -1], [ICO_PHI, 0, 1], [-ICO_PHI, 0, -1], [-ICO_PHI, 0, 1],
+];
+const ICO_EDGES = [];
+for (let i = 0; i < 12; i++) {
+  for (let j = i + 1; j < 12; j++) {
+    const [a, b] = [ICO_VERTS[i], ICO_VERTS[j]];
+    if (ABS(HYP(a[0] - b[0], a[1] - b[1], a[2] - b[2]) - 2) < 0.01) ICO_EDGES.push([i, j]);
+  }
+}
+// El pool: CUATRO formas de roca generadas una vez y compartidas por
+// todas — una instancia, muchas repeticiones
+const makeRockModel = () => {
+  const k = 16 / HYP(1, ICO_PHI);
+  return [
+    ICO_VERTS.map(([x, y, z]) => {
+      const j = (0.68 + RND() * 0.5) * k;
+      return [x * j, y * j * 0.8, z * j];
+    }),
+    ICO_EDGES,
+  ];
+};
+
+const ROCK_POOL = [makeRockModel(), makeRockModel(), makeRockModel(), makeRockModel()];
+
+// La CORBETA: a medio camino entre el ace y el destructor — casco largo,
+// puente alto y dos nacelas; ladra ráfagas manteniendo distancia
+// El CAMINANTE: cuerpo de caja con hocico — las patas se dibujan aparte,
+// animadas de verdad
+const WALK_MODEL = mdl([-26, -28, -34, 26, -28, -34, 26, -28, 34, -26, -28, 34, -26, 28, -34, 26, 28, -34, 26, 28, 34, -26, 28, 34, 0, 0, 58], '01122330455667740415263728386878');
+
+// La TORRETA de superficie: pedestal, domo y cañón doble — se LEE torreta
+const TURRET_MODEL = mdl([-24, 0, -24, 24, 0, -24, 24, 0, 24, -24, 0, 24, -14, -18, -14, 14, -18, -14, 14, -18, 14, -14, -18, 14, 0, -30, 0, -3, -26, 8, 3, -26, 8, -3, -38, 52, 3, -38, 52], '011223300415263745566774485868789;:<;<');
+
+const GUN_MODEL = mdl([0, -2, 70, -16, -8, 30, 16, -8, 30, -20, 8, 24, 20, 8, 24, -22, 0, -20, 22, 0, -20, -14, -6, -64, 14, -6, -64, -16, 8, -58, 16, 8, -58, 0, -16, -14, 0, -12, -44, -30, 2, -48, 30, 2, -48], '01020304152635465768596:789:798:1;2;;<<7<85==96>>:');
+
+// El destructor: una cuña de casi mil unidades con su torre de mando atrás.
+// Local: x derecha, y abajo, z hacia la proa.
+const SD_NOSE = 560;
+const SD_REAR = -400;
+const SD_HALF_W = 300; // media manga en la popa
+const SD_RIDGE = -80; // altura del lomo en la popa
+const SD_KEEL = 70;
+const DESTROYER_MODEL = mdl([0, 0, 560, -300, 0, -400, 300, 0, -400, 0, -80, -400, 0, 70, -400, -280, 24, -400, 280, 24, -400, 0, -45, 80, -80, -70, -250, 80, -70, -250, 80, -70, -400, -80, -70, -400, -60, -150, -290, 60, -150, -290, 60, -150, -400, -60, -150, -400, -130, -165, -340, 130, -165, -340, -150, -40, -400, 150, -40, -400, -36, -30, 420, 36, -30, 420, -56, -56, -250, 56, -56, -250, -60, 38, 60, 60, 38, 60, -60, 44, -120, 60, 44, -120, -110, -180, -340, 110, -180, -340, -150, -6, 180, 150, -6, 180, -95, -142, -338, 95, -142, -338, -70, -110, -272, 70, -110, -272, 70, -110, -400, -70, -110, -400], '010207730413231526546405060B0C899::;;8<==>>??<8<9=:>;?@A<@=ADFEGDEHIIKKJJH<L=M0NN10OO2PQRSSTTUUR');
+// Puntos débiles: torretas en la cubierta, dos domos de escudo sobre el puente,
+// y el puente mismo, que solo recibe daño con los domos caídos
+const SD_PARTS = [
+  [0, 90, -14, 150, 2], [0, -90, -14, 150, 2],
+  [0, 140, -20, -80, 2], [0, -140, -20, -80, 2],
+  [0, 190, -25, -300, 2], [0, -190, -25, -300, 2],
+  [1, 110, -185, -340, 6], [1, -110, -185, -340, 6],
+  [2, 0, -150, -345, 14],
+];
+const SD_PART_R = [42 * SD_SCALE, 46 * SD_SCALE, 72 * SD_SCALE]; // por kd
+
+// Misil: cuerpo largo con cuatro aletas atrás — se tiene que ver como poder
+const MISSILE_MODEL = mdl([0, 0, 16, 0, 0, -12, -3, 0, 8, 3, 0, 8, 0, -3, 8, 0, 3, 8, -8, 0, -14, 8, 0, -14, 0, -8, -14, 0, 8, -14, -3, 0, -6, 3, 0, -6, 0, -3, -6, 0, 3, -6], '020304052:3;4<5=:6;7<8=961718191');
+
+
+// Chatarra: un trozo de casco — placa con borde, puntal y una solapa doblada
+
+const FONT = (size, color) => ({
+  fontFamily: 'monospace',
+  fontSize: size + 'px',
+  color: color || INK_CSS,
+});
+
+
+// El único Graphics del juego (lo crea la escena de juego): los trazos de
+// abajo dibujan ahí sin recibirlo en cada llamada
+let GF;
+
+// Un texto del HUD o de un menú: fuente, color y origen en una llamada
+const TX = (sc, x, y, s, z, c, o) => sc.add.text(x, y, s, FONT(z, c)).setOrigin(o || 0);
+
+// Trazos de dos llamadas, en una: cada par pesa
+const fc = (x, y, r, col, al) => {
+  GF.fillStyle(col, al);
+  GF.fillCircle(x, y, r);
+};
+const fr = (x, y, w, h, col, al) => {
+  GF.fillStyle(col, al);
+  GF.fillRect(x, y, w, h);
+};
+const sk = (x, y, r, w, col, al) => {
+  LS(w, col, al);
+  GF.strokeCircle(x, y, r);
+};
+const LS = (w, c, a) => {
+  GF.lineStyle(w, c, a);
+};
+// una polilínea abierta: PL(x1, y1, x2, y2, …) — un segmento es el caso de dos
+const PL = (...c) => {
+  GF.beginPath();
+  GF.moveTo(c[0], c[1]);
+  for (let i = 2; i < c.length; i += 2) GF.lineTo(c[i], c[i + 1]);
+  GF.strokePath();
+};
+const ln = PL;
+// los mismos trazos, en un punto de pantalla [x, y] ya proyectado
+const fcp = (p, r, col, al) => fc(p[0], p[1], r, col, al);
+const skp = (p, r, w, col, al) => sk(p[0], p[1], r, w, col, al);
+const lnp = (a, b) => ln(a[0], a[1], b[0], b[1]);
+
+const Music = {
+  Qg: 0,
+  step: 0,
+  on: false,
+  G: false,
+  Z6(me = this) {
+    if (!me.on || !Sfx.K) return;
+    const now = Sfx.K.currentTime;
+    if (me.Qg < now) me.Qg = now + 0.05;
+    while (me.Qg < now + 0.4) {
+      const t = me.Qg;
+      const st = me.step++;
+      if (me.G) {
+        // EL DESTRUCTOR: ostinato grave que camina por semitonos, quinta
+        // encima, un stab menor que cae y un tic seco — la flota ya está aquí
+        const s16 = st % 16;
+        const root = [36.7, 36.7, 34.6, 38.9][FLR(st / 16) % 4];
+        Sfx.O(root, 0.32, SAW, 0.1, 0, t);
+        Sfx.O(root * 2, 0.32, SQR, 0.03, 0, t);
+        if (s16 % 4 === 0) Sfx.O(root * 3, 0.6, TRI, 0.065, 0, t);
+        if (s16 === 8) Sfx.O(root * 4.76, 0.9, SAW, 0.05, root * 4, t);
+        if (s16 === 12) Sfx.O(root * 6, 0.5, TRI, 0.045, root * 5.6, t);
+        if (s16 % 2 === 0) Sfx.Qh(0.03, 0.028, t);
+        me.Qg += 0.21 * (Music.Sp || 1);
+      } else {
+        // CACERÍA: galope en menor (Em → C → D → B), stabs, un destello de
+        // tritono y batería marcada — aventura con dientes, nada cozy
+        const s16 = st % 16;
+        const root = [41.2, 32.7, 36.7, 30.9][FLR(st / 16) % 4];
+        if (s16 % 4 !== 3) Sfx.O(s16 % 4 === 2 ? root * 2 : root, 0.14, TRI, 0.1, 0, t);
+        if (s16 === 0) Sfx.O(root * 3, 1.2, SAW, 0.028, 0, t);
+        if (s16 === 4 || s16 === 12) Sfx.O(root * 4.8, 0.22, SQR, 0.04, 0, t);
+        if (s16 === 8) Sfx.O(root * 5.66, 0.5, 'sine', 0.045, root * 4.9, t);
+        if (s16 % 2 === 0) Sfx.Qh(0.025, 0.03, t);
+        if (s16 % 8 === 4) Sfx.Qh(0.09, 0.055, t);
+        me.Qg += 0.19 * (Music.Sp || 1);
+      }
+    }
+  },
+};
+
+// --------------------------------------------------------------------------
+// El título, mínimo a propósito: los bytes son para el JUEGO. Nombre, la
+// nave girando, controles, top 3, y nada más.
+class Title extends PS {
+
+  create() {
+    const [me] = [this];
+    Music.on = false;
+    GF = me.add.graphics(); // el remolino de la portada, detrás de todo
+    TX(me, CX, 96, 'S P A C E  E X P L O R E R', 36, 0, 0.5);
+    TX(me, 160, 330, 'STICK\nB1\nB2\nB3\nB4/B6\nB5\nSTART', 14).setOrigin(1, 0).setAlign('right').setLineSpacing(13);
+    TX(me, 180, 330, 'STEER - HOLD UP/DOWN: LOOP\nFIRE\nDASH - 2X: ROLL/LOOP/U-TURN - HOLD: NITRO\nMISSILE - HOLD: LOCK 4, RELEASE: SALVO\nSHIELD ON/OFF\nOVERDRIVE WHEN FULL\nPAUSE', 13, DIM_CSS).setLineSpacing(14);
+    TX(me, 596, 360, 'TOP 3', 14);
+    me.Q4 = TX(me, 596, 386, '', 14, DIM_CSS).setLineSpacing(9);
+    loadScores().then((scores) => {
+      if (!scores.length || !me.scene.isActive()) return;
+      me.Q4.setText(
+        scores.map((s, i) => `${i + 1}  ${s.n.padEnd(3)}  ${String(s.s).padStart(6, '0')}`).join('\n')
+      );
+    });
+    me.Qw = TX(me, CX, H - 52, 'PRESS START', 16, 0, 0.5);
+    me.Tp = TX(me, CX, H - 24, '', 12, DIM_CSS, 0.5);
+    TX(me, CX, 128, 'HECHO EN BARQUISIMETO, VENEZUELA, POR JUANEVILLAM', 12, DIM_CSS, 0.5);
+    me.Gl = TX(me, CX, 156, '', 14, 0, 0.5);
+  }
+
+  update(time) {
+    // la portada: el agujero negro, con sus anillos cayendo en remolino
+    GF.clear();
+    for (let i = 0; i < 7; i++) {
+      const ph = (i / 7 + time * 0.00008) % 1;
+      const r = 30 + 110 * (1 - ph);
+      LS(1 + 2 * ph, [0x8a5c48, RUST, 0xe89a5c, AMB, CRM][FLR(ph * 5)], (0.2 + 0.6 * ph) * MIN(1, (1 - ph) * 8));
+      for (let j = 0; j < 9; j++) {
+        const a = (time * 0.084) / r + j * 0.698 + i;
+        PL(CX + COS(a) * r * 1.9, 225 + SIN(a) * r * 0.5, CX + COS(a + 0.25) * r * 1.9, 225 + SIN(a + 0.25) * r * 0.5, CX + COS(a + 0.5) * r * 1.9, 225 + SIN(a + 0.5) * r * 0.5);
+      }
+    }
+    fc(CX, 225, 24, 0, 1);
+    sk(CX, 225, 26, 2, 0xfff8ea, 0.7);
+    // los consejos, uno cada 3 s: lo que no se adivina solo
+    this.Tp.setText(TIPS[FLR(time / 3000) % 7]);
+    this.Gl.setText(GOD ? GOD_TXT : '');
+    this.Qw.setAlpha(FLR(time / 600) % 2 ? 1 : 0.25);
+    if (anyStart()) this.scene.start('G');
+  }
+}
+
+// --- vectores {x,y,z} ---
+const vdot = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z;
+const vcross = (a, b) => ({ x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x });
+const vmix = (a, sa, b, sb) => ({ x: a.x * sa + b.x * sb, y: a.y * sa + b.y * sb, z: a.z * sa + b.z * sb });
+const vnorm = (a) => {
+  const m = HYP(a.x, a.y, a.z) || 1;
+  return { x: a.x / m, y: a.y / m, z: a.z / m };
+};
+const WORLD_UP = { x: 0, y: -1, z: 0 };
+// Rota v un ángulo alrededor del eje unitario A (Rodrigues)
+const rotAxis = (v, A, ang) => {
+  const c = COS(ang);
+  const s = SIN(ang);
+  const k = vdot(A, v) * (1 - c);
+  const x = vcross(A, v);
+  return { x: v.x * c + x.x * s + A.x * k, y: v.y * c + x.y * s + A.y * k, z: v.z * c + x.z * s + A.z * k };
+};
+
+// Re-ortonormaliza una base (F, U) → [F, U, R], para que los errores de
+// redondeo de rotar cada frame nunca la deformen
+const orthoBasis = (F, U) => {
+  const f = vnorm(F);
+  const u = vnorm(vmix(U, 1, f, -vdot(U, f)));
+  return [f, u, vcross(f, u)];
+};
+
+// Dirección del cielo: rumbo en el plano del sector y elevación sobre él
+const skyDir = (yaw, el) => ({ x: SIN(yaw) * COS(el), y: -SIN(el), z: COS(yaw) * COS(el) });
+
+// Recorta un polígono de pantalla al lado f(p) >= 0 de una recta
+const clipHalf = (poly, f) => {
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    const fa = f(a);
+    const fb = f(b);
+    if (fa >= 0) out.push(a);
+    if (fa >= 0 !== fb >= 0) {
+      const t = fa / (fa - fb);
+      out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+    }
+  }
+  return out;
+};
+
+// --- El cielo, pintado en coordenadas locales (0,0 al centro) ---
+
+// Esfera en franjas: cada franja respeta el contorno; la noche entra por la
+// derecha. Sin franjas pinta solo la noche, sobre lo que ya haya. Más filas
+// cuanto más grande, para que el borde no se vea en escalones.
+const drawBandedSphere = (R, bands, night) => {
+  const N = MAX(22, FLR(R / 1.5));
+  for (let i = 0; i < N; i++) {
+    const y0 = -R + (2 * R * i) / N;
+    const y1 = y0 + (2 * R) / N;
+    const ym = (y0 + y1) / 2;
+    const hw = SQ(MAX(0, R * R - ym * ym));
+    if (hw < 2) continue;
+    if (bands) fr(-hw, y0, hw * 2, y1 - y0 + 1, bands[FLR((i / N) * bands.length)], 1);
+    const tx = hw * night;
+    fr(tx, y0, hw - tx, y1 - y0 + 1, 0x05060a, 0.72);
+  }
+};
+
+// Saturno, a radio r en pantalla: la mitad de atrás del anillo va detrás
+const drawSaturn = (r) => {
+  const ring = (from) => {
+    for (let k = 0; k < 4; k++) {
+      LS(MAX(1.5, r * (k === 1 ? 0.05 : 0.025)), [0xe8d4a8, 0xd6b47e, 0xb89462, 0x8a7050][k], 0.6);
+      GF.beginPath();
+      for (let j = 0; j <= 24; j++) {
+        const a = from + (j / 24) * PI;
+        const x = r * (1.55 + k * 0.18) * COS(a);
+        const y = r * (0.32 + k * 0.035) * SIN(a) - x * 0.28;
+        if (j === 0) GF.moveTo(x, y);
+        else GF.lineTo(x, y);
+      }
+      GF.strokePath();
+    }
+  };
+  ring(PI);
+  sk(0, 0, r * 1.04, r * 0.06 + 2, 0xe8d4a8, 0.12);
+  drawBandedSphere(r, [0xe6d2a0, 0xc9a86a, 0xd8bb80, 0xb8955a, 0xe0c890, 0xc9a86a, 0xd8bb80], 0.3);
+  sk(0, 0, r, 1.5, 0xe8d4a8, 0.5);
+  ring(0);
+};
+
+// Júpiter: franjas crema y marrón, y la gran mancha roja
+const drawJupiter = (r) => {
+  sk(0, 0, r * 1.04, r * 0.06 + 2, 0xe0c8a8, 0.12);
+  drawBandedSphere(r, [0xe8dcc8, 0xc49a6c, 0xe6d6bc, 0xa87a54, 0xdcc4a4, 0xb88a60, 0xe8dcc8, 0xc49a6c, 0xe0d0b8], 0.3);
+  fc(r * 0.05, r * 0.3, r * 0.15, 0xc0603c, 0.85);
+};
+
+// La Tierra: océano, continentes, nubes, la noche entrando por la derecha
+const drawEarth = (r) => {
+  fc(0, 0, r * 1.1, 0x6fb4e0, 0.12);
+  fc(0, 0, r, 0x1f5a92, 1);
+  // dos continentes hechos de manchas que se solapan, nubes y los polos
+  for (const [x, y, q, c] of [
+    [-0.45, -0.35, 0.18, 0],
+    [-0.35, -0.15, 0.16, 0],
+    [-0.25, 0.15, 0.12, 0],
+    [-0.2, 0.35, 0.14, 0],
+    [0.15, -0.3, 0.2, 0],
+    [0.3, -0.12, 0.18, 0],
+    [0.2, 0.15, 0.16, 0],
+    [0.1, 0.4, 0.12, 0],
+    [0, -0.88, 0.1, 1],
+    [0, 0.88, 0.1, 1],
+    [0, -0.5, 0.2, 1],
+    [-0.05, 0.1, 0.1, 1],
+  ])
+    fc(x * r, y * r, q * r, c ? INK_HI : 0x4f8a4a, c ? 0.45 : 0.9);
+  drawBandedSphere(r, 0, 0.3);
+  sk(0, 0, r, 2, 0x9fd4f0, 0.5);
+};
+
+// --------------------------------------------------------------------------
+class Game extends PS {
+
+  create() {
+    const [me] = [this];
+    GF = me.gfx = me.add.graphics();
+
+    // la nave, en coordenadas de MUNDO (y positivo = hacia abajo). Su actitud
+    // es una base: F nariz, U techo, R ala derecha.
+    me.o = { x: 0, y: 0, z: -1600 };
+    me.F = { x: 0, y: 0, z: 1 };
+    me.U = { x: 0, y: -1, z: 0 };
+    me.R = { x: 1, y: 0, z: 0 };
+    me.yv = 0;
+    me.pv = 0;
+    me.Jr = me.Jp = me.Jt = 0;
+    me.cu = 220;
+    me.H = me.cu;
+    me.u = BOOST_MAX;
+    me.Ql = 0; // alabeo solo visual, al girar
+    me.su = 0;
+    me.sw = 0;
+    me.du = 0;
+    me.fy = 0;
+    me.iu = 0;
+    me.Qj = HULL_MAX;
+    me.am = MISSILE_MAX;
+    me.ar = 0;
+
+    // cámara: la misma base, suavizada — sigue la nave también de cabeza
+    me.Zp = { ...me.F };
+    me.Zo = { ...me.U };
+    me.Zq = { ...me.R };
+
+    // ARCADE INFINITO: una sola fase — sobrevive y puntúa hasta morir.
+    // (Phaser reuses the scene instance across runs)
+    me.fz = 'play';
+    me.bq = 75; // el primer destructor tarda esto en llegar
+    me.Zb = 0;
+    me.Zm = 50; // la primera emboscada da tiempo a respirar
+    me.Za = 5; // la superficie viene armada casi de entrada
+    me.Ji = 0; // puntos por sobrevivir
+    me.wvN = 0;
+    me.ht = 0;
+    me.wa = 0;
+    me.T = 0;
+    me.Ck = 0; // ¿esta partida pasó por GOD? entonces no va al ranking
+    me.Kc = me.Sl = me.Hs = 0; // derribos, cámara lenta, golpe seco
+    me.Bc = me.Se = 1; // mejor combo, sector
+    me.St = 120;
+    me.Od = me.Ou = me.Gc = 0; // overdrive: carga y fin; anillos en cadena
+    me.Gt = null;
+    me.Gs = 8;
+    me.Xh = 10000; // cada 10000 puntos, un casco de vuelta
+    me.Ks = me.Kt = 0; // racha de derribos
+    me.Sv = me.Cg = 0; // puntaje mostrado (cuenta hacia el real); derribos del sector
+    me.Lh = me.Lf = 0; // B3 mantenido: cuánto, y cuándo fija el siguiente
+    me.Lk = []; // los blancos fijados
+    // relojes de los eventos, y los avisos de "primera vez", de cero en cada partida
+    me.Gw = 60;
+    me.Ms = 10;
+    me.Gd = 40;
+    me.Gm = me.Pf = me.Kw = me.Sw = me.Mw = me.Of = 0;
+    me.Hi = null; // el récord a batir, cuando llegue del almacenamiento
+    loadScores().then((s) => (me.Hi = s.length ? s[0].s : null));
+    me.b = 0;
+    me.Q7 = 10; // al principio te dejan orientarte
+    me.S = 0;
+
+    me.D = [];
+    me.bl = [];
+    me.ms = [];
+    me.q = [];
+    me.w = [];
+    me.sz = []; // fragmentos de explosión
+
+    // arcade extra
+    me.pa = false;
+    me.mu = 1; // multiplicador de combo
+    me.mt = 0;
+    me.Jh = 0; // el casco se recompone solo, con calma y sin golpes
+    me.Jj = 0;
+    me.G = null;
+    me.I = null; // el refuerzo que llama al perder los escudos
+
+    me.po();
+    me.bs();
+    me.bu();
+
+    me.Qp = me.add.rectangle(CX, CY, W, H, 0xffffff).setAlpha(0).setDepth(10);
+    Music.on = true;
+  }
+
+  // Las rocas se siembran alrededor del centro del sector
+  po() {
+    const rnd = (a, b) => a + RND() * (b - a);
+    const rocks = 10;
+    for (let i = 0; i < rocks; i++) {
+      const p = this.ri(SECTOR_R * 0.95);
+      this.D.push({
+        k: 8, x: p[0], y: p[1] * 0.5, z: p[2], r: 42, M: 2, t: rnd(0, 9), Zx: ROCK_POOL[FLR(RND() * 4)],
+        Zw: rnd(-0.5, 0.5), A: rnd(-16, 16), C: rnd(-10, 10), B: rnd(-16, 16), E: 0,
+      });
+    }
+  }
+
+  ri(r) {
+    const ang = RND() * PI * 2;
+    const rr = 300 + RND() * (r - 300);
+    return [SIN(ang) * rr, RH() * 2 * r * 0.5, COS(ang) * rr];
+  }
+
+  // Estrellas: puntos fijos del mundo, envueltos en una caja alrededor tuyo
+  bs(me = this) {
+    // Stars sit at infinity: they only turn with the view and never slide
+    // past, so the one thing moving through the sector is you
+    me.sn = [];
+    for (let i = 0; i < 320; i++) {
+      const v = vnorm({ x: RND() - 0.5, y: RND() - 0.5, z: RND() - 0.5 });
+      me.sn.push({
+        v,
+        s: RND() < 0.1 ? 3 : RND() < 0.4 ? 2 : 1,
+        a: 0.25 + RND() * 0.45,
+        tw: RND() < 0.25 ? 1 + RND() * 2 : 0, // parpadeo
+        ph: RND() * 6.3,
+      });
+    }
+    // the galaxy's band: dense faint stars hugging the horizon
+    me.Qu = [];
+    for (let i = 0; i < 260; i++) {
+      const u = RND() + RND() + RND() - 1.5;
+      me.Qu.push({
+        E: RND() * PI * 2,
+        el: (u * 26) / FOCAL,
+        s: RND() < 0.2 ? 2 : 1,
+        a: 0.2 + RND() * 0.45,
+      });
+    }
+    // el polvo: motas cercanas que convierten la velocidad en estelas —
+    // son la referencia principal de hacia dónde te mueves
+    me.Qt = [];
+    for (let i = 0; i < 96; i++) {
+      me.Qt.push({
+        x: RH() * 560,
+        y: RH() * 560,
+        z: RH() * 560,
+      });
+    }
+  }
+
+  bu(me = this) {
+    me.Zk = TX(me, 12, 10, '', 15).setAlpha(0.9);
+    me.Zl = TX(me, 12, 30, '', 13, DIM_CSS);
+    me.Q4 = TX(me, W - 12, 10, '', 15).setOrigin(1, 0).setAlpha(0.9);
+    me.Zg = TX(me, W - 12, H - 28, '', 15, DIM_CSS).setOrigin(1, 0);
+    me.Zh = TX(me, 12, H - 30, '', 17);
+    me.Q9 = TX(me, 168, H - 30, '', 17);
+    TX(me, 136, H - 52, 'DASH', 10, DIM_CSS).setOrigin(0, 0.5);
+    TX(me, 136, H - 66, 'SHIELD', 10, DIM_CSS).setOrigin(0, 0.5);
+    TX(me, 136, H - 80, 'OVERDRIVE', 10, DIM_CSS).setOrigin(0, 0.5);
+    me.Zc = TX(me, CX, 64, '', 16, 0, 0.5).setAlpha(0.95);
+    me.Qq = TX(me, 0, 0, '', 14, 0, 0.5).setVisible(false);
+    me.Qe = TX(me, CX, 168, '', 16, 0, 0.5).setAlpha(0).setAlign('center');
+    me.hint = TX(me, CX, H - 104, HINT_MAIN, 13, DIM_CSS, 0.5).setAlpha(0.6);
+    me.time.delayedCall(9000, () => me.tweens.add({ targets: me.hint, alpha: 0, duration: 800 }));
+    // etiqueta del escudo, junto a su barra
+
+    // los textos que salen del mundo: un pequeño grupo que se recicla
+    me.Pq = [0, 1, 2, 3, 4, 5].map(() => TX(me, 0, 0, '', 14, 0, 0.5).setAlpha(0));
+    me.Pi = 0;
+    me.W('SURVIVE. SCORE.');
+  }
+
+  W(msg) {
+    this.Qe.setText(msg).setAlpha(1);
+    this.tweens.add({ targets: this.Qe, alpha: 0, delay: 2000, duration: 700 });
+  }
+
+  // --- flujo ---
+  update(time, delta) {
+    const [me] = [this];
+    // pausa: START congela TODO — la lógica, el reloj de la partida, los
+    // temporizadores (escudo, dash, cadencia), las animaciones y la música.
+    // El juego corre con su propio reloj: el real menos lo que duró la pausa
+    if (pressed.START1 && me.fz !== 'out') {
+      me.pa = !me.pa;
+      me.time.paused = me.pa;
+      me.pa ? me.tweens.pauseAll() : me.tweens.resumeAll();
+      me.tweens.killTweensOf(me.Qe);
+      me.Qe.setText(me.pa ? 'PAUSED\nSECTOR ' + me.Se + '  ' + me.Kc + ' DOWN  BEST x' + me.Bc : '').setAlpha(me.pa ? 1 : 0);
+    }
+    if (me.pa) {
+      me.pO = (me.pO || 0) + delta;
+      return;
+    }
+    me.vt = time -= me.pO || 0;
+    // cámara lenta (cae el destructor) y un golpe seco al derribar una nave
+    const rd = MIN(delta, 50) / 1000;
+    me.Sl -= rd;
+    me.Hs -= rd;
+    const dt = rd * (me.Sl > 0 ? 0.3 : me.Hs > 0 ? 0.1 : 1);
+    me.b += dt;
+    for (const o of me.Pq) o.Tp += rd;
+    // el arcade de siempre: casco extra por puntos, y el récord cae en vivo
+    if (me.T >= me.Xh) {
+      me.Xh += 10000;
+      me.Qj = MIN(HULL_MAX, me.Qj + 1);
+      me.W('HULL UP.');
+      Sfx.Q3();
+    }
+    if (me.Hi && me.T > me.Hi) me.W('NEW HIGH SCORE.', (me.Hi = null));
+    // con UN casco, la alarma: pitido cada 1.2 s y el marco rojo
+    if (me.Qj === 1 && (me.Lw = (me.Lw || 0) - dt) <= 0) {
+      me.Lw = 1.2;
+      Sfx.O(880, 0.12, SQR, 0.05);
+    }
+    // cada 2 minutos, un sector nuevo: bono por sobrevivirlo y su nombre
+    // y su RETO: derribar 6 + 2·sector naves antes del siguiente — paga fuerte
+    if ((me.St -= dt) <= 0) {
+      me.St = 120;
+      me.T += 300 * me.Se++ + (me.Pf ? 0 : 2000);
+      me.W('SECTOR ' + me.Se + ' - ' + SEC[(me.Se - 1) % 3] + (me.Se > 3 ? ' ' + 'I'.repeat(1 + FLR((me.Se - 1) / 3)) : '') + (me.Pf ? '' : '\nPERFECT +2000') + '\nDOWN ' + (6 + 2 * me.Se) + ' SHIPS');
+      me.Cg = me.Pf = 0;
+      me.Qp.setAlpha(0.35);
+      me.tweens.add({ targets: me.Qp, alpha: 0, duration: 700 });
+      Sfx.Z1();
+    }
+    Music.G = !!(me.G || me.I);
+    if (GOD) me.Ck = 1;
+    Music.Sp = 1 - 0.07 * MIN(3, me.Se - 1); // cada sector, la música aprieta
+    me.Gx = (me.Gm -= dt) > 0 ? 1.8 : 1; // multiplicador del alcance del agujero
+    Music.Z6();
+
+    // el combo se enfría
+    me.mt -= dt;
+    if (me.mt <= 0) me.mu = 1;
+    me.Jj -= dt;
+    me.ht = MAX(0, me.ht - dt);
+
+    const cb = (me.G && me.G.f && me.G) || (me.I && me.I.f && me.I);
+    const anyB = me.G || me.I;
+    if (me.fz === 'play' && !cb) {
+      if (anyB) {
+        // la pelea es contra ÉL: apenas entra escolta, y nada más
+        me.sd(dt, 1, 16);
+      } else {
+      // el reloj del arcade: todo aprieta con los minutos
+      me.sd(dt, MIN(5, 1 + FLR(me.b / 50)), MAX(5, 12 - me.b / 50));
+      me.Zm -= dt;
+      if (me.Zm <= 0) {
+        me.Zm = 45;
+        me.Z7(MIN(5, 2 + FLR(me.b / 90)));
+      }
+      const Po = me.o;
+      const F = me.F;
+      const R = me.R;
+      // el agujero RESPIRA: cada ~70 s, 5 s tirando con casi el doble de alcance
+      if ((me.Gw -= dt) <= 0) {
+        me.Gw = me.Se > 2 ? 35 : 70;
+        me.Gm = 5;
+        me.W('GRAVITY SURGE - KEEP CLEAR.');
+        Sfx.O(70, 2, SAW, 0.15, 30);
+      }
+      // desde el sector 3, TORMENTAS de meteoritos que vienen de frente
+      if (me.Se > 2 && (me.Ms -= dt) <= 0) {
+        me.Ms = 35;
+        me.W('METEOR STORM.');
+        for (let i = 0; i < 14; i++) {
+          const d = 2000 + RND() * 900;
+          const v = 300 + RND() * 200;
+          me.D.push({
+            k: 8, Mt: 1, r: 40, M: 2, t: 0, E: 0, Zx: ROCK_POOL[i % 4], Zw: RH() * 2,
+            x: Po.x + F.x * d + R.x * RH() * 1600, y: Po.y + F.y * d + RH() * 1000, z: Po.z + F.z * d + R.z * RH() * 1600,
+            A: -F.x * v, C: -F.y * v, B: -F.z * v,
+          });
+        }
+      }
+      // la nave DORADA: rara y veloz, cruza de lado — derríbala: +1000 y
+      // misiles llenos. Se va en 8 s
+      if ((me.Gd -= dt) <= 0) {
+        me.Gd = 45 + RND() * 30;
+        me.W('GOLD RUNNER.');
+        me.D.push({
+          k: 10, r: 50, M: 3, t: 0, E: 0,
+          x: Po.x + R.x * 1800 + F.x * 1300, y: Po.y - 150, z: Po.z + R.z * 1800 + F.z * 1300,
+          A: -R.x * 560, C: 0, B: -R.z * 560,
+        });
+      }
+      // las torretas de la base, flotando sobre el disco: bajar al jalón a
+      // cazarlas paga powerup seguro
+      me.Za -= dt;
+      if (me.Za <= 0) {
+        me.Za = 13;
+        if (me.D.filter((e) => e.Qm).length < 12) {
+          if (!me.Zt) {
+            me.Zt = 1;
+            me.W('SURFACE GUNS BELOW.');
+          }
+          for (let i = 0; i < 6; i++) {
+            const wk = RND() < 0.4;
+            let gx2 = 0;
+            let gz2 = 0;
+            let gy2 = 0;
+            let ok = false;
+            for (let tr2 = 0; tr2 < 6 && !ok; tr2++) {
+              const ang = RND() * PI * 2;
+              gx2 = me.o.x + SIN(ang) * (700 + RND() * 600);
+              gz2 = me.o.z + COS(ang) * (700 + RND() * 600);
+              const cxx = FLR(gx2 / CELL) * CELL;
+              const czz = FLR(gz2 / CELL) * CELL;
+              const h2 = HSH(cxx, czz);
+              if (h2 >= 48) {
+                // celda limpia: al suelo
+                gy2 = surfY(gx2, gz2) - (wk ? 175 : 26);
+                ok = true;
+              } else if (!wk && h2 < 22) {
+                // la torreta puede subirse al TECHO de la estructura
+                gx2 = cxx + 350;
+                gz2 = czz + 350;
+                gy2 = surfY(gx2, gz2) - ((h2 < 8 ? 300 : 90) + (h2 % 5) * 70) - 26;
+                ok = true;
+              }
+              // arco o muro en la celda: reintenta — nada nace DENTRO. Y nada
+              // nace ENCIMA de otro: cada techo tiene un solo sitio
+              if (ok && (HYP(gx2, gz2) > BND_R - 300 || me.D.some((q) => !q.X && (q.k === 5 || q.k === 6) && HYP(q.x - gx2, q.z - gz2) < 220))) ok = false;
+            }
+            if (!ok) continue;
+            // UNA de cada seis es TUYA, y nunca más de tres vivas: las
+            // enemigas caen y las tuyas se quedan, así que sin tope el frente
+            // de abajo terminaba azul. Menos, más frágiles — la pelea es tuya
+            const fr = i > 4 && me.D.filter((q) => q.Qm && q.L).length < 3 ? 1 : 0;
+            me.D.push({
+              k: wk ? 6 : 5, Qm: 1, L: fr,
+              x: gx2, y: gy2, z: gz2,
+              r: wk ? 80 : 44, M: fr ? (wk ? 3 : 2) : wk ? 5 : 3,
+              t: RND() * 6, E: RND() * 6.3, P: 1 + RND() * 2,
+            });
+          }
+        }
+      }
+      // la regla del ala: UNO por cada CUATRO enemigos en el aire — con
+      // menos de cuatro vuelas solo; tope tres. El ala ayuda, la pelea es tuya
+      me.Zj = (me.Zj ?? 22) - dt;
+      if (me.Zj <= 0) {
+        me.Zj = 14;
+        const airE = me.D.filter((q) => q.k < 3 && !q.X).length;
+        const want = MIN(3, FLR(airE / 4));
+        if (me.D.filter((q) => q.k === 4 && !q.X).length < want) me.Zr(1);
+      }
+      // el destructor vuelve siempre — y cada vez con menos ceremonia
+      if (!anyB) {
+      const was = me.bq;
+      me.bq -= dt;
+      if (was > 2.5 && me.bq <= 2.5) me.W('MASSIVE SIGNAL.');
+      if (me.bq <= 0) {
+        me.W('HYPERSPACE RUPTURE.');
+        me.Ze();
+        me.Zr(1); // no vas solo: un ala llega contigo
+      }
+      }
+      }
+      // el casco se recompone solo: aguanta 28 s sin golpes
+      if (me.Qj < HULL_MAX) {
+        me.Jh += dt;
+        if (me.Jh >= 28) {
+          me.Jh = 0;
+          me.Qj++;
+          Sfx.Q3();
+        }
+      }
+      // sobrevivir puntúa solo
+      me.Ji += dt;
+      if (me.Ji >= 5) {
+        me.Ji -= 5;
+        me.T += 25;
+      }
+    }
+
+    if (me.fz !== 'out') me.up(time, dt);
+    me.ue(time, dt);
+    me.ux(dt);
+    me.um(dt, time);
+    me.uc(dt);
+    me.Ja(time);
+    me.uh();
+  }
+
+  // ¿Quién es el enemigo/aliado más cercano a esta unidad?
+  Z8(e, rng) {
+    let best = null;
+    let bd = rng;
+    for (const q of this.D) {
+      if (q.X || q.L || (q.k !== 1 && q.k !== 2 && q.k !== 5 && q.k !== 6)) continue;
+      const d = D3(q, e);
+      if (d < bd) {
+        bd = d;
+        best = q;
+      }
+    }
+    return best;
+  }
+
+  Z9(e, rng) {
+    let best = null;
+    let bd = rng;
+    for (const q of this.D) {
+      if (q.X || (!q.L && q.k !== 4)) continue;
+      const d = D3(q, e);
+      if (d < bd) {
+        bd = d;
+        best = q;
+      }
+    }
+    return best;
+  }
+
+  // Tu escuadrón: naves azules que cazan enemigos con tus mismas balas
+  Zr(n) {
+    const Po = this.o;
+    for (let i = 0; i < n; i++) {
+      if (this.D.filter((q) => q.k === 4).length >= 3) return;
+      const ang = RND() * PI * 2;
+      this.D.push({
+        k: 4,
+        x: Po.x + SIN(ang) * 500,
+        y: Po.y - 120,
+        z: Po.z + COS(ang) * 500,
+        r: 40, M: 4, t: 0, E: 0, P: 1, m: RND() < 0.5 ? 1 : -1, A: 0, C: 0, B: 0,
+      });
+    }
+  }
+
+  // La emboscada: n naves entran A LA VEZ desde direcciones distintas —
+  // el nivel 0 se gana peleando, no solo recogiendo
+  Z7(n) {
+    const Po = this.o;
+    // desde el sector 2 la emboscada llega en ESCUADRA: una V que viene de
+    // un solo lado, ya lanzada contra ti
+    const v = this.Se > 1;
+    const a0 = RND() * PI * 2;
+    this.W(v ? 'SQUADRON.' : 'AMBUSH.');
+    Sfx.Z2();
+    this.wvN = n;
+    for (let i = 0; i < n; i++) {
+      const ang = v ? a0 : (i / n) * PI * 2 + RND() * 0.8;
+      const sd = v ? (i % 2 ? -150 : 150) * ((i + 1) >> 1) : 0;
+      const d = 1500 + (v ? ((i + 1) >> 1) * 160 : 0);
+      const gun = i === 2 && n >= 4; // las oleadas grandes traen una corbeta
+      this.D.push({
+        k: gun ? 2 : 1,
+        x: Po.x + SIN(ang) * d + COS(ang) * sd,
+        y: Po.y + (v ? 0 : RH() * 600),
+        z: Po.z + COS(ang) * d - SIN(ang) * sd,
+        r: gun ? 130 : 22 * HUNTER_SCALE,
+        M: gun ? 8 : 4,
+        t: 0,
+        E: 0,
+        P: 2 + RND() * 2,
+        m: RND() < 0.5 ? 1 : -1,
+        A: v ? -SIN(ang) * 320 : 0,
+        C: 0,
+        B: v ? -COS(ang) * 320 : 0,
+        wv: 1,
+      });
+    }
+  }
+
+  // Después de un rato, salen a cazarte — y más, con cada pieza a bordo.
+  // Con la primera pieza aparecen también interceptores, que embisten.
+  sd(dt, max, every) {
+    const [me] = [this];
+    const Po = me.o;
+    me.Q7 -= dt;
+    const alive = me.D.filter((e) => e.k < 3).length;
+    if (me.Q7 > 0 || alive >= max) return;
+    me.Q7 = every;
+    const ang = RND() * PI * 2;
+    const r = RND();
+    const kz = me.Se > 1 && r < 0.35;
+    const sn = !kz && me.Se > 1 && r < 0.6;
+    const gun = sn || (me.b > 50 && r > 0.75);
+    const el = me.Se > 2 && !kz && !gun && r < 0.8; // ÉLITE: más casco, fuego rápido
+    if (kz) Sfx.O(900, 0.6, SAW, 0.05, 300);
+    if (kz && !me.Kw) me.W('KAMIKAZES INBOUND.', (me.Kw = 1));
+    if (sn && !me.Sw) me.W('SNIPERS - KEEP MOVING.', (me.Sw = 1));
+    me.D.push({
+      k: gun ? 2 : 1,
+      Kz: kz,
+      Sn: sn,
+      Et: el,
+      x: Po.x + SIN(ang) * 1300,
+      y: Po.y + RH() * 500,
+      z: Po.z + COS(ang) * 1300,
+      r: sn ? 70 : gun ? 130 : (kz ? 16 : 22) * HUNTER_SCALE,
+      M: sn ? 3 : gun ? 8 : kz ? 1 : el ? 7 : 4,
+      t: 0,
+      E: 0,
+      P: sn ? 4 : kz ? 1e9 : 2,
+      m: RND() < 0.5 ? 1 : -1,
+      A: 0,
+      C: 0,
+      B: 0,
+    });
+  }
+
+  // El destructor sale del hiperespacio y bloquea el salto. Llega ANCLADO
+  // CERCA DEL CENTRO del sector (la pelea nunca vive contra el borde, que
+  // te empuja de vuelta), y al punto del anillo MÁS LEJANO de ti: la
+  // entrada y la salva se ven enteras, de lejos, como una escena.
+  Ze(mini, me = this) {
+    const Po = me.o;
+    // Aparece LEJOS, delante de ti y a TU MISMA ALTURA: lo ves de lado,
+    // entero, imponente. No hay anillo: el sector eres tú. El MINI es el
+    // refuerzo: escolta sin domos, con menos casco — pero son DOS.
+    const f = me.F;
+    const h = HYP(f.x, f.z) || 1;
+    const bd = mini ? 2400 : me.Zb ? 2200 : 2600;
+    const ang = mini ? RND() * PI * 2 : 0;
+    let bx = Po.x + (mini ? SIN(ang) : f.x / h) * bd;
+    let bz = Po.z + (mini ? COS(ang) : f.z / h) * bd;
+    // nunca tras el borde: se acota ANTES de medir el suelo bajo él
+    const bk = MIN(1, (BND_R - 1000) / HYP(bx, bz));
+    bx *= bk;
+    bz *= bk;
+    const nb = {
+      k: 7,
+      x: bx,
+      y: MIN(Po.y, surfY(bx, bz) - 380),
+      z: bz,
+      r: 520 * SD_SCALE,
+      t: 0,
+      E: AT2(Po.x - bx, Po.z - bz), // la proa hacia ti
+      ha: 8,
+      ca: 12,
+      ma: 6,
+      cg: 0,
+      // la entrada: primero el APAGÓN y las letras — y cuando todo está
+      // negro, el destructor simplemente ESTÁ, de golpe, con el flash
+      d: 1,
+      f: 1,
+      Q2: 0,
+      Qb: mini || me.Zb ? 1 : 0, // el primero con toda la ceremonia
+      Zd: 0,
+      Q5: 0,
+      Qn: mini ? 1 : 0,
+      j: SD_PARTS.filter(([kind], i) => !mini || (kind === 2 || i < 4))
+        .map(([kind, ox, oy, oz, hp]) => {
+          // cada regreso vuelve con medio casco más
+          hp = mini && kind === 2 ? 8 : RD(hp * (1 + me.Zb / 2));
+          return { Z: kind, ox, oy, oz, M: hp, max: hp, P: 1 + RND() * 3, Qi: 0 };
+        }),
+    };
+    if (mini) me.I = nb;
+    else {
+      me.G = nb;
+      // PEM: mata todo lo que vuela y limpia el cielo de fuego — la
+      // escena es SUYA, y tu nave queda al garete
+      for (const q of me.D) {
+        if (q.k < 5) {
+          q.X = true;
+          me.bm(q);
+        }
+      }
+      me.q.length = 0;
+      me.XB(nb, 0, { h: true, r: 1100 });
+      me.W('EMP BLAST.');
+    }
+    me.D.push(nb);
+  }
+
+  // Del casco del destructor al mundo, y de vuelta
+  V(b, ox, oy, oz) {
+    const c = COS(b.E) * SD_SCALE;
+    const s = SIN(b.E) * SD_SCALE;
+    return [b.x + ox * c + oz * s, b.y + oy * SD_SCALE, b.z - ox * s + oz * c];
+  }
+  wb(b, wx, wy, wz) {
+    const c = COS(b.E) / SD_SCALE;
+    const s = SIN(b.E) / SD_SCALE;
+    const dx = wx - b.x;
+    const dz = wz - b.z;
+    return [dx * c - dz * s, (wy - b.y) / SD_SCALE, dx * s + dz * c];
+  }
+
+  // ¿Está este punto dentro del casco o de la torre?
+  ib(b, wx, wy, wz, pad) {
+    const [lx, ly, lz] = this.wb(b, wx, wy, wz);
+    if (lz > SD_NOSE + pad || lz < SD_REAR - pad) return false;
+    const k = (SD_NOSE - lz) / (SD_NOSE - SD_REAR);
+    if (ABS(lx) < SD_HALF_W * k + pad && ly > SD_RIDGE * k - pad && ly < SD_KEEL * k + pad) return true;
+    return ABS(lx) < 90 + pad && ly > -175 - pad && ly < -60 && lz < -240 + pad;
+  }
+
+  // Un punto débil puede recibir daño si está vivo y, en el caso del puente,
+  // si ya cayeron los dos domos que lo escudan
+  bo(b, pt) {
+    if (pt.M <= 0) return false;
+    if (pt.Z !== 2) return true;
+    return !b.j.some((q) => q.Z === 1 && q.M > 0);
+  }
+
+  ba(b, f) {
+    const Po = this.o;
+    let best = null;
+    let bestDot = -2;
+    for (const pt of b.j) {
+      if (!this.bo(b, pt)) continue;
+      const [wx, wy, wz] = this.V(b, pt.ox, pt.oy, pt.oz);
+      const d = HYP(wx - Po.x, wy - Po.y, wz - Po.z) || 1;
+      const dot = ((wx - Po.x) * f.x + (wy - Po.y) * f.y + (wz - Po.z) * f.z) / d;
+      if (dot > bestDot) {
+        bestDot = dot;
+        best = pt;
+      }
+    }
+    return best;
+  }
+
+  // Daño a una pieza del destructor. Cae el puente, cae el destructor.
+  bp(b, pt, n, me = this) {
+    if (!me.bo(b, pt)) return;
+    pt.M -= n;
+    b.g = 0.06;
+    pt.g = 0.1;
+    const [wx, wy, wz] = me.V(b, pt.ox, pt.oy, pt.oz);
+    if (pt.M > 0) {
+      me.w.push({ wx, wy, wz, t: 0.3 });
+      return;
+    }
+    me.w.push({ wx, wy, wz, t: 0, h: true });
+    me.sy(wx, wy, wz, 8);
+    Sfx.Qk();
+    if (pt.Z === 0) {
+      me.ad(60);
+    } else if (pt.Z === 1) {
+      me.ad(150);
+      const domesLeft = b.j.some((q) => q.Z === 1 && q.M > 0);
+      me.W(domesLeft ? 'DOME DOWN.' : 'HIT THE BRIDGE.');
+      b.Zd = 0.7; // perder un domo lo hace saltar
+      // sin escudos, no pelea limpio: llama a su escolta — ahora son DOS
+      if (!domesLeft && !me.I && !b.Qn && me.Zb >= 1) {
+        me.W('IT CALLS FOR BACKUP.');
+        me.Ze(1);
+      }
+    } else {
+      me.kb(b);
+    }
+  }
+
+  ub(b, dx, dz, dist, dt, me = this) {
+    const Po = me.o;
+    // La escena (entrada, y cada teletransporte en versión corta): el
+    // sector se APAGA con las letras contando qué pasa, el destructor
+    // aparece DE GOLPE en el negro con el flash, y suelta una lluvia de
+    // cohetes que sube alto, se abre en direcciones distintas y después
+    // se curva hacia ti mientras vuelve la luz.
+    if (b.f) {
+      b.Q2 += dt;
+      const ct = b.Q2;
+      const S = b.Qb ? 0.8 : 1;
+      b.Q8 = ct < 1.2 * S ? ct / (1.2 * S) : ct < 4.4 * S ? 1 : MAX(0, 1 - (ct - 4.4 * S) / (1.8 * S));
+      if (b.d && ct >= 1.2 * S) {
+        b.d = 0;
+        me.Qp.setAlpha(0.7);
+        me.tweens.add({ targets: me.Qp, alpha: 0, duration: 700 });
+        me.S = 12;
+        Sfx.Qk();
+        me.W(b.Qb ? "IT'S BACK." : 'DESTROYER AHEAD.');
+      }
+      if (!b.d && ct > 1.5 * S && ct < 4.1 * S) {
+        b.Q5 -= dt;
+        if (b.Q5 <= 0 && me.D.filter((q) => q.k === 3).length < 6) {
+          b.Q5 = 0.26;
+          if (!b.Zf && !b.Qb) {
+            b.Zf = 1;
+            me.W('SALVO INBOUND.');
+          }
+          // la salva se abre en espiral (ángulo áureo), sube LENTA con su
+          // columna de estela — y uno de cada cuatro es un dardo: sube poco
+          // y se lanza rapidísimo, para esquivarlo en el último segundo
+          const n = (b.sN = (b.sN || 0) + 1);
+          const ang = n * 2.4;
+          const fast = n % 4 === 3;
+          const [wx, wy, wz] = me.V(b, RH() * 160, -175, -330);
+          const P = Po;
+          const mk = 0.45 + RND() * 0.3;
+          me.D.push({
+            k: 3, x: wx, y: wy, z: wz, r: 22, M: 1, t: 0, E: 0,
+            A: COS(ang) * (260 + RND() * 300),
+            C: -(fast ? 260 : (300 + RND() * 180)) * (b.Qb ? 0.7 : 1),
+            B: SIN(ang) * (260 + RND() * 300),
+            Qr: (fast ? 0.6 : 2.2 + RND() * 1.2) * (b.Qb ? 0.6 : 1),
+            fast,
+            mid: fast ? 0 : 1,
+            gx: b.x + (P.x - b.x) * mk + RH() * 700,
+            gy: P.y + RH() * 300,
+            gz: b.z + (P.z - b.z) * mk + RH() * 700,
+            N: 12,
+          });
+          if (RND() < 0.35) Sfx.Qz();
+        }
+      }
+      if (ct > 6.4 * S) {
+        b.f = 0;
+        b.Q8 = 0;
+        if (!b.Qb) me.Zj = 4; // el ala se reagrupa tras el PEM
+      }
+      return;
+    }
+
+    // si te le acercas demasiado, no pelea contigo cuerpo a cuerpo:
+    // desaparece y te castiga desde lejos
+    if (!b.Zd && dist < 420 && me.b > (b.Jg || 0)) {
+      b.Jg = me.b + 20;
+      b.Zd = 1.0;
+      me.W('TOO CLOSE - IT CHARGES A JUMP.');
+    }
+    // cada domo que pierde también lo saca del apuro: salto corto —
+    // desaparece, un silencio, y reaparece lejos con salva
+    if (b.Zd > 0) {
+      b.Zd -= dt;
+      if (b.Zd <= 0) {
+        for (const e2 of me.D) {
+          if (e2.k === 3) {
+            e2.X = true;
+            me.bm(e2);
+          }
+        }
+        // tus misiles en vuelo hacia él vuelven al tubo: el salto no roba
+        let back = 0;
+        for (const m2 of me.ms) {
+          if (m2.Qd === b && !m2.X) {
+            m2.X = true;
+            back++;
+          }
+        }
+        if (back) {
+          me.am = MIN(MISSILE_MAX, me.am + back);
+          me.W('MISSILES RECALLED.');
+        }
+        // salta hacia ADENTRO del sector (hacia el centro, con juego): cerca
+        // del borde, un rumbo al azar lo dejaba tras el muro
+        const ta = AT2(-Po.x, -Po.z) + RH() * 1.4;
+        b.x = Po.x + SIN(ta) * 1700;
+        b.z = Po.z + COS(ta) * 1700;
+        b.y = MIN(Po.y, surfY(b.x, b.z) - 380);
+        b.E = AT2(Po.x - b.x, Po.z - b.z);
+        b.d = 1;
+        b.Qb = 1;
+        b.f = 1;
+        b.Q2 = 0;
+        b.Q5 = 0;
+        Sfx.Z1();
+        me.W('IT JUMPED.');
+        return;
+      }
+    }
+    for (const pt of b.j) if (pt.g) pt.g -= dt;
+    // gira lento para ponerte la proa — más lento que tu órbita, así ganarle
+    // la espalda es cuestión de volar. Avanza si te alejas, nunca retrocede,
+    // y no se deja arrastrar lejos del centro del sector.
+    b.E += AWR(AT2(dx, dz) - b.E) * MIN(1, 0.11 * dt);
+    const move = dist > 1900 ? 90 : 0;
+    b.x += SIN(b.E) * move * dt;
+    b.z += COS(b.E) * move * dt;
+    b.y += SIN(b.t * 0.4) * 6 * dt;
+
+    // torretas: ráfagas de tres, lentas y esquivables — pero son seis
+    for (const pt of b.j) {
+      if (pt.Z !== 0 || pt.M <= 0 || dist > 2600) continue;
+      pt.P -= dt;
+      if (pt.Qi > 0 && pt.P <= 0) {
+        pt.Qi--;
+        pt.P = pt.Qi ? 0.2 : 4.6 + RND() * 1.8;
+        const [wx, wy, wz] = me.V(b, pt.ox, pt.oy - 30, pt.oz);
+        // el destructor es la policía mala: la mitad de sus ráfagas van
+        // contra los carroñeros, no contra ti
+        let prey = null;
+        if (RND() < 0.5) {
+          for (const q of me.D) {
+            if (q.k < 3 && !q.X && HYP(q.x - wx, q.y - wy, q.z - wz) < 2000) {
+              prey = q;
+              break;
+            }
+          }
+        }
+        if (prey) {
+          const pdx = prey.x - wx;
+          const pdy = prey.y - wy;
+          const pdz = prey.z - wz;
+          const pm = HYP(pdx, pdy, pdz) || 1;
+          me.w.push({ wx, wy, wz, t: 0.28, Q1: true });
+          me.q.push({ x: wx, y: wy, z: wz, A: (pdx / pm) * SHOT_SPEED, C: (pdy / pm) * SHOT_SPEED, B: (pdz / pm) * SHOT_SPEED, N: 8, sd: 1 });
+          if (!me.Zs) {
+            me.Zs = 1;
+            me.W('IT HUNTS THEM TOO.');
+          }
+        } else me.sa({ x: wx, y: wy, z: wz }, SHOT_SPEED);
+      } else if (pt.Qi === 0 && pt.P <= 0) pt.Qi = 2;
+    }
+
+    // el hangar suelta interceptores
+    b.ha -= dt;
+    if (b.ha <= 0) {
+      b.ha = 16;
+      if (me.D.filter((e) => e.k === 1).length < 3) {
+        const [wx, wy, wz] = me.V(b, 0, SD_KEEL + 30, -100);
+        me.D.push({ k: 1, x: wx, y: wy, z: wz, r: 22 * HUNTER_SCALE, M: 4, t: 0, E: b.E, P: 2, m: 1, A: 0, C: 120, B: 0 });
+      }
+    }
+
+    // la torre suelta una pareja de misiles que te persiguen
+    b.ma -= dt;
+    if (b.ma <= 0 && dist < 2600 && me.D.filter((q) => q.k === 3).length < 4) {
+      b.ma = 15;
+      for (const side of [-1, 1]) {
+        const [wx, wy, wz] = me.V(b, side * 60, -170, -330);
+        const [ox, , oz] = me.V(b, side * 400, 0, -330);
+        const vx = (ox - b.x) * 0.3;
+        const vz = (oz - b.z) * 0.3;
+        me.D.push({ k: 3, x: wx, y: wy, z: wz, r: 22, M: 1, t: 0, E: 0, A: vx, C: -160, B: vz, N: 9 });
+      }
+      Sfx.Qz();
+    }
+
+    // el cañón de proa: carga a la vista y suelta una esfera enorme y lenta
+    if (b.cg > 0) {
+      b.cg -= dt;
+      if (b.cg <= 0) {
+        const [wx, wy, wz] = me.V(b, 0, 10, SD_NOSE);
+        me.sa({ x: wx, y: wy, z: wz }, 190, true);
+        me.S = 6;
+        Sfx.Qz();
+      }
+    } else {
+      b.ca -= dt;
+      if (b.ca <= 0 && dist < 2800) {
+        b.ca = 14;
+        b.cg = 1.8;
+      }
+    }
+  }
+
+  kb(b, me = this) {
+    b.X = true;
+    if (me.G === b) me.G = null;
+    if (me.I === b) me.I = null;
+    for (let i = 0; i < 9; i++) {
+      const [wx, wy, wz] = me.V(b, RH() * 400, (RND() - 0.7) * 150, SD_REAR + RND() * 900);
+      me.w.push({ wx, wy, wz, t: -i * 0.12, h: true });
+    }
+    me.sy(b.x, b.y, b.z, 24);
+    me.S = 16;
+    me.Sl = 1.2;
+    // su muerte es una ONDA: arrasa las naves enemigas que tenga cerca
+    for (const q of me.D) if (q.k < 4 && !q.X && D3(q, b) < 2500) me.Qf(q, 99);
+    me.T += b.Qn ? 800 : 1500;
+    Sfx.Qk();
+    me.Zb++;
+    me.bq = 50; // el siguiente ya viene (cuando no quede ninguno)
+    me.W(b.Qn ? 'BACKUP DOWN. +800' : 'DESTROYER DOWN. +1500');
+  }
+
+  ad(pts, p, lb, me = this) {
+    const v = pts * me.mu;
+    me.T += v;
+    if (p) {
+      me.PU(p, (lb || '') + '+' + v);
+      // lo que se gana peleando carga el OVERDRIVE
+      me.Od = MIN(100, me.Od + 8);
+      if (me.Od >= 100 && !me.Of) me.W('OVERDRIVE READY - PRESS B5.', (me.Of = 1));
+    }
+    const was = me.mu;
+    if (me.mt > 0) me.mu = MIN(5, me.mu + 1);
+    else me.mu = 2;
+    // al llegar a ×5 el combo se anuncia, y en ×5 aguanta 6 s en vez de 4
+    if (me.mu > 4 && was < 5) me.W('MAX COMBO x5');
+    me.mt = me.mu > 4 ? 6 : 4;
+    me.Bc = MAX(me.Bc, me.mu);
+  }
+
+  // un texto que sale del mundo ('+120', 'CLOSE +50'): sube y se apaga
+  PU(p, s) {
+    const o = this.Pq[this.Pi++ % 6];
+    o.setText(s).setAlpha(1);
+    o.Wp = { x: p.x, y: p.y, z: p.z };
+    o.Tp = 0;
+  }
+
+  sy(x, y, z, n) {
+    for (let i = 0; i < n; i++) {
+      const a1 = RND() * PI * 2;
+      const a2 = RH() * PI;
+      const sp = 120 + RND() * 240;
+      this.sz.push({
+        x, y, z,
+        A: SIN(a1) * COS(a2) * sp,
+        C: SIN(a2) * sp,
+        B: COS(a1) * COS(a2) * sp,
+        N: 0.5 + RND() * 0.3,
+      });
+    }
+  }
+
+  // --- la nave: tuya, libre ---
+  fw() {
+    return this.F;
+  }
+
+  up(time, dt, me = this) {
+    const Po = me.o;
+    // la entrada del destructor es una escena: motores al mínimo, sin dash
+    // ni nitro, y la nave se NIVELA Y ENCUADRA al destructor sola — lo ves
+    // de lado, entero, y recuperas el mando cuando la luz vuelve
+    const cineB = (me.G && me.G.f && me.G) || (me.I && me.I.f && me.I);
+    // solo la PRIMERA entrada te quita el mando; en los saltos a mitad de
+    // pelea se apaga el sector, pero la nave sigue siendo tuya
+    const sceneHold = !!cineB && !cineB.Qb;
+    if (sceneHold) {
+      const b = cineB;
+      // encuadra 500 POR ENCIMA del casco: el destructor queda en cuadro,
+      // y al volver el mando tu rumbo pasa limpio sobre la torre en vez de
+      // estamparte contra la proa
+      const to = vnorm({ x: b.x - Po.x, y: b.y - 500 - Po.y, z: b.z - Po.z });
+      const k = MIN(1, 2.2 * dt);
+      const [F, U, R] = orthoBasis(vmix(me.F, 1 - k, to, k), vmix(me.U, 1 - k, WORLD_UP, k));
+      me.F = F;
+      me.U = U;
+      me.R = R;
+      me.yv = 0;
+      me.pv = 0;
+    }
+
+    const turn = sceneHold ? 0 : (held.P1_R ? 1 : 0) - (held.P1_L ? 1 : 0);
+    const pit = sceneHold ? 0 : (held.P1_U ? 1 : 0) - (held.P1_D ? 1 : 0); // arriba = nariz arriba
+
+    // B5: OVERDRIVE — seis segundos de fuego cuádruple, intocable
+    if (pressed.P1_5 && me.Od >= 100 && !sceneHold) {
+      me.Od = me.Of = 0;
+      me.Ou = me.iu = time + 6000;
+      me.W('OVERDRIVE!');
+      me.q.length = 0; // encenderlo barre el fuego enemigo del aire
+      Sfx.Z1();
+    }
+
+    // B4/B6: el escudo se QUEDA — hasta que lo apagues tú con otro toque,
+    // o hasta que se consuma solo; apagarlo temprano recarga antes
+    if (pressed.P1_4 || pressed.P1_6) {
+      if (time < me.su) {
+        me.su = time;
+        me.sw = time + SHIELD_COOLDOWN_MS;
+      } else if (time >= me.sw) {
+        me.su = time + SHIELD_MS;
+        me.sw = time + SHIELD_MS + SHIELD_COOLDOWN_MS;
+        Sfx.Zv();
+      }
+    }
+
+    // HORIZONTE BLOQUEADO: arriba/abajo cabecea sobre el ala, sin tope — un
+    // loop dura lo que mantengas el stick, y al soltar la nave se queda donde
+    // la dejaste, de cabeza incluido. Izquierda/derecha cambia el rumbo
+    // alrededor del vertical del mapa (derecha es derecha en pantalla aun de
+    // cabeza), así las alas nunca se ladean y no hay nada que enderezar. Aun
+    // en picada casi vertical: girar sobre el techo ahí y re-alinear al salir
+    // daba un salto de 50–70° en un frame. Solo en plena maniobra se gira
+    // sobre el techo.
+    me.yv += (turn * YAW_RATE - me.yv) * MIN(1, YAW_EASE * dt);
+    me.pv += (pit * PITCH_RATE - me.pv) * MIN(1, YAW_EASE * dt);
+    const mv = (me.Jw = me.Jr || me.Jp);
+    const pa = mv ? 0 : me.pv * dt;
+    const ya = mv ? 0 : me.yv * dt;
+    let F = vmix(me.F, COS(pa), me.U, SIN(pa));
+    let U = vmix(me.U, COS(pa), me.F, -SIN(pa));
+    const hz = (f) => vmix(WORLD_UP, 1, f, -vdot(WORLD_UP, f));
+    const c = hz(F);
+    if (HYP(c.x, c.y, c.z) > 1e-4 && !mv) {
+      const s = vdot(U, c) < 0 ? -1 : 1;
+      F = rotAxis(F, { x: 0, y: -s, z: 0 }, -ya);
+      U = vmix(vnorm(hz(F)), s, F, 0);
+    } else F = rotAxis(F, U, -ya);
+    let R;
+    [F, U, R] = orthoBasis(F, U);
+    // Maniobras (doble B2): TONEL — una vuelta
+    // entera sobre la nariz y un paso hacia ese lado; LOOP completo; MEDIA
+    // VUELTA — medio tonel y medio loop hacia el suelo, sales derecho en
+    // sentido contrario. Primero el giro, luego el cabeceo.
+    if (me.Jr) {
+      const th = Math.sign(me.Jr) * MIN(ABS(me.Jr), 13 * dt);
+      me.Jr -= th;
+      [F, U, R] = orthoBasis(F, vmix(U, COS(th), R, SIN(th)));
+      Object.assign(Po, vmix(Po, 1, me.Js, th * 45));
+    } else if (me.Jp) {
+      const th = MIN(me.Jp, 4.5 * dt);
+      me.Jp -= th;
+      [F, U, R] = orthoBasis(vmix(F, COS(th), U, SIN(th)), vmix(U, COS(th), F, -SIN(th)));
+    }
+    me.F = F;
+    me.U = U;
+    me.R = R;
+
+    // B2: cada toque es un dash — un tirón hacia adelante, intocable un
+    // instante. Mantenido es nitro: la nave acelera sin parar mientras dure la
+    // reserva, y a esa velocidad embistes a los cazadores.
+    if (!sceneHold && pressed.P1_2 && me.u >= DASH_COST) {
+      me.u -= DASH_COST;
+      me.H = MAX(me.H, me.cu) + DASH_KICK;
+      me.du = time + DASH_INVULN_MS;
+      // DOBLE toque: maniobra — sin dirección o con lado, tonel; con
+      // arriba, loop; con abajo, media vuelta. Un toque es solo el dash.
+      if (time - me.Jt < 320) {
+        me.Jp = pit > 0 ? 6.283 : pit ? 3.1416 : 0;
+        me.Jr = pit < 0 ? (turn || 1) * 3.1416 : pit ? 0 : (turn || 1) * 6.283;
+        me.Js = vmix(me.R, pit ? 0 : 1, me.R, 0);
+      }
+      me.Jt = time;
+      Sfx.Z0();
+    }
+    if (sceneHold) {
+      me.u = MIN(BOOST_MAX, me.u + BOOST_REGEN * dt);
+      me.H += (6 - me.H) * MIN(1, 4 * dt); // el PEM te dejó al garete
+    } else if (held.P1_2 && me.u > 0) {
+      me.u = MAX(0, me.u - BOOST_DRAIN * dt);
+      me.H = MIN(NITRO_MAX, me.H + NITRO_ACCEL * dt);
+    } else {
+      if (!held.P1_2) me.u = MIN(BOOST_MAX, me.u + BOOST_REGEN * dt);
+      me.H += (me.cu - me.H) * MIN(1, SPEED_EASE * dt);
+    }
+
+    // cerca del destructor la pasada se frena sola (salvo con nitro):
+    // giras antes, lo pierdes de vista menos, la pelea se queda contigo
+
+    const f = me.fw();
+    Po.x += f.x * me.H * dt;
+    Po.y += f.y * me.H * dt;
+    Po.z += f.z * me.H * dt;
+
+    // los BORDES: pasado el muro o el techo te devuelve a la línea, y el rumbo
+    // pierde la componente que empuja hacia afuera y gira — contra el muro de
+    // lado, contra el techo de nariz — así ni de frente te quedas trabado
+    const P = Po;
+    const hr = HYP(P.x, P.z);
+    for (const [over, o, tg] of [
+      [hr - BND_R, { x: P.x / hr, y: 0, z: P.z / hr }, me.R],
+      [BND_TOP - P.y, { x: 0, y: -1, z: 0 }, me.U],
+    ]) {
+      if (over <= 0) continue;
+      P.x -= o.x * over;
+      P.y -= o.y * over;
+      P.z -= o.z * over;
+      const out = vdot(me.F, o);
+      const k = MIN(1, 6 * dt) * out;
+      if (out > 0) [me.F, me.U, me.R] = orthoBasis(vmix(vmix(me.F, 1, o, -1.5 * k), 1, tg, k), me.U);
+      if (me.b > me.wa) {
+        me.wa = me.b + 3;
+        me.W('SECTOR EDGE.');
+      }
+    }
+    // el agujero negro: cuanto más cerca, más tira — y muy cerca, te traga
+    const bdx = BH[0] - P.x;
+    const bdy = BH[1] - P.y;
+    const bdz = BH[2] - P.z;
+    const bhd = HYP(bdx, bdy, bdz);
+    me.Zi = CLP(1 - (bhd - BH_KILL) / (BH_PULL * me.Gx - BH_KILL), 0, 1);
+    // el reloj del disco corre según lo cerca que estés: lejos, lento
+    me.Jf = CLP(1 - bhd / 9000, 0, 1);
+    me.bT = (me.bT || 0) + dt * (0.25 + 2.2 * me.Jf * me.Jf);
+    if (bhd < BH_PULL * me.Gx) {
+      if (me.b > (me.Jl || 0)) {
+        // el retumbo del vacío, cada vez más presente
+        me.Jl = me.b + 0.8;
+        Sfx.O(26 + me.Zi * 22, 0.9, SAW, 0.11 * me.Zi, 18);
+      }
+      const grip = bhd < BH_GRIP;
+      // el agarre: un jalón que el crucero no vence — sales con dash o nitro.
+      // Y el tiempo se estira: sin nitro la nave se frena, la caída DURA
+      if (grip && !held.P1_2) me.H += (60 - me.H) * MIN(1, 8 * dt);
+      const pull = (grip ? 290 : 650 * me.Zi * me.Zi) * dt / bhd;
+      P.x += bdx * pull;
+      P.y += bdy * pull;
+      P.z += bdz * pull;
+      me.S = MAX(me.S, grip ? 6 : me.Zi * 4);
+      if (me.b > me.wa) {
+        me.wa = me.b + (grip ? 2.5 : 4);
+        me.W(grip ? 'IT HAS YOU - DASH.' : 'BLACK HOLE - BREAK AWAY.');
+      }
+    }
+    // el horizonte de sucesos no negocia: ni el escudo ni el modo prueba
+    if (bhd < BH_KILL) me.Jc();
+
+    // la superficie de la estación es PARED: aviso cerca, muerte al tocarla
+    const sdy = surfY(Po.x, Po.z) - Po.y;
+    if (sdy < 46) GOD ? (Po.y -= 46 - sdy) : me.Jc();
+    // las torres de la superficie son SÓLIDAS: rozarlas cuesta casco
+    if (sdy < 620) {
+      const cs = CELL;
+      const cx0 = FLR(Po.x / cs) * cs;
+      const cz0 = FLR(Po.z / cs) * cs;
+      const hsh = HSH(cx0, cz0);
+      if (hsh < 22) {
+        const hh = (hsh < 8 ? 300 : 90) + (hsh % 5) * 70;
+        const bx0 = cx0 + cs * 0.3;
+        const bz0 = cz0 + cs * 0.3;
+        const bw2 = cs * 0.4;
+        const yb = surfY(bx0 + bw2 / 2, bz0 + bw2 / 2);
+        if (
+          Po.y > yb - hh &&
+          Po.x > bx0 && Po.x < bx0 + bw2 &&
+          Po.z > bz0 && Po.z < bz0 + bw2
+        ) {
+          me.hy(time);
+          Po.y = yb - hh - 70; // la torre te escupe hacia arriba
+        }
+      } else if (hsh >= 22 && hsh < 30) {
+        // el travesaño del arco es sólido: o por debajo, o te duele
+        const zm = cz0 + cs / 2;
+        const hA = 230 + (hsh % 4) * 40;
+        const yT = surfY(cx0 + cs / 2, zm) - hA;
+        if (
+          ABS(Po.z - zm) < 40 &&
+          Po.x > cx0 + 60 && Po.x < cx0 + cs - 60 &&
+          Po.y > yT - 20 && Po.y < yT + 60
+        ) {
+          me.hy(time);
+          Po.y = yT - 90;
+        }
+      } else if (hsh >= 42 && hsh < 48) {
+        // el muro bajo: por encima o por los lados
+        const zm = cz0 + cs / 2;
+        const yW = surfY(cx0 + cs / 2, zm);
+        if (
+          ABS(Po.z - zm) < 34 &&
+          Po.x > cx0 + 40 && Po.x < cx0 + cs - 40 &&
+          Po.y > yW - 120
+        ) {
+          me.hy(time);
+          Po.y = yW - 190;
+        }
+      }
+    }
+
+    // los ANILLOS: aparecen delante de ti; crúzalos por dentro — puntos,
+    // turbo lleno y el siguiente, más lejos. Pasar por fuera corta la cadena
+    const G = me.Gt;
+    if (G) {
+      const rx = Po.x - G.x;
+      const ry = Po.y - G.y;
+      const rz = Po.z - G.z;
+      const gd = HYP(rx, ry, rz);
+      if (rx * G.n.x + ry * G.n.y + rz * G.n.z > 0 || gd > 4000) {
+        me.Gt = null;
+        if (gd < 120) {
+          me.ad(100 * ++me.Gc, G, 'GATE ');
+          if (me.Gc === 5) me.Od = 100; // cinco seguidos: OVERDRIVE lleno
+          me.u = BOOST_MAX;
+          me.Gs = 0;
+          Sfx.Q3();
+        } else me.Gc = 0;
+      }
+    } else if ((me.Gs -= dt) <= 0) {
+      me.Gs = 16;
+      const d = 1200 + RND() * 400;
+      // dentro del CÍRCULO del sector (radio útil 5800), nunca tras el borde
+      let x = Po.x + me.F.x * d + me.R.x * RH() * 600;
+      let z = Po.z + me.F.z * d + me.R.z * RH() * 600;
+      const k = MIN(1, 5800 / (HYP(x, z) || 1));
+      x *= k;
+      z *= k;
+      const y = CLP(Po.y + me.F.y * d + RH() * 400, BND_TOP + 300, surfY(x, z) - 300);
+      // si el borde lo corrió hacia adentro, el anillo se gira hacia ti:
+      // siempre se puede cruzar
+      const n = k < 1 ? vnorm({ x: x - Po.x, y: y - Po.y, z: z - Po.z }) : me.F;
+      const e1 = k < 1 ? vnorm(vcross(n, WORLD_UP)) : me.R;
+      me.Gt = { x, y, z, n, e1, e2: vcross(n, e1) };
+    }
+
+    // alabeo con el giro
+    const bank = me.yv * 0.34;
+    me.Ql += (bank - me.Ql) * MIN(1, 8 * dt);
+
+    // B1: cañón — sale de la nariz, hereda tu velocidad (doble con la mejora)
+    // mientras dura la escena del destructor no se dispara: es SU momento
+    if (held.P1_1 && time >= me.fy && !cineB) {
+      me.fy = time + (time < me.Ou ? 70 : FIRE_MS);
+      me.Jj = 0.05;
+      Sfx.Zz();
+      const sp = BOLT_SPEED + me.H;
+      const R = me.R;
+      // contra el destructor, el cañón corrige hacia el punto débil abierto
+      // que tengas casi de frente — pegarle es cuestión de apuntar cerca
+      let aim = f;
+      for (const bb of [me.G, me.I]) {
+        if (!bb || bb.d) continue;
+        const pt = me.ba(bb, f);
+        if (pt) {
+          const [wx, wy, wz] = me.V(bb, pt.ox, pt.oy, pt.oz);
+          const to = vnorm({ x: wx - Po.x, y: wy - Po.y, z: wz - Po.z });
+          if (vdot(to, f) > 0.93) {
+            aim = to;
+            break;
+          }
+        }
+      }
+      if (aim === f) {
+        const tg = me.bt(f);
+        if (tg && tg.k !== 7) {
+          const dd = D3(tg, Po) || 1;
+          const lead = dd / (BOLT_SPEED + me.H);
+          const to = vnorm({
+            x: tg.x + (tg.A || 0) * lead - Po.x,
+            y: tg.y + (tg.C || 0) * lead - Po.y,
+            z: tg.z + (tg.B || 0) * lead - Po.z,
+          });
+          // ayuda al que YA apunta bien: cono estrecho (~10°), no imán
+          if (vdot(to, f) > 0.985) aim = to;
+        }
+      }
+      for (const off of time < me.Ou ? [-20, -7, 7, 20] : [-9, 9]) {
+        me.bl.push({
+          x: Po.x + f.x * 24 + R.x * off,
+          y: Po.y + f.y * 24 + R.y * off,
+          z: Po.z + f.z * 24 + R.z * off,
+          A: aim.x * sp,
+          C: aim.y * sp,
+          B: aim.z * sp,
+          N: BOLT_LIFE,
+        });
+      }
+    }
+
+    // los misiles vuelven solos, uno cada tanto
+    if (me.am < MISSILE_MAX) {
+      me.ar += dt;
+      if (me.ar >= MISSILE_REGEN) {
+        me.ar = 0;
+        me.am++;
+        Sfx.Z4();
+      }
+    } else me.ar = 0;
+
+    // B3: misil — TOCAR lanza uno al blanco más alineado con tu nariz;
+    // MANTENER fija hasta 4 blancos (uno cada 0.25 s) y al SOLTAR sale la
+    // salva, uno a cada uno. Contra el destructor, al punto débil vivo
+    if (held.P1_3 && me.am > 0 && !cineB) {
+      me.Lh += dt;
+      if (me.Lh > 0.4 && me.Lk.length < MIN(4, me.am) && (me.Lf -= dt) <= 0) {
+        me.Lf = 0.25;
+        const t = me.bt(f, me.Lk);
+        if (t) {
+          me.Lk.push(t);
+          Sfx.O(1400, 0.06, SQR, 0.05);
+        }
+      }
+    } else if (me.Lh) {
+      const ts = me.Lh > 0.4 ? me.Lk.filter((t) => !t.X) : [me.bt(f)];
+      for (const target of ts.length ? ts : [null]) {
+        if (me.am <= 0 || cineB) break;
+        me.am--;
+        me.ms.push({
+          x: Po.x + f.x * 26 - me.U.x * 6,
+          y: Po.y + f.y * 26 - me.U.y * 6,
+          z: Po.z + f.z * 26 - me.U.z * 6,
+          A: f.x * MISSILE_SPEED,
+          C: f.y * MISSILE_SPEED,
+          B: f.z * MISSILE_SPEED,
+          Qd: target,
+          Qc: target && target.k === 7 ? me.ba(target, f) : null,
+          Y: [],
+          N: 7,
+        });
+      }
+      Sfx.Qz();
+      me.Lh = me.Lf = 0;
+      me.Lk = [];
+    }
+  }
+
+  bt(f, ex) {
+    const Po = this.o;
+    let best = null;
+    let bestDot = 0.75; // solo lo que ya tienes bastante de frente
+    for (const e of this.D) {
+      if (e.k === 4 || e.L || e.X || (ex && ex.includes(e))) continue;
+      const dx = e.x - Po.x;
+      const dy = e.y - Po.y;
+      const dz = e.z - Po.z;
+      const d = HYP(dx, dy, dz);
+      if (d > (e.k === 7 ? 3600 : 2800)) continue;
+      // el destructor es enorme: cuenta como "de frente" aunque su centro no lo esté
+      const dot = (dx * f.x + dy * f.y + dz * f.z) / MAX(d, 1) + (e.k === 7 ? 0.45 : 0);
+      if (dot > bestDot) {
+        bestDot = dot;
+        best = e;
+      }
+    }
+    return best;
+  }
+
+  // La muerte: una sola, para todo lo que mata de un golpe
+  Jc(me = this) {
+    if (GOD || me.fz === 'out' || (me.G && me.G.f) || (me.I && me.I.f)) return;
+    me.fz = 'out';
+    me.Sl = 1.3; // la propia muerte, en cámara lenta
+    me.XB(me.o, 0, { h: true });
+    me.S = 14;
+    Sfx.Qk();
+    me.time.delayedCall(1400, () => me.scene.start('O', { T: me.T, Sd: [me.Kc, me.Bc, FLR(me.b), me.Se], Ck: me.Ck }));
+  }
+
+  hy(time, me = this) {
+    if (me.fz === 'out' || (me.G && me.G.f) || (me.I && me.I.f)) return;
+    if (time < me.su) {
+      // la burbuja se lleva el golpe: se ve dónde pegó
+      me.ht = 0.3;
+      return;
+    }
+    if (time < me.iu || time < me.du) return;
+    me.iu = time + 2600;
+    me.S = 9;
+    Sfx.Z3();
+    // el golpe se ve: chispas de tu casco y un destello
+    me.sy(me.o.x, me.o.y, me.o.z, 8);
+    me.Qp.setAlpha(0.25);
+    me.tweens.add({ targets: me.Qp, alpha: 0, duration: 300 });
+    if (GOD) return; // modo prueba: duele, pero no mata
+    me.Qj--;
+    me.Pf = 1; // este sector ya no es perfecto
+    me.Jh = 0;
+    if (me.Qj <= 0) me.Jc();
+  }
+
+  // --- el sector ---
+  ue(time, dt, me = this) {
+    const P = me.o;
+
+    for (const e of me.D) {
+      e.t += dt;
+      if (e.g) e.g -= dt;
+      // NADA vive tras el borde: lo que aparece, deriva o SALTA afuera —
+      // el destructor incluido — vuelve adentro, a su radio del muro
+      const eh = HYP(e.x, e.z);
+      const el = BND_R - 150 - e.r;
+      if (eh > el) {
+        e.x *= el / eh;
+        e.z *= el / eh;
+      }
+      const dx = P.x - e.x;
+      const dy = P.y - e.y;
+      const dz = P.z - e.z;
+      const dist = HYP(dx, dy, dz);
+      // el agujero negro los traga también: atráelos y caen — y pagan
+      if (e.k < 5 || e.k > 7) {
+        const bd = D3(e, BHO);
+        if (bd < BH_PULL * me.Gx) {
+          const f = ((1 - bd / BH_PULL / me.Gx) ** 2 * 900 * dt) / bd;
+          e.x += (BHO.x - e.x) * f;
+          e.y += (BHO.y - e.y) * f;
+          e.z += (BHO.z - e.z) * f;
+          if (bd < 420) {
+            e.X = true;
+            me.bm(e);
+            if (e.k < 3) me.ad(200, e, 'SWALLOWED ');
+            continue;
+          }
+        }
+      }
+
+      if (e.k === 1 || e.k === 2 || e.k === 4) {
+        // vuelan como TÚ: siempre hacia adelante, virando con alabeo. El
+        // ACE hace pasadas y rompe cerca; la CORBETA guarda su anillo y
+        // ladra ráfagas — grande, lenta, nunca huye.
+        const gun2 = e.k === 2;
+        const spd2 = gun2 ? 165 : e.Kz ? 470 : 320; // el kamikaze va a fondo
+        let gx = P.x;
+        let gy = P.y;
+        let gz = P.z;
+        let wt = null;
+        if (e.k === 4) {
+          // el wing caza al enemigo más cercano; sin blanco, vuela contigo;
+          // pegado al blanco, ROMPE en evasiva como un piloto de verdad
+          let td = 1e9;
+          for (const q of me.D) {
+            if (q.k < 4 && !q.X) {
+              const d3 = D3(q, e);
+              if (d3 < td) {
+                td = d3;
+                wt = q;
+              }
+            }
+          }
+          if (e.fl > 0) {
+            e.fl -= dt;
+            gx = e.x + me.R.x * 900 * e.m;
+            gy = e.y - 300;
+            gz = e.z + me.R.z * 900 * e.m;
+          } else if (wt && td < 300) {
+            e.fl = 1 + RND() * 0.5;
+          } else if (wt) {
+            gx = wt.x;
+            gy = wt.y;
+            gz = wt.z;
+          } else {
+            gx = P.x + me.R.x * 380 * e.m;
+            gy = P.y - 100;
+            gz = P.z + me.R.z * 380 * e.m;
+          }
+          // y cada tanto, un misil propio — solo contra el destructor: las
+          // naves se las dejan a ti
+          e.Zn = (e.Zn ?? 8) - dt;
+          const mtg = me.G || me.I;
+          if (e.Zn <= 0 && mtg && !mtg.d) {
+            e.Zn = 15;
+            me.ms.push({
+              x: e.x, y: e.y, z: e.z,
+              ...VT(e, mtg, MISSILE_SPEED),
+              Qd: mtg,
+              Qc: mtg.k === 7 ? me.ba(mtg, me.F) : null,
+              Y: [],
+              N: 5,
+            });
+            Sfx.Qz();
+          }
+        } else if (e.Sn) {
+          // el francotirador guarda 2000 de ti, derivando de lado
+          const w = (dist - 2000) / dist;
+          gx = e.x + dx * w + (dz / dist) * 600 * e.m;
+          gy = e.y + dy * w;
+          gz = e.z + dz * w - (dx / dist) * 600 * e.m;
+        } else if (gun2) {
+          // desde el sector 3 la corbeta siembra MINAS a su paso
+          if (me.Se > 2 && (e.Mn = (e.Mn || 5) - dt) <= 0) {
+            e.Mn = 6;
+            if (!me.Mw) me.W('MINES - SHOOT THEM.', (me.Mw = 1));
+            me.D.push({ k: 9, x: e.x, y: e.y, z: e.z, r: 30, M: 1, t: 0, E: 0 });
+          }
+          if (dist < 620) {
+            gx = e.x - (dx / dist) * 1200;
+            gy = e.y - (dy / dist) * 400;
+            gz = e.z - (dz / dist) * 1200;
+          } else if (dist < 1100) {
+            gx = e.x + (dz / dist) * 900 * e.m;
+            gz = e.z - (dx / dist) * 900 * e.m;
+            gy = P.y;
+          }
+        } else if (e.fl > 0) {
+          e.fl -= dt;
+          // huyendo: lejos de ti, con un quiebre lateral
+          gx = e.x - (dx / dist) * 1500 + (dz / dist) * 500 * e.m;
+          gy = e.y - (dy / dist) * 600;
+          gz = e.z - (dz / dist) * 1500 - (dx / dist) * 500 * e.m;
+        } else if (!e.Kz && (dist < 650 || (dist < 1000 && (me.F.x * dx + me.F.y * dy + me.F.z * dz) / dist < -0.93))) {
+          // se sabe presa: si te tiene cerca, o si está en tu mira, rompe y
+          // se aleja — no se deja atropellar
+          e.fl = 1.2 + RND() * 0.8;
+        }
+        let m = HYP(e.A, e.C, e.B);
+        if (m < 40) {
+          e.A = (dx / dist) * spd2;
+          e.C = (dy / dist) * spd2;
+          e.B = (dz / dist) * spd2;
+          m = spd2;
+        }
+        const ddx = gx - e.x;
+        const ddy = gy - e.y;
+        const ddz = gz - e.z;
+        const dd = HYP(ddx, ddy, ddz) || 1;
+        const k2 = MIN(1, (gun2 ? 0.9 : e.Kz ? 1.5 : e.fl > 0 ? 3.6 : 2.3) * dt);
+        const oy = AT2(e.A, e.B);
+        let nx = e.A / m + (ddx / dd - e.A / m) * k2;
+        let ny = e.C / m + (ddy / dd - e.C / m) * k2;
+        let nz = e.B / m + (ddz / dd - e.B / m) * k2;
+        const nm = HYP(nx, ny, nz) || 1;
+        e.A = (nx / nm) * spd2;
+        e.C = (ny / nm) * spd2;
+        e.B = (nz / nm) * spd2;
+        e.x += e.A * dt;
+        e.y += e.C * dt;
+        e.z += e.B * dt;
+        e.E = AT2(e.A, e.B);
+        // el alabeo visual sale del propio viraje
+        e.Qo = (e.Qo || 0) + (CLP(AWR(e.E - oy) * 14, -0.9, 0.9) - (e.Qo || 0)) * MIN(1, 6 * dt);
+        e.P -= dt;
+        if (e.k === 4) {
+          // dispara TUS balas contra su blanco — sin prisa y con pulso de
+          // humano: muchas se van por un lado
+          if (wt && e.P <= 0) {
+            const td2 = D3(wt, e) || 1;
+            if (td2 < 1300) {
+              e.P = 3.4;
+              me.bl.push({
+                x: e.x, y: e.y, z: e.z,
+                A: ((wt.x - e.x) / td2) * 900 + RH() * 180,
+                C: ((wt.y - e.y) / td2) * 900 + RH() * 180,
+                B: ((wt.z - e.z) / td2) * 900 + RH() * 180,
+                N: 1.6,
+                L: 1,
+              });
+              Sfx.Zz();
+            }
+          }
+        } else if (e.Sn) {
+          // la línea roja te sigue y se CONGELA 0.4 s antes del disparo —
+          // muévete — y el rayo es instantáneo
+          e.Bf -= dt;
+          if (e.P > 0.4) e.Am = { x: P.x, y: P.y, z: P.z };
+          if (e.P < 1.6 && !e.Ch && dist < 3400) {
+            e.Ch = 1;
+            Sfx.O(200, 1.4, SQR, 0.04, 900);
+          }
+          if (e.P <= 0) {
+            e.P = 4;
+            e.Bf = 0.15;
+            e.Ch = 0;
+            const v = vnorm({ x: e.Am.x - e.x, y: e.Am.y - e.y, z: e.Am.z - e.z });
+            const tt = dx * v.x + dy * v.y + dz * v.z;
+            if (tt > 0 && tt < 3400 && HYP(dx - v.x * tt, dy - v.y * tt, dz - v.z * tt) < 40) {
+              // con el escudo arriba el rayo REBOTA y lo mata a él
+              if (time < me.su) {
+                me.Qf(e, 99);
+                me.ad(300, e, 'REFLECTED ');
+              } else me.hy(time);
+            }
+            Sfx.Qz();
+          }
+        } else if (e.P <= 0 && dist < (gun2 ? 1500 : 1300)) {
+          e.P = gun2 ? 1.6 : e.Et ? 1.1 : 2.2;
+          me.sa(e, SHOT_SPEED);
+        }
+      } else if (e.k === 6) {
+        // el caminante: pisa la superficie y te sigue por la sombra
+        let tx2 = dx;
+        let tz2 = dz;
+        let tdist = dist;
+        if (e.L) {
+          const tg = me.Z8(e, 2400);
+          if (tg) {
+            tx2 = tg.x - e.x;
+            tz2 = tg.z - e.z;
+            tdist = HYP(tx2, tz2) || 1;
+          }
+        }
+        const hm = HYP(tx2, tz2) || 1;
+        e.E = AT2(tx2, tz2);
+        if (tdist > 500) {
+          const nx2 = e.x + (tx2 / hm) * 55 * dt;
+          const nz2 = e.z + (tz2 / hm) * 55 * dt;
+          const ch2 = HSH(FLR(nx2 / CELL) * CELL, FLR(nz2 / CELL) * CELL);
+          if (ch2 >= 48 || (ch2 >= 22 && ch2 < 42)) {
+            e.x = nx2;
+            e.z = nz2;
+          }
+        }
+        e.y = surfY(e.x, e.z) - 200; // cuerpo chico y ALTO: por debajo se pasa
+        e.P -= dt;
+        if (e.P <= 0) {
+          if (e.L) {
+            const tg = me.Z8(e, 1500);
+            if (tg) {
+              e.P = 2.6;
+              me.bl.push({ x: e.x, y: e.y - 20, z: e.z, ...VT(e, tg, 620), N: 2.4, L: 1 });
+            }
+          } else if (dist < 1500) {
+            e.P = 2.6;
+            const fr2 = RND() < 0.4 ? me.Z9(e, 1400) : null;
+            if (fr2) {
+              me.q.push({ x: e.x, y: e.y - 20, z: e.z, ...VT(e, fr2, SHOT_SPEED), N: 7, ow: e });
+            } else me.sa(e, SHOT_SPEED);
+          }
+        }
+        if (dist > 4200) e.X = true;
+      } else if (e.k === 3) {
+        // misil del destructor: te sigue, pero gira mal — un giro cerrado,
+        // el escudo o el nitro lo dejan atrás; también se puede derribar.
+        // Los de la salva primero SUBEN en columna y luego se curvan a ti.
+        if (e.Qr > 0) {
+          e.Qr -= dt;
+        } else {
+          // el dardo va al doble de velocidad pero gira peor: te roza y
+          // vuelve a intentarlo. Los de la cortina caen primero a su punto
+          // del corredor, y desde ahí sí te buscan.
+          let tx = dx;
+          let ty = dy;
+          let tz = dz;
+          let dd = dist;
+          if (e.mid) {
+            tx = e.gx - e.x;
+            ty = e.gy - e.y;
+            tz = e.gz - e.z;
+            dd = HYP(tx, ty, tz) || 1;
+            if (dd < 180) e.mid = 0;
+          }
+          const spd = e.fast ? 640 : 300;
+          const k = MIN(1, (e.fast ? 0.55 : 0.9) * dt);
+          e.A += ((tx / dd) * spd - e.A) * k;
+          e.C += ((ty / dd) * spd - e.C) * k;
+          e.B += ((tz / dd) * spd - e.B) * k;
+        }
+        e.x += e.A * dt;
+        e.y += e.C * dt;
+        e.z += e.B * dt;
+        e.N -= dt;
+        if (e.N <= 0) {
+          e.X = true;
+          me.bm(e);
+        }
+      } else if (e.k === 7) {
+        me.ub(e, dx, dz, dist, dt);
+      } else if (e.k === 5) {
+        if (dist > 4200) e.X = true; // quedó atrás: el mundo viaja contigo
+        e.E += 0.5 * dt; // gira, vigilando
+        e.y += SIN(e.t * 1.1) * 8 * dt;
+        e.P -= dt;
+        if (e.L) {
+          // torreta ALIADA: busca lo enemigo y lo bate con tus balas
+          if (e.P <= 0) {
+            const tg = me.Z8(e, 1500);
+            if (tg) {
+              e.P = 2.4;
+              me.bl.push({
+                x: e.x, y: e.y - 30, z: e.z,
+                ...VT(e, tg, 620),
+                N: 2.4,
+                L: 1,
+              });
+            }
+          }
+        } else if (e.P <= 0 && dist < 1600) {
+          e.P = e.Qm ? 2.1 : 3.2;
+          // la enemiga reparte: a veces a ti, a veces a los tuyos
+          const fr2 = RND() < 0.5 ? me.Z9(e, 1400) : null;
+          if (fr2) {
+            me.w.push({ wx: e.x, wy: e.y - 26, wz: e.z, t: 0.28, Q1: true });
+            me.q.push({ x: e.x, y: e.y - 26, z: e.z, ...VT(e, fr2, SHOT_SPEED), N: 7, ow: e });
+          } else if (dist < 1000) me.sa(e, SHOT_SPEED);
+        }
+      } else if (e.k === 9) {
+        // la mina: cerca de ti revienta — y con los años se apaga sola
+        if (dist < 120) {
+          e.X = true;
+          me.XB(e, 0, { h: true });
+          me.hy(time);
+        }
+        if (e.t > 40) e.X = true;
+      } else if (e.k > 7) {
+        e.x += e.A * dt;
+        e.y += e.C * dt;
+        e.z += e.B * dt;
+        e.E = AT2(e.A, e.B);
+        if (e.Mt || e.k > 8) {
+          if (e.t > (e.Mt ? 14 : 8)) e.X = true;
+        } else if (dist > 2600) {
+          const ang = RND() * PI * 2;
+          e.x = P.x + SIN(ang) * 1600;
+          e.y = P.y + RH() * 900;
+          e.z = P.z + COS(ang) * 1600;
+        }
+      }
+
+      // lo que se mueve deja estela: se lee hacia dónde va
+      if (e.A !== undefined && e.k !== 8) {
+        e.tt = (e.tt || 0) + dt;
+        if (e.tt > 0.05) {
+          e.tt = 0;
+          (e.Y = e.Y || []).push([e.x, e.y, e.z]);
+          if (e.Y.length > (e.k === 3 ? 26 : 12)) e.Y.shift();
+        }
+      }
+
+      // contacto contigo (el wing es tuyo: se atraviesa)
+      if (!e.X && e.k !== 4 && e.k < 10 && !e.L && dist < e.r + 16) {
+        if (
+          (me.H > RAM_SPEED || time < me.du || time < me.su) &&
+          e.k < 4
+        ) {
+          // a toda velocidad — o con dash o escudo — la nave es el arma;
+          // a la corbeta solo la abolla
+          me.Qf(e, e.k === 2 ? 3 : 99);
+          me.S = 7;
+        } else if (e.k < 3) {
+          // metal contra metal: el caza estalla y tú pierdes UN casco —
+          // morir de un toque contra algo tan pequeño no era justo, y las
+          // emboscadas lo convertían en ejecución. El kamikaze que te
+          // alcanza NO paga: ganó él
+          if (e.Kz) {
+            e.X = true;
+            me.bm(e);
+          } else me.Qf(e, 99);
+          me.hy(time);
+        } else {
+          if (e.k < 5 || e.k > 7) e.X = true;
+          me.bm(e);
+          me.hy(time);
+        }
+      }
+    }
+
+    // disparos enemigos — el escudo activo los deshace contra la burbuja
+    const shieldOn = time < me.su;
+    for (const s of me.q) {
+      s.x += s.A * dt;
+      s.y += s.C * dt;
+      s.z += s.B * dt;
+      s.N -= dt;
+      // muerto el que disparó, su disparo se apaga en el aire: nada que
+      // vuele hacia ti sin dueño
+      if (s.ow && s.ow.X) {
+        s.X = true;
+        me.XB(s, 0.32);
+        continue;
+      }
+      const d = D3(P, s);
+      if (shieldOn && d < SHIELD_R + (s.h ? 40 : 0)) {
+        s.X = true;
+        me.ht = 0.3;
+        me.XB(s, 0.32);
+        continue;
+      }
+      if (d < (s.h ? 60 : 22)) {
+        s.X = true;
+        me.Rv = s.ow; // quien te pegó: derribarlo es REVANCHA
+        me.hy(time);
+      } else if (d < (s.Md ?? 1e9)) s.Md = d;
+      // el ROCE: pasó cerca sin tocarte — paga y sube el combo
+      else if (s.Md < 90 && !s.Nm) {
+        s.Nm = 1;
+        me.ad(50, s, 'CLOSE ');
+        Sfx.O(1200, 0.15, TRI, 0.05, 300);
+        me.Sl = MAX(me.Sl, 0.3); // un respiro de tiempo bala
+      }
+      if (!s.X) {
+        for (const q of me.D) {
+          if ((q.k === 4 || q.L) && !q.X && D3(q, s) < (q.k === 6 ? 90 : 50)) {
+            s.X = true;
+            q.M--;
+            if (q.M <= 0) {
+              q.X = true;
+              me.bm(q);
+              me.sy(q.x, q.y, q.z, 5);
+              if (q.k === 4) me.W('WINGMAN DOWN.');
+            } else me.XB(s, 0.32, { L: 1 });
+            break;
+          }
+        }
+      }
+      if (s.sd && !s.X) {
+        for (const q of me.D) {
+          if (q.k < 3 && !q.X && D3(q, s) < 60) {
+            s.X = true;
+            me.Qf(q, 1);
+            break;
+          }
+        }
+      }
+    }
+
+    // tus disparos contra el sector
+    for (const b of me.bl) {
+      let ate = false;
+      for (const bb of [me.G, me.I]) {
+        if (bb && !bb.d && me.Zu(bb, b)) {
+          ate = true;
+          break;
+        }
+      }
+      if (ate) continue;
+      for (const e of me.D) {
+        if (e.X || e.k === 7 || e.k === 4 || e.L) continue;
+        const d = D3(b, e);
+        if (d < e.r + 10) {
+          b.X = true;
+          me.Qf(e, 1, b.x, b.y, b.z);
+          // derribo con TUS balas desde más de 2400: tiro largo
+          if (e.X && e.k < 3 && !b.L && D3(e, me.o) > 2400) me.ad(100, e, 'LONG SHOT ');
+          break;
+        }
+      }
+    }
+
+    // los fragmentos vuelan y se apagan
+    for (const s of me.sz) {
+      s.x += s.A * dt;
+      s.y += s.C * dt;
+      s.z += s.B * dt;
+      s.N -= dt;
+    }
+    me.sz = me.sz.filter((s) => s.N > 0);
+
+    for (const bm of me.w) bm.t += dt;
+    me.D = me.D.filter((e) => !e.X);
+    me.q = me.q.filter((s) => !s.X && s.N > 0);
+    me.w = me.w.filter((b) => b.t < 0.5);
+  }
+
+  // Un disparo tuyo contra el destructor: pega en un punto débil, o el casco
+  // se lo traga con una chispa. Devuelve true si el disparo se consumió.
+  Zu(boss, b, me = this) {
+    for (const pt of boss.j) {
+      if (pt.M <= 0) continue;
+      const [wx, wy, wz] = me.V(boss, pt.ox, pt.oy, pt.oz);
+      if (HYP(b.x - wx, b.y - wy, b.z - wz) < SD_PART_R[pt.Z]) {
+        b.X = true;
+        if (me.bo(boss, pt)) me.bp(boss, pt, 1);
+        else me.XB(b, 0.35);
+        return true;
+      }
+    }
+    if (me.ib(boss, b.x, b.y, b.z, 0)) {
+      b.X = true;
+      me.XB(b, 0.38);
+      return true;
+    }
+    return false;
+  }
+
+  Qf(e, n) {
+    const [me] = [this];
+    e.M -= n;
+    e.g = 0.08;
+    if (e.M > 0) {
+      me.XB(e, 0.3);
+      return;
+    }
+    e.X = true;
+    if (e.L) {
+      me.bm(e);
+      me.sy(e.x, e.y, e.z, 4);
+      Sfx.Qk();
+      return;
+    }
+    // la última nave de la emboscada paga SIEMPRE: así se aprende que
+    // matarlas es lo que da los poderes
+    if (e.wv) {
+      e.wv = 0;
+      if (--me.wvN <= 0) {
+        me.W('WAVE CLEAR.');
+        me.ad(100);
+      }
+    }
+    me.bm(e);
+    me.sy(e.x, e.y, e.z, 6);
+    // una mina o un kamikaze derribados revientan en cadena: lo que esté
+    // cerca cae con ellos — en un enjambre, uno bien puesto limpia el cielo
+    if (e.k === 9 || e.Kz) {
+      const br = e.Kz ? 200 : 260;
+      me.XB(e, 0, { h: true, r: br });
+      for (const q of me.D) if (!q.X && q.k !== 7 && q.k !== 4 && !q.L && D3(q, e) < br) me.Qf(q, 99);
+    }
+    me.ad(e.k > 9 ? 1000 : e.k === 6 ? 120 : e.k === 5 ? (e.Qm ? 80 : 40) : e.k === 8 ? 15 : e.k === 2 ? 150 : e.k === 1 ? 60 : 25, e);
+    if (e.k > 9) {
+      // la dorada: misiles y OVERDRIVE llenos
+      me.am = MISSILE_MAX;
+      me.Od = 100;
+    }
+    if (e.k < 3) {
+      me.Kc++;
+      me.Hs = 0.05;
+      if (e === me.Rv) {
+        me.Rv = 0;
+        me.ad(200, e, 'REVENGE ');
+      }
+      if (++me.Cg === 6 + 2 * me.Se) {
+        me.T += 1000 * me.Se;
+        me.W('SECTOR CHALLENGE +' + 1000 * me.Se);
+      }
+      // la racha: derribos a menos de 2 s uno de otro
+      me.Ks = me.b - me.Kt < 2 ? me.Ks + 1 : 1;
+      me.Kt = me.b;
+      if (me.Ks > 1) {
+        me.T += 100 * me.Ks;
+        me.W(['DOUBLE KILL.', 'TRIPLE KILL.', 'RAMPAGE.'][MIN(3, me.Ks) - 2] + ' +' + 100 * me.Ks);
+      }
+    }
+    Sfx.Qk();
+    if (e.k === 8 && e.r > 20) {
+      for (let i = 0; i < 2; i++) {
+        me.D.push({
+          k: 8, x: e.x, y: e.y, z: e.z, r: 18, M: 1, t: 0, E: 0, Zx: ROCK_POOL[FLR(RND() * 4)],
+          Zw: RH() * 3,
+          A: RH() * 120,
+          C: RH() * 80,
+          B: RH() * 120,
+        });
+      }
+    }
+  }
+
+  sa(e, sp, big, me = this) {
+    const Po = me.o;
+    // el fogonazo marca de dónde sale — se ve quién te dispara
+    me.XB(e, 0.28, { Q1: true });
+    // apunta a donde VAS a estar, no a donde estás
+    const t = D3(Po, e) / sp;
+    const f = me.fw();
+    const tx = Po.x + f.x * me.H * t * 0.7;
+    const ty = Po.y + f.y * me.H * t * 0.7;
+    const tz = Po.z + f.z * me.H * t * 0.7;
+    const dx = tx - e.x;
+    const dy = ty - e.y;
+    const dz = tz - e.z;
+    const m = HYP(dx, dy, dz);
+    me.q.push({
+      x: e.x,
+      y: e.y - (e.k === 5 ? 26 : 0),
+      z: e.z,
+      A: (dx / m) * sp,
+      C: (dy / m) * sp,
+      B: (dz / m) * sp,
+      N: big ? 12 : 6,
+      h: big,
+      ow: e,
+    });
+  }
+
+  bm(e) {
+    this.XB(e, 0, { L: e.k === 4 || e.L });
+  }
+
+  // una explosión, un destello o un fogonazo en el punto p
+  XB(p, t, o) {
+    this.w.push({ wx: p.x, wy: p.y, wz: p.z, t, ...o });
+  }
+
+  ux(dt) {
+    for (const b of this.bl) {
+      b.x += b.A * dt;
+      b.y += b.C * dt;
+      b.z += b.B * dt;
+      b.N -= dt;
+    }
+    this.bl = this.bl.filter((b) => !b.X && b.N > 0);
+  }
+
+  um(dt) {
+    const [me] = [this];
+    for (const m of me.ms) {
+      const t = m.Qd;
+      if (t && !t.X) {
+        // corrige el rumbo hacia el blanco — contra el destructor, hacia su punto débil
+        let [tx, ty, tz] = [t.x, t.y, t.z];
+        let hitR = t.r + 16;
+        if (m.Qc && m.Qc.M > 0) {
+          [tx, ty, tz] = me.V(t, m.Qc.ox, m.Qc.oy, m.Qc.oz);
+          hitR = SD_PART_R[m.Qc.Z];
+        }
+        const dx = tx - m.x;
+        const dy = ty - m.y;
+        const dz = tz - m.z;
+        const d = HYP(dx, dy, dz);
+        const k = MIN(1, MISSILE_TURN * dt);
+        m.A += ((dx / d) * MISSILE_SPEED - m.A) * k;
+        m.C += ((dy / d) * MISSILE_SPEED - m.C) * k;
+        m.B += ((dz / d) * MISSILE_SPEED - m.B) * k;
+        if (d < hitR) me.dn(m);
+      }
+      for (const bb of [me.G, me.I]) {
+        if (!m.X && bb && !bb.d && me.ib(bb, m.x, m.y, m.z, 0)) me.dn(m);
+      }
+      m.Y.push([m.x, m.y, m.z]);
+      if (m.Y.length > 14) m.Y.shift();
+      m.x += m.A * dt;
+      m.y += m.C * dt;
+      m.z += m.B * dt;
+      m.N -= dt;
+    }
+    me.ms = me.ms.filter((m) => !m.X && m.N > 0);
+  }
+
+  // El misil estalla: golpe fuerte al blanco y a todo lo que esté cerca
+  dn(m, me = this) {
+    m.X = true;
+    me.XB(m, 0, { h: true, r: MISSILE_SPLASH });
+    me.S = MAX(me.S, 5);
+    Sfx.Qk();
+    for (const boss of [me.G, me.I]) {
+      if (!boss) continue;
+      for (const pt of boss.j) {
+        const [wx, wy, wz] = me.V(boss, pt.ox, pt.oy, pt.oz);
+        if (pt === m.Qc || HYP(m.x - wx, m.y - wy, m.z - wz) < MISSILE_SPLASH) {
+          me.bp(boss, pt, pt === m.Qc ? MISSILE_DMG - 1 : 1);
+        }
+      }
+    }
+    for (const e of me.D) {
+      if (e.X || e.k === 7 || e.k === 4 || e.L) continue;
+      const d = D3(m, e);
+      if (e === m.Qd || d < MISSILE_SPLASH + e.r) me.Qf(e, e === m.Qd ? MISSILE_DMG : 2);
+    }
+  }
+
+  // La cámara hereda la base de la nave con un pelo de retraso — incluida la
+  // inclinación, así la pantalla siempre coincide con el stick
+  uc(dt, me = this) {
+    // en plena maniobra la cámara va PEGADA a la nave: si se arrastrara,
+    // el tonel terminaría y la pantalla seguiría asentándose un rato
+    const k = me.Jw ? 1 : MIN(1, 8 * dt);
+    [me.Zp, me.Zo, me.Zq] = orthoBasis(vmix(me.Zp, 1 - k, me.F, k), vmix(me.Zo, 1 - k, me.U, k));
+    if (me.S > 0) me.S = MAX(0, me.S - 34 * dt);
+  }
+
+  // --- proyección mundo → pantalla ---
+  Jb(me = this) {
+    const Po = me.o;
+    const F = me.Zp;
+    const U = me.Zo;
+    const back = CAM_BACK + MAX(0, me.H - me.cu) * 0.09; // con nitro la cámara se queda atrás
+    return {
+      x: Po.x - F.x * back + U.x * CAM_UP,
+      y: Po.y - F.y * back + U.y * CAM_UP,
+      z: Po.z - F.z * back + U.z * CAM_UP,
+      F,
+      U,
+      R: me.Zq,
+    };
+  }
+
+  czOf(wx, wy, wz) {
+    const cm = this.cm;
+    return (wx - cm.x) * cm.F.x + (wy - cm.y) * cm.F.y + (wz - cm.z) * cm.F.z;
+  }
+
+  Q(wx, wy, wz, me = this) {
+    const cm = me.cm;
+    const d = { x: wx - cm.x, y: wy - cm.y, z: wz - cm.z };
+    const cz = vdot(d, cm.F);
+    if (cz < NEAR) return null;
+    const shx = me.S ? RH() * me.S : 0;
+    const shy = me.S ? RH() * me.S : 0;
+    return [CX + (vdot(d, cm.R) * FOCAL) / cz + shx, CY - (vdot(d, cm.U) * FOCAL) / cz + shy, cz];
+  }
+
+  // Una dirección del cielo (infinitamente lejos): solo gira con la cámara
+  // proyecta un punto dado como {x, y, z} o como [x, y, z]
+  p(v) {
+    return v.x === undefined ? this.Q(v[0], v[1], v[2]) : this.Q(v.x, v.y, v.z);
+  }
+
+  pd(v) {
+    const cm = this.cm;
+    const cz = vdot(v, cm.F);
+    if (cz < 0.08) return null;
+    return [CX + (vdot(v, cm.R) * FOCAL) / cz, CY - (vdot(v, cm.U) * FOCAL) / cz];
+  }
+
+  J(a, b, me = this) {
+    const g = me.gfx;
+    let pa = me.p(a);
+    let pb = me.p(b);
+    if (!pa && !pb) return;
+    if (!pa || !pb) {
+      const [va, vb] = pa ? [a, b] : [b, a];
+      const cza = me.czOf(va[0], va[1], va[2]);
+      const czb = me.czOf(vb[0], vb[1], vb[2]);
+      const t = (cza - NEAR - 0.01) / (cza - czb);
+      const mx = va[0] + (vb[0] - va[0]) * t;
+      const my = va[1] + (vb[1] - va[1]) * t;
+      const mz = va[2] + (vb[2] - va[2]) * t;
+      pa = me.p(va);
+      pb = me.Q(mx, my, mz);
+      if (!pa || !pb) return;
+    }
+    lnp(pa, pb);
+  }
+
+  fg(dist) {
+    return CLP(1.25 - dist / 2600, 0, 1);
+  }
+
+  // Modelo 3D anclado al mundo, con yaw propio y roll/pitch opcionales
+  dm(model, e, scale, color, baseAlpha, extraRoll, pitch) {
+    const [verts, edges] = model;
+    const cyw = COS(e.E || 0);
+    const syw = SIN(e.E || 0);
+    const cr = COS(extraRoll || 0);
+    const sr = SIN(extraRoll || 0);
+    const cp = COS(pitch || 0);
+    const sp = SIN(pitch || 0);
+    const pts = [];
+    for (const [mx0, my0, mz0] of verts) {
+      const mx = mx0 * cr - my0 * sr;
+      let my = mx0 * sr + my0 * cr;
+      let mz = mz0;
+      const my2 = my * cp - mz * sp;
+      mz = my * sp + mz * cp;
+      my = my2;
+      const wx = e.x + (mx * cyw + mz * syw) * scale;
+      const wy = e.y + my * scale;
+      const wz = e.z + (-mx * syw + mz * cyw) * scale;
+      pts.push([wx, wy, wz]);
+    }
+    this.sg(pts, edges, color, baseAlpha);
+  }
+
+  // dos pasadas: un halo ancho y tenue bajo la línea viva — luz, no alambre
+  sg(pts, edges, color, alpha) {
+    LS(4.5, color, alpha * 0.18);
+    for (const [a, b] of edges) this.J(pts[a], pts[b]);
+    LS(1.5, color, alpha);
+    for (const [a, b] of edges) this.J(pts[a], pts[b]);
+  }
+
+  Ja(time, me = this) {
+    const g = me.gfx;
+    g.clear();
+    me.cameras.main.setBackgroundColor(0x070709);
+    const cm = me.Jb();
+    me.cm = cm; // la cámara del frame: pj/pd/wl la leen de aquí
+
+    me.dk(time);
+    me.dz(time);
+    fr(0, 0, W, H, [0, 0x1f3a4a, 0x4a1f2a][(me.Se - 1) % 3], 0.08);
+    for (const o of me.Pq) {
+      const p = o.Wp && o.Tp < 1 && me.p(o.Wp);
+      p ? o.setPosition(p[0], p[1] - o.Tp * 50).setAlpha(1 - o.Tp) : o.setAlpha(0);
+    }
+    me.de2();
+    me.Jd(time);
+    me.dd();
+
+    me.Qq.setVisible(false);
+    // la escena de la salva: el sector entero se apaga y solo quedan el
+    // destructor, sus cohetes, tus disparos y tú
+    const cineB2 = (me.G && me.G.f && me.G) || (me.I && me.I.f && me.I);
+    const cine = cineB2 ? cineB2.Q8 || 0 : 0;
+    for (const e of me.D) {
+      if (cine > 0 && (e.k === 7 || e.k === 3)) continue;
+      me.de(e, time);
+    }
+    if (cine > 0) {
+      fr(0, 0, W, H, 0x000000, 0.85 * cine);
+      for (const e of me.D) {
+        if (e.k === 7 || e.k === 3) me.de(e, time);
+      }
+    }
+
+    // cañón: trazos brillantes — blanco el tuyo, azul el de tu equipo
+    for (const b of me.bl) {
+      const p1 = me.p(b);
+      const p2 = me.Q(b.x - b.A * 0.03, b.y - b.C * 0.03, b.z - b.B * 0.03);
+      if (!p1 || !p2) continue;
+      LS(2, b.L ? BLU : INK_HI, 0.9);
+      lnp(p1, p2);
+    }
+
+    // misiles: un proyectil de verdad, con aletas, cabeza ardiendo y estela larga
+    for (const m of me.ms) {
+      for (let i = 1; i < m.Y.length; i++) {
+        const a = m.Y[i - 1];
+        const b = m.Y[i];
+        LS(1 + i * 0.3, INK_HI, (i / m.Y.length) * 0.45);
+        me.J(a, b);
+      }
+      const F = vnorm({ x: m.A, y: m.C, z: m.B });
+      const U = vnorm(vmix(WORLD_UP, 1, F, -vdot(WORLD_UP, F)));
+      me.db(MISSILE_MODEL, m, F, U, 1.5, INK_HI, 1, m.N * 9);
+      const p = me.Q(m.x - F.x * 20, m.y - F.y * 20, m.z - F.z * 20);
+      if (p) {
+        fcp(p, MAX(2.5, 1400 / p[2]), AMB, 0.9);
+      }
+    }
+
+    // disparos enemigos: brasas de óxido grandes y lentas, con su estela —
+    // se ven venir y se pueden esquivar
+    for (const s of me.q) {
+      const p = me.p(s);
+      if (!p) continue;
+      const q = me.Q(s.x - s.A * 0.35, s.y - s.C * 0.35, s.z - s.B * 0.35);
+      const r = CLP(((s.h ? 48 : 7) * FOCAL) / p[2], s.h ? 6 : 3, s.h ? 70 : 14);
+      if (q) {
+        LS(r * 0.9, RUST, 0.45);
+        lnp(p, q);
+      }
+      // núcleo BLANCO siempre: una brasa se pierde contra el resplandor del
+      // disco; un núcleo ardiente no
+      fcp(p, r * 1.8, RUST, 0.4);
+      fcp(p, r, RUST_HI, 0.95);
+      fcp(p, r * 0.45, CRM, 0.9);
+    }
+
+    // explosiones: anillos que crecen y fragmentos que vuelan
+    for (const bm of me.w) {
+      if (bm.t < 0) continue;
+      const p = me.Q(bm.wx, bm.wy, bm.wz);
+      if (!p) continue;
+      const k = FOCAL / p[2];
+      if (bm.Q1) {
+        fcp(p, MAX(4, 30 * k), RUST_HI, (0.5 - bm.t) * 3.5);
+        continue;
+      }
+      const r = (4 + bm.t * (bm.r ? bm.r * 2.4 : bm.h ? 260 : 150)) * k;
+      if (bm.r) {
+        fcp(p, r * 0.8, AMB, 0.35 * (1 - bm.t / 0.5));
+      }
+      skp(p, r, bm.r ? 3 : 1.5, bm.h ? INK_HI : bm.L ? BLU : RUST, 1 - bm.t / 0.5);
+    }
+    for (const s of me.sz) {
+      const p1 = me.p(s);
+      const p2 = me.Q(s.x - s.A * 0.05, s.y - s.C * 0.05, s.z - s.B * 0.05);
+      if (!p1 || !p2) continue;
+      LS(1, INK, s.N * 1.6);
+      lnp(p1, p2);
+    }
+
+    // cerca del agujero, la pantalla entera se tiñe de acreción: no hay
+    // duda de DÓNDE estás metido
+    if (me.Zi > 0.02) fr(0, 0, W, H, 0xe89a5c, me.Zi * (0.1 + 0.06 * SIN(time * 0.004)));
+    const G = me.Gt;
+    if (G) {
+      // el anillo: dos aros que respiran, en la tinta del jugador
+      LS(3, INK_HI, 0.55 + 0.35 * SIN(time * 0.008));
+      for (const rr of [120, 100])
+        for (let i = 0; i < 20; i++) {
+          const at = (a) => [G.x + (G.e1.x * COS(a) + G.e2.x * SIN(a)) * rr, G.y + (G.e1.y * COS(a) + G.e2.y * SIN(a)) * rr, G.z + (G.e1.z * COS(a) + G.e2.z * SIN(a)) * rr];
+          me.J(at(i * 0.314), at(i * 0.314 + 0.314));
+        }
+    }
+    if (me.Ou > me.vt) fr(0, 0, W, H, BLU, 0.07 + 0.04 * SIN(time * 0.02));
+    if (me.Gx > 1) fr(0, 0, W, H, 0xe89a5c, 0.05 + 0.04 * SIN(time * 0.01));
+    if (me.Qj === 1) {
+      LS(14, RUST, 0.25 + 0.2 * SIN(time * 0.01));
+      GF.strokeRect(0, 0, W, H);
+    }
+    // los blancos fijados por B3: una caja sobre cada uno
+    LS(2, RUST_HI, 0.9);
+    for (const t of me.Lk) {
+      const p = !t.X && me.p(t);
+      if (p) GF.strokeRect(p[0] - 16, p[1] - 16, 32, 32);
+    }
+    me.dj(time);
+    me.dv();
+    me.di(time);
+
+    // barra de carga del hipersalto, o la vida que le queda al destructor
+    if ((me.G && !me.G.d) || (me.I && !me.I.d)) {
+      let hp = 0;
+      let max = 0;
+      for (const bb of [me.G, me.I]) {
+        if (!bb || bb.d) continue;
+        for (const pt of bb.j) {
+          if (pt.Z === 0) continue;
+          hp += MAX(0, pt.M);
+          max += pt.max;
+        }
+      }
+      LS(1.5, RUST, 0.9);
+      g.strokeRect(CX - 160, 30, 320, 10);
+      fr(CX - 158, 32, 316 * (hp / max), 6, RUST_HI, 0.9);
+    }
+  }
+
+  // Up and down must always read: a hazy floor below the sector's level
+  // plane and the galaxy's band along the horizon. The camera rolls with the
+  // ship, so the horizon is a line at any angle — found per pixel as the
+  // screen points whose view ray is level.
+  dh() {
+    const cm = this.cm;
+    const { R, U, F } = cm;
+    const n = HYP(R.y, U.y);
+    if (n < 0.02) return;
+    const s = (p) => ((p[0] - CX) * R.y - (p[1] - CY) * U.y + FOCAL * F.y) / n;
+    const band = (lo, hi, color, alpha) => {
+      let poly = clipHalf([[0, 0], [W, 0], [W, H], [0, H]], (p) => s(p) - lo);
+      if (hi !== undefined) poly = clipHalf(poly, (p) => hi - s(p));
+      if (poly.length < 3) return;
+      GF.fillStyle(color, alpha);
+      GF.fillPoints(poly.map(([x, y]) => ({ x, y })), true);
+    };
+    // bajo el horizonte: el resplandor frío de la estación, tenue
+    for (let i = 0; i < 10; i++) band(i * i * 7, undefined, 0x2c3a46, 0.1 - i * 0.009);
+    band(-18, 18, 0x3a4452, 0.1);
+    band(-6, 6, 0x5a6878, 0.1);
+    band(-0.7, 0.7, INK, 0.28);
+    for (const b of this.Qu) {
+      const p = this.pd(skyDir(b.E, b.el));
+      if (!p) continue;
+      fr(p[0], p[1], b.s, b.s, INK, b.a);
+    }
+  }
+
+  // Cuánto rota la pantalla respecto del "arriba" del sector: el arte del
+  // cielo se dibuja derecho y se gira con esto
+  kr() {
+    const cm = this.cm;
+    return AT2(-cm.R.y, -cm.U.y);
+  }
+
+  dk(time, me = this) {
+    me.dh();
+    // nebulosas: manchas apenas visibles que dan fondo al negro
+    for (const [yw, el, r, col, al] of [
+      [0.25, 0.5, 280, 0x4a3560, 0.06],
+      [0.9, 0.14, 300, 0x33506a, 0.05],
+      [4.1, 0.1, 260, 0x33506a, 0.04],
+      [5.3, 0.33, 220, 0x5e4038, 0.05],
+    ]) {
+      const p = me.pd(skyDir(yw, el));
+      if (!p) continue;
+      fcp(p, r, col, al);
+      fc(p[0] + r * 0.4, p[1] - r * 0.25, r * 0.6, col, al * 0.7);
+    }
+    // los planetas, fuera del rumbo del agujero negro (que es SOLO suyo):
+    // la Tierra al sur, Saturno al suroeste y Júpiter al este, en el hueco
+    // entre la Tierra y el agujero
+    me.so(3.4, 0.3, 46, drawEarth);
+    me.so(4.32, 0.14, 64, drawSaturn);
+    me.so(1.9, 0.24, 58, drawJupiter);
+    me.dl(time);
+  }
+
+  // Dibuja algo del cielo en su dirección, girado con la cámara
+  so(yaw, el, r, paint) {
+    const p = this.pd(skyDir(yaw, el));
+    if (!p || p[0] < -3 * r || p[0] > W + 3 * r || p[1] < -3 * r || p[1] > H + 3 * r) return;
+    GF.save();
+    GF.translateCanvas(p[0], p[1]);
+    GF.rotateCanvas(this.kr());
+    paint(r);
+    GF.restore();
+  }
+
+  // el agujero negro: su disco en 3D y, encima, la sombra como billete en
+  // su punto del mundo, girada con la cámara
+  Jd(time) {
+    const t = time * 0.001;
+    this.Je();
+    const p = this.p(BH);
+    if (!p) return;
+    const r = (BH[3] * FOCAL) / p[2];
+    if (p[0] < -3 * r || p[0] > W + 3 * r || p[1] < -3 * r || p[1] > H + 3 * r) return;
+    GF.save();
+    GF.translateCanvas(p[0], p[1]);
+    GF.rotateCanvas(this.kr());
+    this.bh(r, t);
+    GF.restore();
+  }
+
+  // EL AGUJERO NEGRO, en pantalla: resplandor, la sombra y el anillo de
+  // fotones. Cuanto más cerca, más arde todo.
+  bh(r, t) {
+    const q = this.Zi || 0;
+    fc(0, 0, r * 3.2, 0xe8a060, 0.04 + 0.05 * q);
+    fc(0, 0, r * 1.9, 0xe8a060, 0.07 + 0.08 * q);
+    fc(0, 0, r, 0x000000, 1);
+    sk(0, 0, r * 1.1, r * 0.16, CRM, 0.12 + 0.1 * q);
+    sk(0, 0, r * 1.04, MAX(1.5, r * 0.04), 0xfff8ea, 0.7 + 0.3 * SIN(t * 3));
+  }
+
+  // el disco de acreción en 3D, en el punto del agujero y MIRÁNDOTE: su
+  // normal apunta a la nave, inclinada ~48° para que se lea como un plato
+  // en perspectiva, y los anillos caen hacia adentro girando — el remolino
+  // que se traga todo. La DISTANCIA se siente: lejos gira lento y el trazo
+  // es fino; cerca gira rápido y arde grueso
+  Je(me = this) {
+    const [x, y, z, RS] = BH;
+    const q = me.Zi || 0;
+    const P = me.o;
+    const t = me.bT || 0;
+    const nk = me.Jf || 0;
+    const n = vnorm(vmix(vnorm({ x: P.x - x, y: P.y - y, z: P.z - z }), 1, WORLD_UP, 1.1));
+    const e1 = vnorm(vcross(n, { x: 0.01, y: 1, z: 0 }));
+    const e2 = vcross(n, e1);
+    const at = (a, r) => [x + (e1.x * COS(a) + e2.x * SIN(a)) * r, y + (e1.y * COS(a) + e2.y * SIN(a)) * r, z + (e1.z * COS(a) + e2.z * SIN(a)) * r];
+    for (let i = 0; i < 7; i++) {
+      const ph = (i / 7 + t * 0.09) % 1; // 0 afuera → 1 adentro
+      const k = 1.5 + 5.5 * (1 - ph);
+      LS((1.5 + 2.5 * ph) * (0.4 + nk) + q * 2, [0x8a5c48, RUST, 0xe89a5c, AMB, CRM][FLR(ph * 5)], MIN(1, (0.15 + 0.6 * ph) * (1 + q) * MIN(1, (1 - ph) * 8)));
+      for (let arc = 0; arc < 9; arc++) {
+        const a0 = t * (3 / k) + arc * 0.698 + i;
+        for (let j = 0; j < 3; j++) me.J(at(a0 + j * 0.16, k * RS), at(a0 + j * 0.16 + 0.16, k * RS));
+      }
+    }
+  }
+
+  // LOS BORDES se ven al acercarse: la pared del cilindro y el techo son
+  // mallas ancladas al mundo que aparecen a 1800 de distancia
+  de2(me = this) {
+    const P = me.o;
+    const hr = HYP(P.x, P.z);
+    const aw = 1 - (BND_R - hr) / 1800;
+    const y0 = FLR(P.y / 150) * 150;
+    const on = (a, y) => [SIN(a) * BND_R, y, COS(a) * BND_R];
+    if (aw > 0) {
+      LS(1.5, BLU, aw * 0.55);
+      const a0 = FLR(AT2(P.x, P.z) * 40) / 40;
+      for (let i = -9; i <= 9; i++) {
+        me.J(on(a0 + i / 40, MAX(BND_TOP, y0 - 1400)), on(a0 + i / 40, y0 + 1400));
+        const yy = y0 + i * 150;
+        if (yy >= BND_TOP) for (let j = -9; j < 9; j++) me.J(on(a0 + j / 40, yy), on(a0 + (j + 1) / 40, yy));
+      }
+    }
+    const cw = 1 - (P.y - BND_TOP) / 1800;
+    if (cw > 0) {
+      LS(1.5, BLU, cw * 0.55);
+      const x0 = FLR(P.x / 200) * 200;
+      const z0 = FLR(P.z / 200) * 200;
+      for (let i = -12; i <= 12; i++) {
+        me.J([x0 + i * 200, BND_TOP, z0 - 2400], [x0 + i * 200, BND_TOP, z0 + 2400]);
+        me.J([x0 - 2400, BND_TOP, z0 + i * 200], [x0 + 2400, BND_TOP, z0 + i * 200]);
+      }
+    }
+  }
+
+  // LA ESTACIÓN: la superficie de la esfera, dibujada como cuadrícula
+  // local alrededor tuyo — celdas fijas del MUNDO (no te siguen), con
+  // estructuras generadas por hash de celda y luces de posición. Tron abajo.
+  dl(time, me = this) {
+    const Po = me.o;
+    // el LIMBO: el borde curvo de la esfera, que sube y baja contigo — lo
+    // que dice que esto es un PLANETA de metal y no un piso con cielo
+    const alt = MAX(60, surfY(Po.x, Po.z) - Po.y);
+    const dhz = MIN(9500, SQ(2 * ST_R * alt));
+    for (const [wd2, al2] of [[5, 0.1], [1.5, 0.5]]) {
+      LS(wd2, BLD, al2);
+      let prev = null;
+      for (let i = 0; i <= 26; i++) {
+        const a2 = (i / 26) * PI * 2;
+        const lx = Po.x + SIN(a2) * dhz;
+        const lz = Po.z + COS(a2) * dhz;
+        const pt = [lx, surfY(lx, lz), lz];
+        if (pt[1] > 8e8) {
+          prev = null;
+          continue;
+        }
+        if (prev) me.J(prev, pt);
+        prev = pt;
+      }
+    }
+    const cs = CELL;
+    const cx0 = FLR(Po.x / cs);
+    const cz0 = FLR(Po.z / cs);
+    for (let i = -4; i <= 4; i++) {
+      for (let j = -4; j <= 4; j++) {
+        const x0 = (cx0 + i) * cs;
+        const z0 = (cz0 + j) * cs;
+        const y00 = surfY(x0, z0);
+        if (y00 > 9e8) continue;
+        const al = MAX(0, 1 - HYP(x0 - Po.x, z0 - Po.z) / 3200) * 0.5 + 0.06;
+        // los dos bordes de la celda: compartidos, forman la malla completa
+        LS(1.5, BLD, al);
+        me.J([x0, y00, z0], [x0 + cs, surfY(x0 + cs, z0), z0]);
+        me.J([x0, y00, z0], [x0, surfY(x0, z0 + cs), z0 + cs]);
+        // el hash decide qué celda lleva estructura, y de qué altura
+        const hsh = HSH(x0, z0);
+        if (hsh >= 42 && hsh < 48) {
+          // un MURO bajo cruzando la celda: sáltalo o rodéalo
+          const zm = z0 + cs / 2;
+          const hW = 120;
+          LS(1.5, GRY, al * 1.3);
+          const yA = surfY(x0 + 40, zm);
+          const yB = surfY(x0 + cs - 40, zm);
+          me.J([x0 + 40, yA, zm], [x0 + 40, yA - hW, zm]);
+          me.J([x0 + cs - 40, yB, zm], [x0 + cs - 40, yB - hW, zm]);
+          me.J([x0 + 40, yA - hW, zm], [x0 + cs - 40, yB - hW, zm]);
+        }
+        if (hsh >= 22 && hsh < 30) {
+          // un ARCO: dos pilones y un travesaño — pásale por debajo
+          const zm = z0 + cs / 2;
+          const yA = surfY(x0 + 90, zm);
+          const yB = surfY(x0 + cs - 90, zm);
+          const hA = 230 + (hsh % 4) * 40;
+          LS(1.5, GRY, al * 1.4);
+          me.J([x0 + 90, yA, zm], [x0 + 90, yA - hA, zm]);
+          me.J([x0 + cs - 90, yB, zm], [x0 + cs - 90, yB - hA, zm]);
+          me.J([x0 + 90, yA - hA, zm], [x0 + cs - 90, yB - hA, zm]);
+          me.J([x0 + 90, yA - hA + 26, zm], [x0 + cs - 90, yB - hA + 26, zm]);
+          // la guía azul en el suelo: por AQUÍ se pasa
+          LS(2, BLD, al * 1.6);
+          me.J([x0 + 110, yA - 6, zm], [x0 + cs - 110, yB - 6, zm]);
+        }
+        if (hsh < 22) {
+          const hh = (hsh < 8 ? 300 : 90) + (hsh % 5) * 70;
+          const bx0 = x0 + cs * 0.3;
+          const bz0 = z0 + cs * 0.3;
+          const bw2 = cs * 0.4;
+          const yb = surfY(bx0 + bw2 / 2, bz0 + bw2 / 2);
+          LS(1.5, GRY, al * 1.3);
+          for (const [ox, oz] of [[0, 0], [bw2, 0], [bw2, bw2], [0, bw2]]) {
+            me.J([bx0 + ox, yb, bz0 + oz], [bx0 + ox, yb - hh, bz0 + oz]);
+          }
+          me.J([bx0, yb - hh, bz0], [bx0 + bw2, yb - hh, bz0]);
+          me.J([bx0 + bw2, yb - hh, bz0], [bx0 + bw2, yb - hh, bz0 + bw2]);
+          me.J([bx0 + bw2, yb - hh, bz0 + bw2], [bx0, yb - hh, bz0 + bw2]);
+          me.J([bx0, yb - hh, bz0 + bw2], [bx0, yb - hh, bz0]);
+          // la torre alta lleva luz de posición
+          if (hsh < 8 && FLR(time / 500 + hsh) % 3) {
+            const lp = me.Q(bx0 + bw2 / 2, yb - hh - 14, bz0 + bw2 / 2);
+            if (lp) fcp(lp, MAX(1.2, 700 / lp[2]), RUST_HI, al * 1.6);
+          }
+        }
+      }
+    }
+  }
+
+  dz(time) {
+    for (const m of this.sn) {
+      const p = this.pd(m.v);
+      if (!p || p[0] < -4 || p[0] > W + 4 || p[1] < -4 || p[1] > H + 4) continue;
+      let a = m.a;
+      if (m.tw) a *= 0.6 + 0.4 * SIN(time * 0.001 * m.tw + m.ph);
+      fr(p[0], p[1], m.s, m.s, INK, a);
+      if (m.s === 3) {
+        // las grandes destellan en cruz
+        LS(1, INK, a * 0.5);
+        PL(p[0] - 4, p[1] + 1, p[0] + 6, p[1] + 1);
+        PL(p[0] + 1, p[1] - 4, p[0] + 1, p[1] + 6);
+      }
+    }
+  }
+
+  // El polvo convierte tu velocidad en estelas: se SIENTE volar
+  dd(me = this) {
+    const Po = me.o;
+    const L = 560;
+    const f = me.fw();
+    const trail = 0.016 + (me.H / TURBO_SPEED) * 0.065;
+    for (const m of me.Qt) {
+      const wx = Po.x + WRP(m.x - Po.x, -L / 2, L / 2);
+      const wy = Po.y + WRP(m.y - Po.y, -L / 2, L / 2);
+      const wz = Po.z + WRP(m.z - Po.z, -L / 2, L / 2);
+      const p1 = me.Q(wx, wy, wz);
+      const p2 = me.Q(wx + f.x * me.H * trail, wy + f.y * me.H * trail, wz + f.z * me.H * trail);
+      if (!p1 || !p2) continue;
+      const dist = HYP(wx - Po.x, wy - Po.y, wz - Po.z);
+      const a = CLP(1 - dist / 420, 0, 1) * 0.5 * (me.H / TURBO_SPEED + 0.3);
+      if (a <= 0.02) continue;
+      LS(1, INK, a);
+      lnp(p1, p2);
+    }
+  }
+
+  de(e, time, me = this) {
+    const dist = D3(e, me.o);
+    // la estela de lo que se mueve: se ve de dónde viene y hacia dónde va —
+    // en la tinta de SU bando: nada aliado deja óxido
+    if (e.Y && dist < 2200) {
+      const n = e.Y.length;
+      for (let i = 1; i < n; i++) {
+        LS(e.k === 3 ? 3 : 2, e.k === 4 || e.L ? BLU : e.k > 9 ? AMB : RUST_HI, (i / n) * 0.5);
+        me.J(e.Y[i - 1], i === n - 1 ? [e.x, e.y, e.z] : e.Y[i]);
+      }
+    }
+    // el rayo del francotirador: aviso que engorda, y el destello del tiro
+    if (e.Sn && e.Am && (e.P < 1.6 || e.Bf > 0)) {
+      const v = vnorm({ x: e.Am.x - e.x, y: e.Am.y - e.y, z: e.Am.z - e.z });
+      LS(e.Bf > 0 ? 5 : 1 + (1.6 - e.P) * 1.5, e.Bf > 0 ? INK_HI : RUST_HI, e.Bf > 0 ? 1 : 0.3 + (1.6 - e.P) * 0.4);
+      me.J([e.x, e.y, e.z], [e.x + v.x * 3400, e.y + v.y * 3400, e.z + v.z * 3400]);
+    }
+    const p = me.p(e);
+    if (!p) return;
+    let a = me.fg(dist);
+    // el kamikaze late en rojo: se ve venir
+    if (e.Kz) skp(p, MAX(8, (60 * FOCAL) / p[2]) * (1 + 0.2 * SIN(e.t * 14)), 2, RUST_HI, 0.8);
+    if (e.k === 9) {
+      // la mina: un rombo cuyo núcleo parpadea más rápido si estás cerca
+      const r = MAX(4, (34 * FOCAL) / p[2]);
+      LS(2, RUST_HI, MAX(a, 0.4));
+      PL(p[0], p[1] - r, p[0] + r, p[1], p[0], p[1] + r, p[0] - r, p[1], p[0], p[1] - r);
+      if (SIN(e.t * (dist < 500 ? 30 : 8)) > 0) fcp(p, r * 0.45, RUST_HI, 0.9);
+      return;
+    }
+
+    if (e.k === 3) {
+      const F = vnorm({ x: e.A, y: e.C, z: e.B });
+      const U = vnorm(vmix(WORLD_UP, 1, F, -vdot(WORLD_UP, F)));
+      me.db(MISSILE_MODEL, e, F, U, 1.6, e.g > 0 ? INK_HI : RUST_HI, 1, e.t * 8);
+      fcp(p, MAX(3, (16 * FOCAL) / p[2]), RUST_HI, 0.5 + 0.4 * SIN(e.t * 20));
+      return;
+    }
+
+    // el destructor no se apaga con la niebla: es enorme y tiene que verse
+    // desde lejos. Escondido (antes del flash de entrada) no se dibuja.
+    if (e.k === 7) {
+      if (!e.d) me.dr(e, MAX(a, 0.6), e.g > 0);
+      return;
+    }
+
+    if (a <= 0.03) {
+      if ((e.k === 1 || e.k === 2 || e.k === 5) && !e.L && dist < 3200) {
+        fr(p[0], p[1], 2.5, 2.5, RUST_HI, 0.6);
+      }
+      return;
+    }
+
+    // el óxido es solo para lo que te ataca; una roca es paisaje que golpea
+    const flash = e.g > 0;
+    const color = flash
+      ? INK_HI
+      : e.k === 4 || e.L ? BLU : e.k === 8 ? GRY : e.k > 9 ? AMB : e.Et ? RUST_HI : RUST;
+    if (e.k === 8 && !flash) a *= 0.7;
+
+    const model =
+      e.k === 5 ? (e.Qm ? TURRET_MODEL : SENTRY_MODEL)
+      : e.k === 1 || e.k === 4 || e.k > 9 ? SHIP_MODEL : e.k === 2 ? GUN_MODEL
+      : e.k === 6 ? WALK_MODEL
+      : e.Zx;
+    const scale = e.k === 8 ? e.r / 16 : e.k === 5 ? 1.6 : e.k === 1 ? 2.2 : e.k === 4 ? 2 : e.k === 2 ? 3 : e.k === 6 ? 1 : 2.4;
+    const rot = e.k === 8 ? e.t * e.Zw : e.Qo || 0;
+    me.dm(model, e, scale, color, a, rot);
+
+    if (e.k === 6) {
+      // las patas CAMINAN: dos pares alternando, con rodilla y pie que se
+      // levanta — la superficie tiene vida propia
+      const cy2 = COS(e.E);
+      const sy3 = SIN(e.E);
+      LS(1.5, e.L ? BLU : RUST, a);
+      for (let i = 0; i < 4; i++) {
+        const hx = i < 2 ? -26 : 26;
+        const hz = i % 2 ? 22 : -22;
+        const ph = e.t * 5 + (i === 0 || i === 3 ? 0 : PI);
+        const stz = SIN(ph) * 34;
+        const wxh = e.x + (hx * cy2 + hz * sy3) * 1.1;
+        const wzh = e.z + (-hx * sy3 + hz * cy2) * 1.1;
+        const hipY = e.y + 31; // cadera en el piso del cuerpo
+        const wxf = e.x + (hx * 1.7 * cy2 + (hz + stz) * sy3) * 1.1;
+        const wzf = e.z + (-hx * 1.7 * sy3 + (hz + stz) * cy2) * 1.1;
+        const fy = surfY(wxf, wzf) - MAX(0, SIN(ph + PI / 2)) * 16;
+        const kx = (wxh + wxf) / 2;
+        const kz = (wzh + wzf) / 2;
+        const ky = (hipY + fy) / 2 - 18;
+        // rodilla hacia ATRÁS, como los de Star Wars
+        me.J([wxh, hipY, wzh], [kx - sy3 * 34, ky, kz - cy2 * 34]);
+        me.J([kx - sy3 * 34, ky, kz - cy2 * 34], [wxf, fy, wzf]);
+      }
+      const eye = me.Q(e.x + SIN(e.E) * 64, e.y, e.z + COS(e.E) * 64);
+      if (eye) fcp(eye, MAX(1.5, 700 / eye[2]), e.L ? BLU : RUST_HI, a * (0.6 + 0.4 * SIN(e.t * 5)));
+    }
+    if (e.k < 3) {
+      // el ojo de brasa en la nariz: se lee quién te está mirando
+      const nr = e.k === 2 ? 200 : 50;
+      const nose = me.Q(e.x + SIN(e.E) * nr, e.y - 4, e.z + COS(e.E) * nr);
+      if (nose) {
+        fcp(nose, MAX(1.5, 600 / nose[2]), RUST_HI, a * (0.6 + 0.4 * SIN(e.t * 6)));
+      }
+    }
+    if (e.k === 5) {
+      // el ojo late y su anillo de vigilancia respira — en la tinta de SU
+      // bando; el anillo de amenaza es solo de las enemigas
+      const pulse = 0.5 + 0.5 * SIN(e.t * 3);
+      GF.fillStyle(e.L ? BLU : RUST_HI, a * (0.6 + 0.4 * pulse));
+      const eye = me.Q(e.x, e.y - 20, e.z);
+      if (eye) GF.fillCircle(eye[0], eye[1], MAX(3, 1100 / p[2]));
+      if (!e.L) skp(p, (70 + pulse * 10) * (FOCAL / p[2]), 1.5, RUST, a * (0.25 + 0.3 * pulse));
+    }
+  }
+
+  dr(b, a, flash, me = this) {
+    me.dm(DESTROYER_MODEL, b, SD_SCALE, flash ? INK_HI : RUST, a);
+    // luces de posición parpadeando por el casco: un objeto VIVO, no un plano
+    [[0, -6, SD_NOSE], [-SD_HALF_W, -4, SD_REAR], [SD_HALF_W, -4, SD_REAR], [-130, -168, -340], [130, -168, -340], [0, -48, 80]].forEach(
+      ([lx, ly, lz], i) => {
+        if (FLR(b.t * 1.6 + i * 0.7) % 3 === 0) return;
+        const [wx, wy, wz] = me.V(b, lx, ly, lz);
+        const lp = me.Q(wx, wy, wz);
+        if (!lp) return;
+        fcp(lp, MAX(1.5, 1100 / lp[2]), i < 3 ? RUST_HI : BLU, a * 0.9);
+      }
+    );
+    // tres motores encendidos en la popa
+    for (const ox of [-130, 0, 130]) {
+      const [wx, wy, wz] = me.V(b, ox, 18, SD_REAR - 6);
+      const p = me.Q(wx, wy, wz);
+      if (!p) continue;
+      const r = (34 * SD_SCALE * FOCAL) / p[2];
+      fcp(p, r * 1.6, AMB, 0.25);
+      fcp(p, r * 0.7, CRM, 0.85);
+    }
+    const shielded = b.j.some((q) => q.Z === 1 && q.M > 0);
+    const aimed = me.ba(b, me.F);
+    for (const pt of b.j) {
+      if (pt.M <= 0) continue;
+      const [wx, wy, wz] = me.V(b, pt.ox, pt.oy, pt.oz);
+      const p = me.Q(wx, wy, wz);
+      if (!p) continue;
+      const k = (SD_SCALE * FOCAL) / p[2];
+      const hot = pt.g > 0 ? INK_HI : RUST_HI;
+      // los puntos débiles abiertos llevan mira: ahí es donde se le pega
+      if (me.bo(b, pt)) {
+        const main = pt.Z !== 0;
+        const r = MAX(main ? 20 : 16, SD_PART_R[pt.Z] * (FOCAL / p[2]) * 0.8);
+        const c = r * 0.4;
+        LS(main ? 2 : 2, main ? INK_HI : RUST_HI, main ? 0.6 + 0.4 * SIN(b.t * 6) : 0.7);
+        for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+          PL(p[0] + sx * r, p[1] + sy * (r - c), p[0] + sx * r, p[1] + sy * r, p[0] + sx * (r - c), p[1] + sy * r);
+        }
+        // la que tienes en la mira muestra cuánto le queda
+        if (pt === aimed) {
+          GF.fillStyle(INK_HI, 0.9);
+          for (let i = 0; i < pt.M; i++) GF.fillRect(p[0] - pt.max * 3 + i * 6, p[1] - r - 10, 4, 4);
+        }
+      }
+      if (pt.Z === 0) {
+        me.dm(SENTRY_MODEL, { x: wx, y: wy - 12 * SD_SCALE, z: wz, E: b.E }, 1.1 * SD_SCALE, pt.g > 0 ? INK_HI : RUST, a);
+        fc(p[0], p[1] - 34 * k, MAX(2, 7 * k), hot, a);
+      } else if (pt.Z === 1) {
+        // domo de escudo: esfera en tinta, lo que protege el puente
+        skp(p, 36 * k, 1.5, pt.g > 0 ? INK_HI : BLD, 0.9);
+        GF.strokeEllipse(p[0], p[1], 72 * k, 26 * k);
+        fcp(p, 36 * k, BLD, 0.12 + 0.08 * SIN(b.t * 4));
+      } else {
+        // el puente: blindado mientras haya domos; expuesto, late en brasa
+        const pulse = 0.5 + 0.5 * SIN(b.t * (shielded ? 2 : 7));
+        if (shielded) {
+          skp(p, 90 * k, 1.5, BLD, 0.25 + 0.2 * pulse);
+        } else {
+          fcp(p, 30 * k, hot, 0.45 + 0.45 * pulse);
+          skp(p, (50 + pulse * 20) * k, 2, RUST_HI, 0.6 * pulse);
+        }
+      }
+    }
+    // el cañón de proa cargando: el aviso para esquivar
+    if (b.cg > 0) {
+      const [wx, wy, wz] = me.V(b, 0, 10, SD_NOSE);
+      const p = me.Q(wx, wy, wz);
+      if (p) {
+        const c = 1 - b.cg / 1.8;
+        const k = (SD_SCALE * FOCAL) / p[2];
+        fcp(p, (10 + 40 * c) * k, RUST_HI, 0.3 + 0.5 * c);
+        skp(p, (60 - 40 * c) * k, 2, CRM, c);
+      }
+    }
+  }
+
+  // Un modelo orientado por una base cualquiera (la nave, los misiles):
+  // x del modelo sobre R, -y sobre U, z sobre F; con alabeo visual opcional
+  db(model, P, F, U, scale, color, alpha, bank) {
+    const R = vcross(F, U);
+    const cb = COS(bank || 0);
+    const sb = SIN(bank || 0);
+    const pts = model[0].map(([mx0, my0, mz]) => {
+      const mx = (mx0 * cb - my0 * sb) * scale;
+      const my = (mx0 * sb + my0 * cb) * scale;
+      const s = mz * scale;
+      return [
+        P.x + R.x * mx - U.x * my + F.x * s,
+        P.y + R.y * mx - U.y * my + F.y * s,
+        P.z + R.z * mx - U.z * my + F.z * s,
+      ];
+    });
+    this.sg(pts, model[1], color, alpha);
+  }
+
+  dj(time, me = this) {
+    const Po = me.o;
+    if (me.fz === 'out') return;
+    if (time < me.iu && FLR(time / 95) % 2 === 0) return;
+    const f = me.fw();
+    // dash: la nave deja copias fantasma — mientras se ven, nada te toca
+    if (time < me.du) {
+      for (let i = 1; i <= 3; i++) {
+        const gp = { x: Po.x - f.x * 22 * i, y: Po.y - f.y * 22 * i, z: Po.z - f.z * 22 * i };
+        me.db(SHIP_MODEL, gp, me.F, me.U, 1, INK_HI, 0.4 / i, me.Ql);
+      }
+    }
+    me.db(SHIP_MODEL, Po, me.F, me.U, 1, INK, 1, me.Ql);
+    // a velocidad de embestida, la proa se enciende
+    if (me.H > RAM_SPEED) {
+      const np = me.Q(Po.x + f.x * 22, Po.y + f.y * 22, Po.z + f.z * 22);
+      if (np) {
+        const k = MIN(1, (me.H - RAM_SPEED) / 150);
+        skp(np, (20 * FOCAL) / np[2], 2, INK_HI, 0.5 * k + 0.2 * SIN(time * 0.05));
+        fcp(np, (20 * FOCAL) / np[2], INK_HI, 0.18 * k);
+      }
+    }
+    // el escudo envuelve la nave; el fogonazo vive en la nariz
+    const sp0 = me.p(Po);
+    // el escudo ACTIVO: una esfera de energía en el azul de los domos —
+    // relleno tenue, meridianos girando y arcos vivos; parpadea al morir
+    if (time < me.su && sp0) {
+      const left = (me.su - time) / SHIELD_MS;
+      const dying = left < 0.22 && FLR(time / 90) % 2 === 0;
+      const r = SHIELD_R * 0.85 * (FOCAL / sp0[2]);
+      if (!dying) {
+        fcp(sp0, r, BLD, 0.1);
+        skp(sp0, r, 1.5, BLU, 0.85);
+        skp(sp0, r * 1.1, 3.5, BLD, 0.2);
+        // los meridianos: la burbuja es una esfera, no un aro
+        const sp = time * 0.0021;
+        LS(1, BLU, 0.4);
+        GF.strokeEllipse(sp0[0], sp0[1], 2 * r * ABS(COS(sp)), 2 * r);
+        GF.strokeEllipse(sp0[0], sp0[1], 2 * r, 2 * r * ABS(COS(sp * 0.8 + 1.2)));
+        const spin = time * 0.004;
+        LS(2.5, INK_HI, 0.9);
+        for (let i = 0; i < 3; i++) {
+          const a0 = spin + (i * PI * 2) / 3;
+          GF.beginPath();
+          GF.arc(sp0[0], sp0[1], r, a0, a0 + 0.7);
+          GF.strokePath();
+        }
+      }
+      // la onda del impacto: se VE que la burbuja se llevó el golpe
+      if (me.ht > 0) {
+        const u = 1 - me.ht / 0.3;
+        skp(sp0, r * (1 + u * 0.55), 2.5, INK_HI, 0.9 * (1 - u));
+      }
+    }
+    if (me.Jj > 0) {
+      const mp = me.Q(Po.x + f.x * 26, Po.y + f.y * 26 - 2, Po.z + f.z * 26);
+      if (mp) {
+        fcp(mp, MAX(2, 500 / mp[2]), INK_HI, 0.9);
+      }
+    }
+    // estela del motor
+    const level = ABS(me.H) / TURBO_SPEED;
+    if (level > 0.05) {
+      LS(2, INK_HI, 0.3 + 0.5 * level * (0.6 + 0.4 * SIN(time * 0.04)));
+      const tail = 20 + 26 * level;
+      me.J(
+        [Po.x - f.x * 14, Po.y - f.y * 14 + 1, Po.z - f.z * 14],
+        [Po.x - f.x * tail, Po.y - f.y * tail + 1, Po.z - f.z * tail]
+      );
+    }
+    // retícula: a donde apunta la nariz — y avisa si un misil tiene blanco
+    const rp = me.Q(Po.x + f.x * 620, Po.y + f.y * 620, Po.z + f.z * 620);
+    if (rp) {
+      const locked = me.am > 0 && me.bt(f);
+      skp(rp, locked ? 10 : 7, 1.5, locked ? RUST_HI : INK, 0.6);
+      fr(rp[0] - 1, rp[1] - 1, 2, 2, locked ? RUST_HI : INK, 0.6);
+    }
+  }
+
+  // Lo que viene hacia ti desde fuera de la pantalla se anuncia en el borde,
+  // del lado por el que llega
+  di(time, me = this) {
+    const cm = me.cm;
+    const Po = me.o;
+    // las naves cercanas SIEMPRE se anuncian en el borde — aunque no se
+    // estén acercando; los proyectiles, desde más lejos que antes
+    let chn = 0;
+    const chMax = 2;
+    for (const e of me.D) {
+      if (e.k > 2 || e.X) continue;
+      if (chn >= chMax) break;
+      const d = { x: e.x - Po.x, y: e.y - Po.y, z: e.z - Po.z };
+      const dist = HYP(d.x, d.y, d.z);
+      if (dist > 1100) continue;
+      const p = me.p(e);
+      if (p && p[0] > 30 && p[0] < W - 30 && p[1] > 30 && p[1] < H - 30) continue;
+      chn++;
+      const ang = AT2(-vdot(d, cm.U), vdot(d, cm.R) || 0.001);
+      const ex = CX + COS(ang) * (CX - 24);
+      const ey = CY + SIN(ang) * (CY - 24);
+      LS(2, RUST_HI, 0.55);
+      PL(ex - COS(ang + 0.5) * 11, ey - SIN(ang + 0.5) * 11, ex, ey, ex - COS(ang - 0.5) * 11, ey - SIN(ang - 0.5) * 11);
+    }
+    const threats = me.q.concat(me.D.filter((e) => e.k === 3));
+    for (const s of threats) {
+      const d = { x: Po.x - s.x, y: Po.y - s.y, z: Po.z - s.z };
+      const dist = HYP(d.x, d.y, d.z);
+      if (dist > 1500 || d.x * s.A + d.y * s.C + d.z * s.B <= 0) continue;
+      const p = me.p(s);
+      if (p && p[0] > 30 && p[0] < W - 30 && p[1] > 30 && p[1] < H - 30) continue;
+      const o = { x: -d.x, y: -d.y, z: -d.z };
+      const ang = AT2(-vdot(o, cm.U), vdot(o, cm.R) || 0.001);
+      const ex = CX + COS(ang) * (CX - 28);
+      const ey = CY + SIN(ang) * (CY - 28);
+      const pulse = 0.55 + 0.45 * SIN(time * 0.02);
+      LS(3, RUST_HI, pulse * (1 - dist / 1600));
+      PL(ex - COS(ang + 0.6) * 16, ey - SIN(ang + 0.6) * 16, ex, ey, ex - COS(ang - 0.6) * 16, ey - SIN(ang - 0.6) * 16);
+    }
+  }
+
+  // La marca de navegación: hacia la pieza que falta
+  dv(me = this) {
+    const cm = me.cm;
+    const Po = me.o;
+    let target = null;
+    let label = '';
+    if (me.G || me.I) {
+      // no al centro del destructor: al punto débil que toca romper
+      let bd = 1e9;
+      for (const b of [me.G, me.I]) {
+        if (!b || b.d) continue;
+        for (const pt of b.j) {
+          if (pt.Z === 0 || !me.bo(b, pt)) continue;
+          const [x, y, z] = me.V(b, pt.ox, pt.oy, pt.oz);
+          const d = HYP(x - Po.x, y - Po.y, z - Po.z);
+          if (d < bd) {
+            bd = d;
+            target = { x, y, z };
+            label = pt.Z === 1 ? 'DOME' : 'BRIDGE';
+          }
+        }
+      }
+    }
+
+    if (!target) {
+      me.Zc.setText('');
+      return;
+    }
+    const part = target;
+    const dist = D3(part, Po);
+    me.Zc.setText(label + '  ' + RD(dist) + ' M');
+
+    const p = me.p(part);
+    const margin = 46;
+    if (p && p[0] > margin && p[0] < W - margin && p[1] > margin && p[1] < H - margin) {
+      // una MIRA, no un cuadrito: esquinas gruesas que respiran
+      const r = 22 + 2 * SIN(me.b * 5);
+      const c = r * 0.45;
+      LS(2.5, INK_HI, 0.9);
+      for (const [sx, sy2] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        PL(p[0] + sx * r, p[1] + sy2 * (r - c), p[0] + sx * r, p[1] + sy2 * r, p[0] + sx * (r - c), p[1] + sy2 * r);
+      }
+      return;
+    }
+    let ang;
+    if (p) ang = AT2(p[1] - CY, p[0] - CX);
+    else {
+      // detrás: la flecha apunta al lado por el que conviene girar
+      const d = { x: part.x - cm.x, y: part.y - cm.y, z: part.z - cm.z };
+      ang = AT2(-vdot(d, cm.U), vdot(d, cm.R) || 1);
+    }
+    const ex = CX + COS(ang) * (CX - 60);
+    const ey = CY + SIN(ang) * (CY - 60);
+    // flecha grande con halo: se ve aunque el sector esté lleno de cosas
+    for (const [wd, al, sc] of [[7, 0.25, 1.3], [2.5, 0.95, 1]]) {
+      LS(wd, INK_HI, al);
+      const tip = [ex + COS(ang) * 20 * sc, ey + SIN(ang) * 20 * sc];
+      PL(...tip, ex + COS(ang + 2.5) * 14 * sc, ey + SIN(ang + 2.5) * 14 * sc, ex + COS(ang - 2.5) * 14 * sc, ey + SIN(ang - 2.5) * 14 * sc, ...tip);
+    }
+  }
+
+  uh(me = this) {
+    me.Zk.setText('SPD ' + String(ABS(RD(me.H))).padStart(3, '0'));
+    // dónde quedan los bordes: altura sobre la estación contra el techo, y
+    // cuánto falta para la pared
+    const P = me.o;
+    me.Zl.setText('ALT ' + RD(1800 - P.y) + ' / ' + (1800 - BND_TOP) + '\nEDGE ' + RD(BND_R - HYP(P.x, P.z)));
+    me.Sv += CLP((me.T - me.Sv) * 0.2, 1, 1e9) * (me.Sv < me.T);
+    me.Q4.setText(String(RD(me.Sv)).padStart(6, '0') + (me.mu > 1 ? '  x' + me.mu : ''));
+    // el combo se enfría: lo que le queda, bajo el puntaje
+    if (me.mu > 1) fr(W - 12 - 27 * me.mt, 30, 27 * me.mt, 3, INK_HI, 0.6);
+    me.Zh.setText('HULL ' + (GOD ? 'INF' : '>'.repeat(me.Qj) + '.'.repeat(HULL_MAX - me.Qj)));
+    me.Q9.setText('MSL ' + '^'.repeat(me.am) + '.'.repeat(MISSILE_MAX - me.am));
+    const mm = FLR(me.b / 60);
+    me.Zg.setText('S' + me.Se + '  T ' + mm + ':' + String(FLR(me.b % 60)).padStart(2, '0'));
+    // el bloque de recursos, junto a las vidas: DASH y SHIELD como barras
+    // con nombre — llena = lista; el escudo va en SU azul
+    const g = me.gfx;
+    LS(1, INK, 0.5);
+    g.strokeRect(12, H - 56, 118, 8);
+    fr(13, H - 55, 116 * (me.u / BOOST_MAX), 6, INK_HI, 0.75);
+    const now = me.vt;
+    const shReady = now >= me.sw ? 1 : 1 - (me.sw - now) / (SHIELD_MS + SHIELD_COOLDOWN_MS);
+    LS(1, INK, 0.5);
+    g.strokeRect(12, H - 70, 118, 8);
+    fr(13, H - 69, 116 * MAX(0, shReady), 6, BLU, shReady >= 1 ? 0.9 : 0.35);
+    // OVERDRIVE: se carga peleando; llena, late — y encendida, se vacía
+    const on = me.Ou > now;
+    LS(1, INK, 0.5);
+    g.strokeRect(12, H - 84, 118, 8);
+    fr(13, H - 83, 116 * (on ? (me.Ou - now) / 6000 : me.Od / 100), 6, on || me.Od >= 100 ? BLU : INK_HI, me.Od >= 100 ? 0.6 + 0.4 * SIN(me.b * 10) : 0.7);
+    // el próximo misil, recargándose bajo su contador
+    if (me.am < MISSILE_MAX) {
+      LS(1, INK, 0.4);
+      g.strokeRect(169, H - 8, 118, 4);
+      fr(170, H - 7, 116 * (me.ar / MISSILE_REGEN), 2, INK_HI, 0.7);
+    }
+  }
+}
+
+// --------------------------------------------------------------------------
+class Over extends PS {
+
+  init(data) {
+    this.T = data.T || 0;
+    this.Sd = data.Sd || [0, 1, 0, 1];
+    this.Ck = data.Ck;
+  }
+
+  create() {
+    const [me] = [this];
+    const T = me.T;
+    const [k, c, s, se] = me.Sd;
+    Music.on = false;
+    // la partida, en números — y un rango para querer otra
+    TX(me, CX, CY - 130, 'RANK ' + (T >= 20000 ? 'S' : T >= 10000 ? 'A' : T >= 4000 ? 'B' : 'C'), 20, 0, 0.5);
+    TX(me, CX, CY + 36, 'SHIPS DOWNED  ' + k + '\nBEST COMBO  x' + c + '\nTIME  ' + FLR(s / 60) + ':' + String(s % 60).padStart(2, '0') + '\nSECTOR  ' + se, 13, DIM_CSS, 0.5)
+      .setOrigin(0.5, 0)
+      .setAlign('center')
+      .setLineSpacing(6);
+    me.Qx = false;
+    me.Qs = false;
+    me.Q6 = false;
+    Sfx.Z5();
+
+    TX(me, CX, CY - 70, 'GAME OVER', 32, 0, 0.5);
+    TX(me, CX, CY + 4, 'SCORE  ' + String(me.T).padStart(6, '0'), 16, 0, 0.5);
+    if (me.Ck) TX(me, CX, CY + 150, GOD_TXT, 13, DIM_CSS, 0.5);
+
+    loadScores().then((scores) => {
+      me.Q6 = !me.Ck && (scores.length < 3 || me.T > scores[scores.length - 1].s);
+      me.time.delayedCall(1200, () => (me.Qx = true));
+    });
+    me.time.delayedCall(9000, () => me.Qg());
+  }
+
+  Qg() {
+    const [me] = [this];
+    if (me.Qs) return;
+    me.Qs = true;
+    if (me.Q6 && me.T > 0) me.scene.start('I', { T: me.T });
+    else me.scene.start('T');
+  }
+
+  update() {
+    if (this.Qx && anyStart()) this.Qg();
+  }
+}
+
+// --------------------------------------------------------------------------
+class Initials extends PS {
+
+  init(data) {
+    this.T = data.T || 0;
+  }
+
+  create() {
+    const [me] = [this];
+    me.lt = [0, 0, 0];
+    me.i = 0;
+    me.Qy = false;
+
+    TX(me, CX, CY - 110, 'TOP 3!', 16, 0, 0.5);
+    TX(me, CX, CY - 78, 'SCORE  ' + String(me.T).padStart(6, '0'), 15, DIM_CSS, 0.5);
+    me.Qv = [0, 1, 2].map((i) => TX(me, CX - 48 + i * 48, CY + 8, 'A', 32, 0, 0.5));
+    TX(me, CX, CY + 88, 'STICK SELECT  B1 OK', 13, DIM_CSS, 0.5).setAlpha(0.8);
+  }
+
+  update(time) {
+    const [me] = [this];
+    if (me.Qy) return;
+    const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    if (pressed.P1_U) me.lt[me.i] = (me.lt[me.i] + 25) % 26;
+    if (pressed.P1_D) me.lt[me.i] = (me.lt[me.i] + 1) % 26;
+    if (pressed.P1_L) me.i = MAX(0, me.i - 1);
+    if (pressed.P1_R) me.i = MIN(2, me.i + 1);
+    if (pressed.P1_U || pressed.P1_D) Sfx.Q3();
+
+    if (pressed.P1_1 || pressed.START1) {
+      if (me.i < 2) me.i++;
+      else {
+        me.Qy = true;
+        const name = me.lt.map((l) => A[l]).join('');
+        loadScores().then((scores) => {
+          scores.push({ n: name, s: me.T });
+          scores.sort((a, b) => b.s - a.s);
+          saveScores(scores.slice(0, 3)).then(() => me.scene.start('T'));
+        });
+      }
+    }
+
+    me.Qv.forEach((t, i) => {
+      t.setText(A[me.lt[i]]);
+      t.setAlpha(i === me.i ? (FLR(time / 300) % 2 ? 1 : 0.35) : 0.8);
+    });
+  }
+}
+
+// --------------------------------------------------------------------------
+const config = {
+  type: Phaser.AUTO,
+  width: W,
+  height: H,
+  parent: 'game-root',
+  backgroundColor: '#070709',
+  antialias: true,
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  // cada escena nace con su clave: sin un constructor por clase
+  scene: [new Title('T'), new Game('G'), new Over('O'), new Initials('I')],
+};
+
+// los toques por flanco se limpian UNA vez por frame, tras todas las escenas
+new Phaser.Game(config).events.on('poststep', clearPressed);
+})();
