@@ -1,18 +1,20 @@
 // Space Explorer — Platanus Hack 26: Caracas Arcade Challenge
-// Tu nave quedó varada en un sector alienígena. Encuentra las tres piezas del
-// hipersalto entre los restos, y vuelve a casa.
+// Hecho en Barquisimeto, Venezuela, por juanevillam.
 //
-// Vuelo libre 3D con proyección propia: la nave siempre avanza y el stick
-// la dirige, con loops completos; la cámara va pegada a ella. MODO ARCADE
-// INFINITO: sin niveles ni final — sobrevive y puntúa. El sector es un
-// cilindro con techo (el HUD dice cuánto queda); la Tierra y Saturno son
-// cielo, y un agujero negro que tira y traga flota en él; los cazadores aprietan
-// con los minutos, hay emboscadas periódicas, torretas de la base flotando
-// sobre el disco del agujero (bajar a cazarlas paga powerup seguro), y un
-// destructor recurrente que llega del hiperespacio a oscuras — el primero
-// con toda la ceremonia, los siguientes al grano — y paga +1500. Morir es
-// el único final. Texto en inglés, corto, voz arcade. Wireframe luminoso;
-// el óxido marca el peligro.
+// Combate aéreo 3D en wireframe al borde de un agujero negro. MODO ARCADE
+// INFINITO: sin niveles ni final — sobrevive y puntúa; morir es el único
+// final. Vuelo con horizonte bloqueado (estilo Star Fox): el stick nunca ladea
+// la nave, los loops duran lo que mantengas arriba/abajo, y las acrobacias
+// (tonel, loop, media vuelta) salen del doble toque de B2. El sector es un
+// cilindro con techo (el HUD dice cuánto queda) y nada vive tras su borde; la
+// Tierra, Saturno y Júpiter son cielo, y el agujero negro flota en él, tira
+// y traga. Tres sectores con nombre venezolano (AVILA, CATATUMBO, SALTO
+// ANGEL) traen kamikazes, francotiradores, minas, élites y tormentas; abajo,
+// la estación libra su propia guerra de torretas y caminantes; y un
+// destructor recurrente llega del hiperespacio a oscuras — el primero con
+// toda la ceremonia, los siguientes al grano. Texto en inglés y ASCII puro
+// (la fuente del gabinete no se arriesga), corto, voz arcade. Wireframe
+// luminoso; el óxido marca el peligro, el azul lo tuyo.
 
 // Todo va dentro de una IIFE: en el scope global el minificador no puede
 // renombrar ni inlinear las constantes y clases de arriba; aquí sí (~3.4 KB).
@@ -223,8 +225,6 @@ let BH_KILL = 240;
 
 let HULL_MAX = 5;
 let SCORE_KEY = 'space-explorer:scores';
-
-// Las cuatro piezas del hipersalto
 
 
 // --------------------------------------------------------------------------
@@ -1044,8 +1044,8 @@ class Game extends PS {
           A: -R.x * 560, C: 0, B: -R.z * 560,
         });
       }
-      // las torretas de la base, flotando sobre el disco: bajar al jalón a
-      // cazarlas paga powerup seguro
+      // la GUERRA DE SUPERFICIE: cada 13 s, seis unidades en la estación —
+      // torretas o caminantes — casi todas enemigas; tope 12 vivas
       me.Za -= dt;
       if (me.Za <= 0) {
         me.Za = 13;
@@ -1223,8 +1223,9 @@ class Game extends PS {
     }
   }
 
-  // Después de un rato, salen a cazarte — y más, con cada pieza a bordo.
-  // Con la primera pieza aparecen también interceptores, que embisten.
+  // Los CAZADORES: salen a buscarte y aprietan con los minutos (más vivos a
+  // la vez, cada vez más seguido). Desde el sector 2, kamikazes y
+  // francotiradores; desde el 3, élites. Con un destructor, solo escolta.
   sd(dt, max, every) {
     let [me] = [this];
     let Po = me.o;
@@ -1842,7 +1843,7 @@ class Game extends PS {
         me.W(grip ? 'IT HAS YOU - DASH.' : 'BLACK HOLE - BREAK AWAY.');
       }
     }
-    // el horizonte de sucesos no negocia: ni el escudo ni el modo prueba
+    // el horizonte de sucesos no negocia: ni el escudo te salva
     if (bhd < BH_KILL) me.Jc();
 
     // la superficie de la estación es PARED: aviso cerca, muerte al tocarla
@@ -2985,7 +2986,7 @@ class Game extends PS {
     me.dv();
     me.di(time);
 
-    // barra de carga del hipersalto, o la vida que le queda al destructor
+    // la barra de vida que le queda al destructor (o a los dos)
     if ((me.G && !me.G.d) || (me.I && !me.I.d)) {
       let hp = 0;
       let max = 0;
@@ -3614,7 +3615,8 @@ class Game extends PS {
     }
   }
 
-  // La marca de navegación: hacia la pieza que falta
+  // La marca de navegación: con un destructor en el sector, apunta al punto
+  // débil abierto más cercano (DOME o BRIDGE) y dice a cuánto está
   dv(me = this) {
     let cm = me.cm;
     let Po = me.o;
