@@ -8,9 +8,10 @@
 // (tonel, loop, media vuelta) salen del doble toque de B2. El sector es un
 // cilindro con techo (el HUD dice cuánto queda) y nada vive tras su borde; la
 // Tierra, Saturno y Júpiter son cielo, y el agujero negro flota en él, tira
-// y traga. Tres sectores (ORION, NEBULA, EVENT HORIZON) traen kamikazes, francotiradores, minas, élites y tormentas; abajo,
-// la estación libra su propia guerra de torretas y caminantes; y un
-// destructor recurrente llega del hiperespacio a oscuras — el primero con
+// y traga. Tres sectores (ORION, NEBULA, EVENT HORIZON) traen kamikazes,
+// francotiradores, minas, élites y tormentas; abajo, la estación libra su
+// propia guerra de torretas y caminantes; y un destructor recurrente llega
+// del hiperespacio a oscuras y se materializa despacio — el primero con
 // toda la ceremonia, los siguientes al grano. Texto en inglés y ASCII puro
 // (la fuente del gabinete no se arriesga), corto, voz arcade. Wireframe
 // luminoso; el óxido marca el peligro, el azul lo tuyo.
@@ -46,10 +47,10 @@
 // Q8=cineDark Q9=missileText Za=baseAt Zb=bossN Zc=navText Zd=tpAt
 // Ze=spawnBoss Zf=salvoSaid Zg=partText Zh=hullText Zi=bhx Zj=wgAt
 // Zk=velText Zl=altText Zm=wvAt Zn=msAt Zo=camU Zp=camF Zq=camR Zr=wingUp
-// Zs=sdSaid Zt=bgSaid Zu=boltVsBoss Zv=shieldUp Zw=spin Zx=model Zy=say
+// Zt=bgSaid Zu=boltVsBoss Zv=shieldUp Zw=spin Zx=model Zy=say
 // Zz=fire Z0=dash Z1=jump Z2=turn Z3=hurt Z4=ammo Z5=over Z6=tick Z7=wave
 // Z8=foe Z9=ally Ja=draw Jb=cam Jc=die Jd=dwb Je=dsk Jf=bnk Jg=tpCd Jh=hRt
-// Ji=svT Jj=mz2 Jk=lvT Jl=rmb Jr=rollLeft Js=rollSide Jp=loopLeft Jt=lastDashTap Jw=inManeuver
+// Ji=svT Jj=mz2 Jl=rmb Jr=rollLeft Js=rollSide Jp=loopLeft Jt=lastDashTap Jw=inManeuver
 // Tercera pasada, a UNA letra (los más usados; la de la izquierda gana
 // sobre las listas de arriba): A=vx B=vz C=vy D=en E=yw G=Bo H=sp I=Bt J=wl
 // K=Qa L=fr M=hp N=lf O=tn P=fA Q=pj S=sh T=sc V=bw W=Zy Y=tr Z=kd b=ep
@@ -61,10 +62,9 @@
 // ft=flashT bz=boost hd=hidden ss=shots bl=bolts ms=missiles sz=shards
 // sn=stars yv=yawVel pv=pitchVel su=shieldUntil sw=shieldReady ht=shieldHitT
 // ea=shieldEats iu=invulnUntil du=dashUntil fy=fireReadyAt ar=ammoRegen
-// sq=scrapRun tl=twinUntil mz2=muzzleT mt=multT mu=mult cg=charging ch=charge
-// pg=partsGot ep=elapsed pa=paused jg=jumping jt=jumpT ts=tutStep tu=tutWait
-// bq=bossAt kA=skipArm wa=bhWarnAt et=enterT ha=hangarAt ca=cannonAt
-// ma=missileAt
+// mz2=muzzleT mt=multT mu=mult cg=charging ep=elapsed pa=paused
+// bq=bossAt wa=bhWarnAt ha=hangarAt ca=cannonAt ma=missileAt
+// Fa=fade del destructor (0 escondido, 1 entero: entra y sale despacio)
 // Alias cortos: SWC no acorta nombres top-level ni Math.* — esto sí cuenta
 let SIN = Math.sin;
 let COS = Math.cos;
@@ -140,22 +140,12 @@ let HSH = (x0, z0) => (((x0 * 1103 + z0 * 12793) % 97) + 97) % 97;
 let INK_CSS = '#eef2f7';
 let DIM_CSS = '#8a9099';
 
-// MODO PRUEBA (sin muerte): nada te mata — ni golpes, ni el suelo, ni el
-// agujero negro (de él se sale con nitro). Para recorrer todas las fases.
-// Apagado por defecto; lo enciende y apaga en CUALQUIER momento el código
-// secreto de abajo. El HUD lo delata con 'HULL ∞', y una partida jugada con
-// él no entra al ranking.
-// El código: la secuencia de controles, cada uno por su letra — U D L R es
-// el stick, 1–6 son B1–B6. Por defecto, el Konami de la máquina:
-// ↑ ↑ ↓ ↓ ← → ← → B2 B1
-
 // --- Vuelo: la nave SIEMPRE avanza; el stick dirige, el turbo se recarga.
 // Arriba/abajo cabecea sin tope: mantenlo y das la vuelta completa. La cámara
 // va pegada a la nave, así que izquierda es izquierda aun de cabeza. ---
 let YAW_RATE = 2.4; // rad/s tope
 let YAW_EASE = 13; // 1/s, el giro responde YA
 let PITCH_RATE = 2.5; // rad/s de cabeceo
-let CRUISE = 235; // crucero constante — la nave NUNCA se detiene
 let TURBO_SPEED = 470; // referencia de "rápido" para estelas y cámara
 let NITRO_MAX = 760; // manteniendo B2 la nave acelera sin parar hasta aquí
 let NITRO_ACCEL = 260; // unidades/s²
@@ -176,14 +166,12 @@ let SHIELD_R = 52; // radio en mundo dentro del que la burbuja come disparos
 let MAGNET_R = 240; // lo recogible viene hacia ti
 let FIRE_MS = 160;
 let BOLT_SPEED = 980;
-let BOLT_LIFE = 3.2; // ~3800 de alcance: se pelea desde lejos
+let BOLT_LIFE = 3.2; // ~3100 de alcance: se pelea desde lejos
 let MISSILE_TURN = 3.4; // 1/s de corrección hacia el blanco
 let MISSILE_MAX = 5;
 let MISSILE_DMG = 4;
 let MISSILE_SPLASH = 150; // todo lo que esté cerca del impacto también cae
 let MISSILE_REGEN = 10; // segundos por misil recuperado solo
-
-// --- Enemigos: pocos, grandes, disparos lentos que se pueden esquivar ---
 
 // --- El sector: una esfera de juego alrededor del origen ---
 let SECTOR_R = 3000;
@@ -201,8 +189,8 @@ let surfY = (x, z) => {
 // hacia adentro; cerca, la pared se dibuja y el HUD dice cuánto queda.
 // El agujero negro está ANCLADO al mundo, a la derecha del arranque: se
 // puede ir hasta él y alejarse [x, y, z, radio]. Tira más cuanto más cerca y
-// te traga ya DENTRO de la sombra — la caída dura. La Tierra y Saturno son
-// cielo, fijos al fondo del lado opuesto (sur y suroeste).
+// te traga ya DENTRO de la sombra — la caída dura. La Tierra, Saturno y
+// Júpiter son cielo, fijos al fondo (sur, suroeste y este).
 let BH = [2400, -2200, 3600, 420];
 let BHO = { x: BH[0], y: BH[1], z: BH[2] };
 // Los SECTORES: cada 2 minutos uno nuevo, con nombre, bono y otra mezcla —
@@ -333,7 +321,7 @@ async function saveScores(scores) {
 }
 
 // --------------------------------------------------------------------------
-// Audio: solo efectos puntuales, sintetizados. La música llega al final.
+// Audio: solo efectos puntuales, sintetizados. La música va aparte (Music).
 let Sfx = {
   K: null,
   out: null,
@@ -441,8 +429,6 @@ let SENTRY_MODEL = mdl([-22, 14, -22, 22, 14, -22, 22, 14, 22, -22, 14, 22, 0, -
 
 let HUNTER_SCALE = 3; // cazadores e interceptores: grandes, fáciles de seguir
 
-// Mina: octaedro
-
 
 
 // Asteroide: icosaedro con cada vértice desplazado — cada roca es única,
@@ -475,8 +461,6 @@ let makeRockModel = () => {
 
 let ROCK_POOL = [makeRockModel(), makeRockModel(), makeRockModel(), makeRockModel()];
 
-// La CORBETA: a medio camino entre el ace y el destructor — casco largo,
-// puente alto y dos nacelas; ladra ráfagas manteniendo distancia
 // El CAMINANTE: cuerpo de caja con hocico — las patas se dibujan aparte,
 // animadas de verdad
 let WALK_MODEL = mdl([-26, -28, -34, 26, -28, -34, 26, -28, 34, -26, -28, 34, -26, 28, -34, 26, 28, -34, 26, 28, 34, -26, 28, 34, 0, 0, 58], '01122330455667740415263728386878');
@@ -484,6 +468,8 @@ let WALK_MODEL = mdl([-26, -28, -34, 26, -28, -34, 26, -28, 34, -26, -28, 34, -2
 // La TORRETA de superficie: pedestal, domo y cañón doble — se LEE torreta
 let TURRET_MODEL = mdl([-24, 0, -24, 24, 0, -24, 24, 0, 24, -24, 0, 24, -14, -18, -14, 14, -18, -14, 14, -18, 14, -14, -18, 14, 0, -30, 0, -3, -26, 8, 3, -26, 8, -3, -38, 52, 3, -38, 52], '011223300415263745566774485868789;:<;<');
 
+// La CORBETA: a medio camino entre el ace y el destructor — casco largo,
+// puente alto y dos nacelas; ladra ráfagas manteniendo distancia
 let GUN_MODEL = mdl([0, -2, 70, -16, -8, 30, 16, -8, 30, -20, 8, 24, 20, 8, 24, -22, 0, -20, 22, 0, -20, -14, -6, -64, 14, -6, -64, -16, 8, -58, 16, 8, -58, 0, -16, -14, 0, -12, -44, -30, 2, -48, 30, 2, -48], '01020304152635465768596:789:798:1;2;;<<7<85==96>>:');
 
 // El destructor: una cuña de casi mil unidades con su torre de mando atrás.
@@ -508,8 +494,6 @@ let SD_PART_R = [42 * SD_SCALE, 46 * SD_SCALE, 72 * SD_SCALE]; // por kd
 // Misil: cuerpo largo con cuatro aletas atrás — se tiene que ver como poder
 let MISSILE_MODEL = mdl([0, 0, 16, 0, 0, -12, -3, 0, 8, 3, 0, 8, 0, -3, 8, 0, 3, 8, -8, 0, -14, 8, 0, -14, 0, -8, -14, 0, 8, -14, -3, 0, -6, 3, 0, -6, 0, -3, -6, 0, 3, -6], '020304052:3;4<5=:6;7<8=961718191');
 
-
-// Chatarra: un trozo de casco — placa con borde, puntal y una solapa doblada
 
 let FONT = (size, color) => ({
   fontFamily: 'monospace',
@@ -624,8 +608,8 @@ let Music = {
 };
 
 // --------------------------------------------------------------------------
-// El título, mínimo a propósito: los bytes son para el JUEGO. Nombre, la
-// nave girando, controles, top 3, y nada más.
+// El título, mínimo a propósito: los bytes son para el JUEGO. Nombre,
+// lema y firma, controles, top 3 y consejos, y nada más.
 class Title extends PS {
 
   create() {
@@ -811,7 +795,7 @@ class Game extends PS {
     me.Zq = { ...me.R };
 
     // ARCADE INFINITO: una sola fase — sobrevive y puntúa hasta morir.
-    // (Phaser reuses the scene instance across runs)
+    // (Phaser reusa la instancia de la escena entre partidas)
     me.fz = 'play';
     me.bq = 75; // el primer destructor tarda esto en llegar
     me.Zb = 0;
@@ -886,10 +870,10 @@ class Game extends PS {
     return [SIN(ang) * rr, RH() * 2 * r * 0.5, COS(ang) * rr];
   }
 
-  // Estrellas: puntos fijos del mundo, envueltos en una caja alrededor tuyo
+  // Estrellas: direcciones en el infinito — solo giran con la vista
   bs(me = this) {
-    // Stars sit at infinity: they only turn with the view and never slide
-    // past, so the one thing moving through the sector is you
+    // las estrellas están en el infinito: solo giran con la vista y nunca
+    // pasan de largo, así lo único que se mueve por el sector eres tú
     me.sn = [];
     for (let i = 0; i < 320; i++) {
       let v = vnorm({ x: RND() - 0.5, y: RND() - 0.5, z: RND() - 0.5 });
@@ -901,7 +885,7 @@ class Game extends PS {
         ph: RND() * 6.3,
       });
     }
-    // the galaxy's band: dense faint stars hugging the horizon
+    // la banda de la galaxia: estrellas tenues y apretadas sobre el horizonte
     me.Qu = [];
     for (let i = 0; i < 260; i++) {
       let u = RND() + RND() + RND() - 1.5;
@@ -937,7 +921,6 @@ class Game extends PS {
     me.Zc = TX(me, CX, 64, '', 16, 0, 0.5).setAlpha(0.95);
     me.Qq = TX(me, 0, 0, '', 14, 0, 0.5).setVisible(false);
     me.Qe = TX(me, CX, 168, '', 16, 0, 0.5).setAlpha(0).setAlign('center');
-    // etiqueta del escudo, junto a su barra
 
     // los textos que salen del mundo: un pequeño grupo que se recicla
     me.Pq = [0, 1, 2, 3, 4, 5].map(() => TX(me, 0, 0, '', 14, 0, 0.5).setAlpha(0));
@@ -1027,7 +1010,7 @@ class Game extends PS {
       let Po = me.o;
       let F = me.F;
       let R = me.R;
-      // el agujero RESPIRA: cada ~70 s, 5 s tirando con casi el doble de alcance
+      // el agujero RESPIRA: cada ~70 s (35 s desde el sector 3), 5 s tirando con casi el doble de alcance
       if ((me.Gw -= dt) <= 0) {
         me.Gw = me.Se > 2 ? 35 : 70;
         me.Gm = 5;
@@ -1193,7 +1176,7 @@ class Game extends PS {
   }
 
   // La emboscada: n naves entran A LA VEZ desde direcciones distintas —
-  // el nivel 0 se gana peleando, no solo recogiendo
+  // cada 45 s, para que el sector se gane peleando, no solo volando
   Z7(n) {
     let Po = this.o;
     // desde el sector 2 la emboscada llega en ESCUADRA: una V que viene de
@@ -1266,10 +1249,10 @@ class Game extends PS {
     });
   }
 
-  // El destructor sale del hiperespacio y bloquea el salto. Llega ANCLADO
-  // CERCA DEL CENTRO del sector (la pelea nunca vive contra el borde, que
-  // te empuja de vuelta), y al punto del anillo MÁS LEJANO de ti: la
-  // entrada y la salva se ven enteras, de lejos, como una escena.
+  // El destructor sale del hiperespacio y bloquea el salto. Llega LEJOS,
+  // delante de ti, y nunca a menos de 1000 del borde (la pelea nunca vive
+  // contra el muro, que te empuja de vuelta): la entrada y la salva se ven
+  // enteras, de lejos, como una escena.
   Ze(mini, me = this) {
     let Po = me.o;
     // Aparece LEJOS, delante de ti y a TU MISMA ALTURA: lo ves de lado,
@@ -1298,7 +1281,7 @@ class Game extends PS {
       ma: 6,
       cg: 0,
       // la entrada: primero el APAGÓN y las letras — y cuando todo está
-      // negro, el destructor simplemente ESTÁ, de golpe, con el flash
+      // negro, el destructor se materializa en 1.2 s, con el flash
       d: 1,
       f: 1,
       Q2: 0,
@@ -1414,11 +1397,11 @@ class Game extends PS {
     let Po = me.o;
     // La escena (entrada, y cada teletransporte en versión corta): el
     // sector se APAGA con las letras contando qué pasa, el destructor
-    // aparece DE GOLPE en el negro con el flash, y suelta una lluvia de
+    // se MATERIALIZA en el negro con el flash, y suelta una lluvia de
     // cohetes que sube alto, se abre en direcciones distintas y después
     // se curva hacia ti mientras vuelve la luz.
-    // Aparece y se va DESPACIO: se materializa en 1.2 s, y al cargar un
-    // salto (el doble de largo que antes) se desvanece mientras carga
+    // Aparece y se va DESPACIO: se materializa en 1.2 s, y en los últimos
+    // 1.4 s de cada salto (2 s si te acercas, 1.4 s tras un domo) se desvanece
     b.Fa = b.d ? 0 : MIN(1, (b.Fa || 0) + dt / 1.2, b.Zd > 0 ? b.Zd / 1.4 : 1);
     if (b.f) {
       b.Q2 += dt;
@@ -1530,14 +1513,14 @@ class Game extends PS {
     for (let pt of b.j) if (pt.g) pt.g -= dt;
     // gira lento para ponerte la proa — más lento que tu órbita, así ganarle
     // la espalda es cuestión de volar. Avanza si te alejas, nunca retrocede,
-    // y no se deja arrastrar lejos del centro del sector.
+    // y el muro del sector lo devuelve adentro.
     b.E += AWR(AT2(dx, dz) - b.E) * MIN(1, 0.11 * dt);
     let move = dist > 1900 ? 90 : 0;
     b.x += SIN(b.E) * move * dt;
     b.z += COS(b.E) * move * dt;
     b.y += SIN(b.t * 0.4) * 6 * dt;
 
-    // torretas: ráfagas de tres, lentas y esquivables — pero son seis
+    // torretas: ráfagas de dos, lentas y esquivables — pero son seis
     for (let pt of b.j) {
       if (pt.Z !== 0 || pt.M <= 0 || dist > 2600) continue;
       pt.P -= dt;
@@ -1545,7 +1528,7 @@ class Game extends PS {
         pt.Qi--;
         pt.P = pt.Qi ? 0.2 : 4.6 + RND() * 1.8;
         let [wx, wy, wz] = me.V(b, pt.ox, pt.oy - 30, pt.oz);
-        // el destructor es la policía mala: la mitad de sus ráfagas van
+        // el destructor es la policía mala: la mitad de sus disparos van
         // contra los carroñeros, no contra ti
         let prey = null;
         if (RND() < 0.5) {
@@ -1794,9 +1777,6 @@ class Game extends PS {
       me.H += (me.cu - me.H) * MIN(1, SPEED_EASE * dt);
     }
 
-    // cerca del destructor la pasada se frena sola (salvo con nitro):
-    // giras antes, lo pierdes de vista menos, la pelea se queda contigo
-
     let f = me.fw();
     Po.x += f.x * me.H * dt;
     Po.y += f.y * me.H * dt;
@@ -1945,7 +1925,7 @@ class Game extends PS {
     let bank = me.yv * 0.34;
     me.Ql += (bank - me.Ql) * MIN(1, 8 * dt);
 
-    // B1: cañón — sale de la nariz, hereda tu velocidad (doble con la mejora)
+    // B1: cañón — sale de la nariz, hereda tu velocidad (doble; cuádruple en OVERDRIVE)
     // mientras dura la escena del destructor no se dispara: es SU momento
     if (held.P1_1 && time >= me.fy && !cineB) {
       me.fy = time + (time < me.Ou ? 70 : FIRE_MS);
@@ -2337,13 +2317,13 @@ class Game extends PS {
       } else if (e.k === 3) {
         // misil del destructor: te sigue, pero gira mal — un giro cerrado,
         // el escudo o el nitro lo dejan atrás; también se puede derribar.
-        // Los de la salva primero SUBEN en columna y luego se curvan a ti.
+        // Los de la salva espejada primero SUBEN en columna (Qr) y luego bajan.
         if (e.Qr > 0) {
           e.Qr -= dt;
         } else {
-          // el dardo va al doble de velocidad pero gira peor: te roza y
-          // vuelve a intentarlo. Los de la cortina caen primero a su punto
-          // del corredor, y desde ahí sí te buscan.
+          // el dardo (una pareja de cada cuatro) va al doble pero gira peor:
+          // te roza y vuelve. Los demás de la salva van antes a su punto
+          // entre el destructor y tú, y desde ahí sí te buscan.
           let tx = dx;
           let ty = dy;
           let tz = dz;
@@ -2443,8 +2423,8 @@ class Game extends PS {
           me.Qf(e, e.k === 2 ? 3 : 99);
           me.S = 7;
         } else if (e.k < 3) {
-          // metal contra metal: el caza estalla y tú pierdes UN casco —
-          // morir de un toque contra algo tan pequeño no era justo, y las
+          // metal contra metal: el caza (o la corbeta) estalla y tú pierdes
+          // UN casco — morir de un toque no era justo, y las
           // emboscadas lo convertían en ejecución. El kamikaze que te
           // alcanza NO paga: ganó él
           if (e.Kz) {
@@ -2593,8 +2573,7 @@ class Game extends PS {
       Sfx.Qk();
       return;
     }
-    // la última nave de la emboscada paga SIEMPRE: así se aprende que
-    // matarlas es lo que da los poderes
+    // la última nave de la emboscada paga un bono: WAVE CLEAR, +100
     if (e.wv) {
       e.wv = 0;
       if (--me.wvN <= 0) {
@@ -2789,12 +2768,12 @@ class Game extends PS {
     return [CX + (vdot(d, cm.R) * FOCAL) / cz + shx, CY - (vdot(d, cm.U) * FOCAL) / cz + shy, cz];
   }
 
-  // Una dirección del cielo (infinitamente lejos): solo gira con la cámara
   // proyecta un punto dado como {x, y, z} o como [x, y, z]
   p(v) {
     return v.x === undefined ? this.Q(v[0], v[1], v[2]) : this.Q(v.x, v.y, v.z);
   }
 
+  // Una dirección del cielo (infinitamente lejos): solo gira con la cámara
   pd(v) {
     let cm = this.cm;
     let cz = vdot(v, cm.F);
@@ -3008,10 +2987,10 @@ class Game extends PS {
     }
   }
 
-  // Up and down must always read: a hazy floor below the sector's level
-  // plane and the galaxy's band along the horizon. The camera rolls with the
-  // ship, so the horizon is a line at any angle — found per pixel as the
-  // screen points whose view ray is level.
+  // Arriba y abajo siempre se leen: una bruma bajo el plano del sector y la
+  // banda de la galaxia en el horizonte. La cámara alabea con la nave, así
+  // que el horizonte es una línea a cualquier ángulo: se halla por píxel,
+  // en los puntos de pantalla cuyo rayo de vista va nivelado.
   dh() {
     let cm = this.cm;
     let { R, U, F } = cm;
@@ -3308,7 +3287,7 @@ class Game extends PS {
     let p = me.p(e);
     if (!p) return;
     let a = me.fg(dist);
-    // el kamikaze late en rojo: se ve venir
+    // el kamikaze late en óxido claro: se ve venir
     if (e.Kz) skp(p, MAX(8, (60 * FOCAL) / p[2]) * (1 + 0.2 * SIN(e.t * 14)), 2, RUST_HI, 0.8);
     if (e.k === 9) {
       // la mina: un rombo cuyo núcleo parpadea más rápido si estás cerca
@@ -3327,8 +3306,9 @@ class Game extends PS {
       return;
     }
 
-    // el destructor no se apaga con la niebla: es enorme y tiene que verse
-    // desde lejos. Escondido (antes del flash de entrada) no se dibuja.
+    // la niebla no lo apaga (es enorme, se ve desde lejos), pero Fa lo funde:
+    // se materializa al entrar y se desvanece al cargar un salto. Oculto
+    // (e.d: antes del flash, o saltando) no se dibuja.
     if (e.k === 7) {
       if (!e.d) me.dr(e, MAX(a, 0.6) * e.Fa, e.g > 0);
       return;
@@ -3452,7 +3432,7 @@ class Game extends PS {
         me.dm(SENTRY_MODEL, { x: wx, y: wy - 12 * SD_SCALE, z: wz, E: b.E }, 1.1 * SD_SCALE, pt.g > 0 ? INK_HI : RUST, a);
         fc(p[0], p[1] - 34 * k, MAX(2, 7 * k), hot, a);
       } else if (pt.Z === 1) {
-        // domo de escudo: esfera en tinta, lo que protege el puente
+        // domo de escudo: esfera en azul apagado, lo que protege el puente
         skp(p, 36 * k, 1.5, pt.g > 0 ? INK_HI : BLD, 0.9);
         GF.strokeEllipse(p[0], p[1], 72 * k, 26 * k);
         fcp(p, 36 * k, BLD, 0.12 + 0.08 * SIN(b.t * 4));
@@ -3583,8 +3563,8 @@ class Game extends PS {
   di(time, me = this) {
     let cm = me.cm;
     let Po = me.o;
-    // las naves cercanas SIEMPRE se anuncian en el borde — aunque no se
-    // estén acercando; los proyectiles, desde más lejos que antes
+    // hasta dos naves a menos de 1100 se anuncian en el borde, aunque no se
+    // acerquen; proyectiles y misiles que vienen hacia ti, desde 1500
     let chn = 0;
     let chMax = 2;
     for (let e of me.D) {
@@ -3695,8 +3675,8 @@ class Game extends PS {
     me.Q9.setText('MSL ' + '^'.repeat(me.am) + '.'.repeat(MISSILE_MAX - me.am));
     let mm = FLR(me.b / 60);
     me.Zg.setText('S' + me.Se + '  T ' + mm + ':' + String(FLR(me.b % 60)).padStart(2, '0'));
-    // el bloque de recursos, junto a las vidas: DASH y SHIELD como barras
-    // con nombre — llena = lista; el escudo va en SU azul
+    // el bloque de recursos, sobre el casco: DASH, SHIELD y OVERDRIVE como
+    // barras con nombre — llena = lista; el escudo va en SU azul
     let g = me.gfx;
     LS(1, INK, 0.5);
     g.strokeRect(12, H - 56, 118, 8);
