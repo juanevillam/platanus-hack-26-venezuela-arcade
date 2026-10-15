@@ -1,5 +1,5 @@
 // Space Explorer — Platanus Hack 26: Caracas Arcade Challenge
-// Hecho en Barquisimeto, Venezuela, por juanevillam.
+// Por juanevillam.
 //
 // Combate aéreo 3D en wireframe al borde de un agujero negro. MODO ARCADE
 // INFINITO: sin niveles ni final — sobrevive y puntúa; morir es el único
@@ -8,8 +8,7 @@
 // (tonel, loop, media vuelta) salen del doble toque de B2. El sector es un
 // cilindro con techo (el HUD dice cuánto queda) y nada vive tras su borde; la
 // Tierra, Saturno y Júpiter son cielo, y el agujero negro flota en él, tira
-// y traga. Tres sectores con nombre venezolano (AVILA, CATATUMBO, SALTO
-// ANGEL) traen kamikazes, francotiradores, minas, élites y tormentas; abajo,
+// y traga. Tres sectores (ORION, NEBULA, EVENT HORIZON) traen kamikazes, francotiradores, minas, élites y tormentas; abajo,
 // la estación libra su propia guerra de torretas y caminantes; y un
 // destructor recurrente llega del hiperespacio a oscuras — el primero con
 // toda la ceremonia, los siguientes al grano. Texto en inglés y ASCII puro
@@ -119,11 +118,12 @@ let CAM_UP = 32;
 // BLU: azul: escudo y recursos TUYOS
 // BLD: azul apagado
 // GRY: gris de escombro: paisaje, no equipo
-let [INK, INK_HI, RUST, RUST_HI, AMB, CRM, BLU, BLD, GRY, SAW, TRI, SQR, FOCAL, SD_SCALE, MISSILE_SPEED, SHOT_SPEED, BND_TOP, BND_R, CELL] = [
+let [INK, INK_HI, RUST, RUST_HI, AMB, CRM, BLU, BLD, GRY, SAW, TRI, SQR, SIN_W, FOCAL, SD_SCALE, MISSILE_SPEED, SHOT_SPEED, BND_TOP, BND_R, CELL] = [
   0xf5f5f5, 0xeef2f7, 0xa65240, 0xc97b5a, 0xf6c98a, 0xfff1d6, 0xb8dbe4, 0x8fb0c4, 0x8a9099,
   'sawtooth',
   'triangle',
   'square',
+  'sine',
   420, 1.6, 560, 250, -5200, 6500, 700,
 ];
 // Números con nombre que se usan mucho van en la misma desestructuración:
@@ -216,9 +216,9 @@ let TIPS = [
   'NO HULL LOST: PERFECT SECTOR',
   'GRAVITY SURGE: KEEP CLEAR - OR LURE THEM IN',
 ];
-// tres sectores con nombre venezolano (en ASCII: la fuente del gabinete no se
-// arriesga); pasado el tercero vuelven con numeral
-let SEC = ['AVILA', 'CATATUMBO', 'SALTO ANGEL'];
+// tres sectores con nombre del espacio (en ASCII: la fuente del gabinete no
+// se arriesga); pasado el tercero vuelven con numeral
+let SEC = ['ORION', 'NEBULA', 'EVENT HORIZON'];
 let BH_PULL = 2700;
 let BH_GRIP = 1500; // aquí ya TE TIENE: el crucero no alcanza — dash o nitro
 let BH_KILL = 240;
@@ -415,10 +415,10 @@ let Sfx = {
     Sfx.O(140, 0.22, TRI, 0.13, 520);
   },
   Z2() {
-    Sfx.O(330, 0.3, 'sine', 0.12, 160);
+    Sfx.O(330, 0.3, SIN_W, 0.12, 160);
   },
   Zv() {
-    Sfx.O(240, 0.28, 'sine', 0.15, 520);
+    Sfx.O(240, 0.28, SIN_W, 0.15, 520);
   },
   Z1() {
     let t = Sfx.K && Sfx.K.currentTime;
@@ -559,32 +559,66 @@ let Music = {
   step: 0,
   on: false,
   G: false,
+  // una VOZ: sierra apagada por un pasabajos, que entra en rampa y se va en
+  // rampa — sin el ataque seco de Sfx.O, así suena a coro y a cuerda, no a 8 bits
+  V(f, t, d, v, me = Sfx.K) {
+    let o = me.createOscillator();
+    let q = me.createBiquadFilter();
+    let g = me.createGain();
+    o.type = SAW;
+    o.frequency.value = f;
+    o.detune.value = RH() * 12;
+    q.frequency.value = f * 2.5;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(v, t + d * 0.3);
+    g.gain.linearRampToValueAtTime(0, t + d);
+    o.connect(q);
+    q.connect(g);
+    g.connect(Sfx.out);
+    o.start(t);
+    o.stop(t + d);
+  },
   Z6(me = this) {
     if (!me.on || !Sfx.K) return;
     let now = Sfx.K.currentTime;
     if (me.Qg < now) me.Qg = now + 0.05;
     while (me.Qg < now + 0.4) {
-      // DUELO: homenaje a la batalla coral de las películas de espadas de
-      // luz — cuerdas serruchando corcheas, timbales, un coro que golpea cada
-      // compás y un canto de metales encima. Em -> C -> Am -> B (la dominante
-      // MAYOR es el drama). Melodía propia: el estilo, no la partitura.
+      // BATALLA CORAL a dos velocidades, movida y SOMBRÍA — un piloto que
+      // va cayendo al lado oscuro: ARRIBA lo épico va lento (un canto de
+      // metales en blancas y tres octavas, un coro de cinco voces); ABAJO todo
+      // empuja (cuerdas en semicorcheas, timbales 3-3-2, golpe seco en 2 y 4).
+      // En el compás de Si, el drama: redoble de timbal y el coro crece.
+      // Em F C B: el Fa sobre el Mi (frigio) es la sombra. Negra = 150.
+      // Música propia: el carácter de un duelo épico, no la partitura de nadie.
       let t = me.Qg;
       let st = me.step++;
       let s = st % 8;
       let bar = FLR(st / 8);
-      let root = 41.2 * 2 ** ([0, -4, 5, 7][bar % 4] / 12);
-      let n = 'HHHDIIHDFIMIH LO'.charCodeAt((bar % 4) * 4 + s / 2) - 65;
-      Sfx.O(root * 4 * 2 ** ([0, 0, 7, 0, 8, 0, 7, 12][s] / 12), 0.17, SAW, 0.055, 0, t);
-      if (s % 4 === 0 || s === 7) Sfx.O(root * 2, 0.45, TRI, 0.17, root * 1.4, t);
-      if (s % 4 === 2) Sfx.Qh(0.09, 0.06, t);
-      if (s % 4 === 0) for (let c of [0, 3 + (bar % 2), 7, 12]) Sfx.O(root * 8 * 2 ** (c / 12), 0.9, TRI, me.G ? 0.04 : 0.028, 0, t);
-      // el canto entra a la mitad de cada vuelta de 8 compases; con el
-      // destructor, todo el tiempo y con metal
-      if (s % 2 === 0 && n >= 0 && (me.G || bar & 4)) {
-        Sfx.O(329.6 * 2 ** (n / 12), 0.3, SQR, me.G ? 0.05 : 0.035, 0, t);
-        Sfx.O(164.8 * 2 ** (n / 12), 0.3, SAW, 0.03, 0, t);
+      let ch = bar % 4;
+      // con un DESTRUCTOR cambia de piel: Mi Fa Mi Si bemol (el tritono es la
+      // amenaza), coro disminuido en GOLPES cortos, cuerdas que tropiezan en
+      // semitonos, un canto que cae y otro entrecortado con silencios, timbal
+      // en cada tiempo y más rápido — algo te está buscando
+      let G = me.G;
+      let root = 41.2 * 2 ** ((G ? [0, 1, 0, 6] : [0, 1, -4, 7])[ch] / 12);
+      // la melodía es una frase de OCHO compases: A en blancas (lo épico) y
+      // B en negras (la acción), y cada tema tiene la suya
+      let B = bar & 4;
+      let n = 'AHNIIHOLHMPMNMIFDIMPOLH MLNMMPSRM PNN MIMPSPNKG '.charCodeAt((G ? 24 : 0) + (B ? 8 + ch * 4 + s / 2 : ch * 2 + s / 4)) - 65;
+      let d = (G ? 0.17 : 0.2) * (me.Sp || 1);
+      // cuerdas en SEMICORCHEAS: la nota del patrón y el pedal de la raíz
+      for (let h of [0, 1]) me.V(root * 2 * 2 ** (h ? 0 : (G ? [12, 13, 12, 7, 12, 13, 15, 13] : [12, 7, 12, 8, 12, 7, 15, 12])[s] / 12), t + (h * d) / 2, 0.13, 0.06);
+      if (s % (G ? 2 : 3) === 0 || ch > 2) Sfx.O(root * 2, 0.8, SIN_W, s ? 0.25 : 0.42, root * 1.4, t);
+      if (s % 4 === 2) Sfx.Qh(0.16, 0.08, t);
+      // con el destructor, el MIEDO: un rugido grave, una octava bajo el
+      // bajo, que no se va en todo el compás
+      if (G && !s) me.V(root, t, d * 8, 0.12);
+      if (!s || (G && s === 4)) for (let c of [0, 12, G ? 15 : 15 + !!ch, G ? 18 : 19, 24]) me.V(root * 4 * 2 ** (c / 12), t, G ? 0.6 : 2.1, ch > 2 ? 0.045 : 0.03);
+      // el canto va AL FRENTE y siempre: es lo que se recuerda del juego
+      if (s % (B ? 2 : 4) === 0 && n >= 0) {
+        for (let f of [659.2, 329.6, 164.8]) me.V(f * 2 ** (n / 12), t, B ? 0.4 : 1.05, G ? 0.07 : 0.06);
       }
-      me.Qg += (me.G ? 0.17 : 0.19) * (Music.Sp || 1);
+      me.Qg += d;
     }
   },
 };
@@ -597,8 +631,8 @@ class Title extends PS {
   create() {
     let [me] = [this];
     Music.on = false;
-    GF = me.add.graphics(); // el remolino de la portada, detrás de todo
-    TX(me, CX, 96, 'S P A C E  E X P L O R E R', 36, 0, 0.5);
+    // el NOMBRE es la portada: grande, solo, sin nada detrás
+    TX(me, CX, 180, 'SPACE EXPLORER', 56, 0, 0.5).setLetterSpacing(6).setFontStyle('bold').setShadow(0, 0, '#8296b4', 14, 0, 1);
     TX(me, 160, 330, 'STICK\nB1\nB2\nB3\nB4/B6\nB5\nSTART', 14).setOrigin(1, 0).setAlign('right').setLineSpacing(13);
     TX(me, 180, 330, 'STEER - HOLD UP/DOWN: LOOP\nFIRE\nDASH - 2X: ROLL/LOOP/U-TURN - HOLD: NITRO\nMISSILE - HOLD: LOCK 4, RELEASE: SALVO\nSHIELD ON/OFF\nOVERDRIVE WHEN FULL\nPAUSE', 13, DIM_CSS).setLineSpacing(14);
     TX(me, 596, 360, 'TOP 3', 14);
@@ -611,23 +645,11 @@ class Title extends PS {
     });
     me.Qw = TX(me, CX, H - 52, 'PRESS START', 16, 0, 0.5);
     me.Tp = TX(me, CX, H - 24, '', 12, DIM_CSS, 0.5);
-    TX(me, CX, 128, 'HECHO EN BARQUISIMETO, VENEZUELA, POR JUANEVILLAM', 12, DIM_CSS, 0.5);
+    TX(me, CX, 228, "FLY FREE.  FIGHT THE DESTROYER.  DON'T FALL IN.", 14, DIM_CSS, 0.5);
+    TX(me, CX, 256, 'BY JUANEVILLAM', 12, DIM_CSS, 0.5);
   }
 
   update(time) {
-    // la portada: el agujero negro, con sus anillos cayendo en remolino
-    GF.clear();
-    for (let i = 0; i < 7; i++) {
-      let ph = (i / 7 + time * 0.00008) % 1;
-      let r = 30 + 110 * (1 - ph);
-      LS(1 + 2 * ph, [0x8a5c48, RUST, 0xe89a5c, AMB, CRM][FLR(ph * 5)], (0.2 + 0.6 * ph) * MIN(1, (1 - ph) * 8));
-      for (let j = 0; j < 9; j++) {
-        let a = (time * 0.084) / r + j * 0.698 + i;
-        PL(CX + COS(a) * r * 1.9, 225 + SIN(a) * r * 0.5, CX + COS(a + 0.25) * r * 1.9, 225 + SIN(a + 0.25) * r * 0.5, CX + COS(a + 0.5) * r * 1.9, 225 + SIN(a + 0.5) * r * 0.5);
-      }
-    }
-    fc(CX, 225, 24, 0, 1);
-    sk(CX, 225, 26, 2, 0xfff8ea, 0.7);
     // los consejos, uno cada 3 s: lo que no se adivina solo
     this.Tp.setText(TIPS[FLR(time / 3000) % 7]);
     this.Qw.setAlpha(FLR(time / 600) % 2 ? 1 : 0.25);
@@ -1377,7 +1399,7 @@ class Game extends PS {
       me.ad(150);
       let domesLeft = b.j.some((q) => q.Z === 1 && q.M > 0);
       me.W(domesLeft ? 'DOME DOWN.' : 'HIT THE BRIDGE.');
-      b.Zd = 0.7; // perder un domo lo hace saltar
+      b.Zd = 1.4; // perder un domo lo hace saltar
       // sin escudos, no pelea limpio: llama a su escolta — ahora son DOS
       if (!domesLeft && !me.I && !b.Qn && me.Zb >= 1) {
         me.W('IT CALLS FOR BACKUP.');
@@ -1395,6 +1417,9 @@ class Game extends PS {
     // aparece DE GOLPE en el negro con el flash, y suelta una lluvia de
     // cohetes que sube alto, se abre en direcciones distintas y después
     // se curva hacia ti mientras vuelve la luz.
+    // Aparece y se va DESPACIO: se materializa en 1.2 s, y al cargar un
+    // salto (el doble de largo que antes) se desvanece mientras carga
+    b.Fa = b.d ? 0 : MIN(1, (b.Fa || 0) + dt / 1.2, b.Zd > 0 ? b.Zd / 1.4 : 1);
     if (b.f) {
       b.Q2 += dt;
       let ct = b.Q2;
@@ -1459,8 +1484,8 @@ class Game extends PS {
     // desaparece y te castiga desde lejos
     if (!b.Zd && dist < 420 && me.b > (b.Jg || 0)) {
       b.Jg = me.b + 20;
-      b.Zd = 1.0;
-      me.W('TOO CLOSE - IT CHARGES A JUMP.');
+      b.Zd = 2;
+      me.W('JUMP CHARGING.');
     }
     // cada domo que pierde también lo saca del apuro: salto corto —
     // desaparece, un silencio, y reaparece lejos con salva
@@ -1538,10 +1563,6 @@ class Game extends PS {
           let pm = HYP(pdx, pdy, pdz) || 1;
           me.w.push({ wx, wy, wz, t: 0.28, Q1: true });
           me.q.push({ x: wx, y: wy, z: wz, A: (pdx / pm) * SHOT_SPEED, C: (pdy / pm) * SHOT_SPEED, B: (pdz / pm) * SHOT_SPEED, N: 8, sd: 1 });
-          if (!me.Zs) {
-            me.Zs = 1;
-            me.W('IT HUNTS THEM TOO.');
-          }
         } else me.sa({ x: wx, y: wy, z: wz }, SHOT_SPEED);
       } else if (pt.Qi === 0 && pt.P <= 0) pt.Qi = 2;
     }
@@ -3309,7 +3330,7 @@ class Game extends PS {
     // el destructor no se apaga con la niebla: es enorme y tiene que verse
     // desde lejos. Escondido (antes del flash de entrada) no se dibuja.
     if (e.k === 7) {
-      if (!e.d) me.dr(e, MAX(a, 0.6), e.g > 0);
+      if (!e.d) me.dr(e, MAX(a, 0.6) * e.Fa, e.g > 0);
       return;
     }
 
