@@ -2392,8 +2392,8 @@ class Game extends PS {
         e.y += e.C * dt;
         e.z += e.B * dt;
         e.E = AT2(e.A, e.B);
-        if (e.Mt || e.k > 8) {
-          if (e.t > (e.Mt ? 14 : 8)) e.X = true;
+        if (e.Mt) {
+          if (e.t > 14) e.X = true;
         } else if (dist > 2600) {
           let ang = RND() * PI * 2;
           e.x = P.x + SIN(ang) * 1600;
@@ -2607,7 +2607,7 @@ class Game extends PS {
       me.Kt = me.b;
       if (me.Ks > 1) {
         me.T += 100 * me.Ks;
-        me.W(['DOUBLE KILL.', 'TRIPLE KILL.', 'RAMPAGE.'][MIN(3, me.Ks) - 2] + ' +' + 100 * me.Ks);
+        me.W(['DOUBLE KILL.', 'TRIPLE KILL.', 'RAMPAGE.'][MIN(4, me.Ks) - 2] + ' +' + 100 * me.Ks);
       }
     }
     Sfx.Qk();
