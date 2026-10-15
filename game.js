@@ -564,33 +564,27 @@ let Music = {
     let now = Sfx.K.currentTime;
     if (me.Qg < now) me.Qg = now + 0.05;
     while (me.Qg < now + 0.4) {
+      // DUELO: homenaje a la batalla coral de las películas de espadas de
+      // luz — cuerdas serruchando corcheas, timbales, un coro que golpea cada
+      // compás y un canto de metales encima. Em -> C -> Am -> B (la dominante
+      // MAYOR es el drama). Melodía propia: el estilo, no la partitura.
       let t = me.Qg;
       let st = me.step++;
-      if (me.G) {
-        // EL DESTRUCTOR: ostinato grave que camina por semitonos, quinta
-        // encima, un stab menor que cae y un tic seco — la flota ya está aquí
-        let s16 = st % 16;
-        let root = [36.7, 36.7, 34.6, 38.9][FLR(st / 16) % 4];
-        Sfx.O(root, 0.32, SAW, 0.1, 0, t);
-        Sfx.O(root * 2, 0.32, SQR, 0.03, 0, t);
-        if (s16 % 4 === 0) Sfx.O(root * 3, 0.6, TRI, 0.065, 0, t);
-        if (s16 === 8) Sfx.O(root * 4.76, 0.9, SAW, 0.05, root * 4, t);
-        if (s16 === 12) Sfx.O(root * 6, 0.5, TRI, 0.045, root * 5.6, t);
-        if (s16 % 2 === 0) Sfx.Qh(0.03, 0.028, t);
-        me.Qg += 0.21 * (Music.Sp || 1);
-      } else {
-        // CACERÍA: galope en menor (Em → C → D → B), stabs, un destello de
-        // tritono y batería marcada — aventura con dientes, nada cozy
-        let s16 = st % 16;
-        let root = [41.2, 32.7, 36.7, 30.9][FLR(st / 16) % 4];
-        if (s16 % 4 !== 3) Sfx.O(s16 % 4 === 2 ? root * 2 : root, 0.14, TRI, 0.1, 0, t);
-        if (s16 === 0) Sfx.O(root * 3, 1.2, SAW, 0.028, 0, t);
-        if (s16 === 4 || s16 === 12) Sfx.O(root * 4.8, 0.22, SQR, 0.04, 0, t);
-        if (s16 === 8) Sfx.O(root * 5.66, 0.5, 'sine', 0.045, root * 4.9, t);
-        if (s16 % 2 === 0) Sfx.Qh(0.025, 0.03, t);
-        if (s16 % 8 === 4) Sfx.Qh(0.09, 0.055, t);
-        me.Qg += 0.19 * (Music.Sp || 1);
+      let s = st % 8;
+      let bar = FLR(st / 8);
+      let root = 41.2 * 2 ** ([0, -4, 5, 7][bar % 4] / 12);
+      let n = 'HHHDIIHDFIMIH LO'.charCodeAt((bar % 4) * 4 + s / 2) - 65;
+      Sfx.O(root * 4 * 2 ** ([0, 0, 7, 0, 8, 0, 7, 12][s] / 12), 0.17, SAW, 0.055, 0, t);
+      if (s % 4 === 0 || s === 7) Sfx.O(root * 2, 0.45, TRI, 0.17, root * 1.4, t);
+      if (s % 4 === 2) Sfx.Qh(0.09, 0.06, t);
+      if (s % 4 === 0) for (let c of [0, 3 + (bar % 2), 7, 12]) Sfx.O(root * 8 * 2 ** (c / 12), 0.9, TRI, me.G ? 0.04 : 0.028, 0, t);
+      // el canto entra a la mitad de cada vuelta de 8 compases; con el
+      // destructor, todo el tiempo y con metal
+      if (s % 2 === 0 && n >= 0 && (me.G || bar & 4)) {
+        Sfx.O(329.6 * 2 ** (n / 12), 0.3, SQR, me.G ? 0.05 : 0.035, 0, t);
+        Sfx.O(164.8 * 2 ** (n / 12), 0.3, SAW, 0.03, 0, t);
       }
+      me.Qg += (me.G ? 0.17 : 0.19) * (Music.Sp || 1);
     }
   },
 };
@@ -1428,34 +1422,40 @@ class Game extends PS {
       }
       if (!b.d && ct > 1.5 * S && ct < 4.1 * S) {
         b.Q5 -= dt;
-        if (b.Q5 <= 0 && me.D.filter((q) => q.k === 3).length < 6) {
-          b.Q5 = 0.26;
+        if (b.Q5 <= 0 && me.D.filter((q) => q.k === 3).length < 11) {
+          b.Q5 = 0.45;
           if (!b.Zf && !b.Qb) {
             b.Zf = 1;
             me.W('SALVO INBOUND.');
           }
-          // la salva se abre en espiral (ángulo áureo), sube LENTA con su
-          // columna de estela — y uno de cada cuatro es un dardo: sube poco
-          // y se lanza rapidísimo, para esquivarlo en el último segundo
+          // la salva sale por PAREJAS, una por banda de la torre y espejada
+          // (izquierda y derecha, la misma cantidad), se abre en espiral
+          // (ángulo áureo) y sube LENTA con su columna de estela — y una
+          // pareja de cada cuatro son dardos: suben poco y se lanzan
+          // rapidísimo, para esquivarlos en el último segundo
           let n = (b.sN = (b.sN || 0) + 1);
           let ang = n * 2.4;
           let fast = n % 4 === 3;
-          let [wx, wy, wz] = me.V(b, RH() * 160, -175, -330);
-          let P = Po;
-          let mk = 0.45 + RND() * 0.3;
-          me.D.push({
-            k: 3, x: wx, y: wy, z: wz, r: 22, M: 1, t: 0, E: 0,
-            A: COS(ang) * (260 + RND() * 300),
-            C: -(fast ? 260 : (300 + RND() * 180)) * (b.Qb ? 0.7 : 1),
-            B: SIN(ang) * (260 + RND() * 300),
-            Qr: (fast ? 0.6 : 2.2 + RND() * 1.2) * (b.Qb ? 0.6 : 1),
-            fast,
-            mid: fast ? 0 : 1,
-            gx: b.x + (P.x - b.x) * mk + RH() * 700,
-            gy: P.y + RH() * 300,
-            gz: b.z + (P.z - b.z) * mk + RH() * 700,
-            N: 12,
-          });
+          let sp = 160 + RND() * 190;
+          for (let side of [-1, 1]) {
+            let [wx, wy, wz] = me.V(b, side * 110, -175, -330);
+            let [vx, , vz] = me.V(b, side * (110 + ABS(COS(ang)) * sp), -175, SIN(ang) * sp - 330);
+            let P = Po;
+            let mk = 0.45 + RND() * 0.3;
+            me.D.push({
+              k: 3, x: wx, y: wy, z: wz, r: 22, M: 1, t: 0, E: 0,
+              A: vx - wx,
+              C: -(fast ? 260 : (300 + RND() * 180)) * (b.Qb ? 0.7 : 1),
+              B: vz - wz,
+              Qr: (fast ? 0.6 : 2.2 + RND() * 1.2) * (b.Qb ? 0.6 : 1),
+              fast,
+              mid: fast ? 0 : 1,
+              gx: b.x + (P.x - b.x) * mk + RH() * 700,
+              gy: P.y + RH() * 300,
+              gz: b.z + (P.z - b.z) * mk + RH() * 700,
+              N: 12,
+            });
+          }
           if (RND() < 0.35) Sfx.Qz();
         }
       }
@@ -1568,17 +1568,17 @@ class Game extends PS {
       }
     }
 
-    // la torre suelta una pareja de misiles que te persiguen
+    // la torre suelta una salva de seis misiles que te persiguen: TRES por
+    // banda, espejados — cada uno sale más abierto y más alto que el anterior
     b.ma -= dt;
-    if (b.ma <= 0 && dist < 2600 && me.D.filter((q) => q.k === 3).length < 4) {
-      b.ma = 15;
-      for (let side of [-1, 1]) {
-        let [wx, wy, wz] = me.V(b, side * 60, -170, -330);
-        let [ox, , oz] = me.V(b, side * 400, 0, -330);
-        let vx = (ox - b.x) * 0.3;
-        let vz = (oz - b.z) * 0.3;
-        me.D.push({ k: 3, x: wx, y: wy, z: wz, r: 22, M: 1, t: 0, E: 0, A: vx, C: -160, B: vz, N: 9 });
-      }
+    if (b.ma <= 0 && dist < 2600 && me.D.filter((q) => q.k === 3).length < 7) {
+      b.ma = 11;
+      for (let side of [-1, 1])
+        for (let i = 0; i < 3; i++) {
+          let [wx, wy, wz] = me.V(b, side * (50 + 25 * i), -170, -330);
+          let [ox, , oz] = me.V(b, side * (250 + 200 * i), 0, -330);
+          me.D.push({ k: 3, x: wx, y: wy, z: wz, r: 22, M: 1, t: 0, E: 0, A: (ox - b.x) * 0.3, C: -130 - 50 * i, B: (oz - b.z) * 0.3, N: 9 });
+        }
       Sfx.Qz();
     }
 
