@@ -814,7 +814,6 @@ class Game extends PS {
     // relojes de los eventos, y los avisos de "primera vez", de cero en cada partida
     me.Gw = 60;
     me.Ms = 10;
-    me.Gd = 40;
     me.Gm = me.Pf = me.Kw = me.Sw = me.Mw = me.Of = 0;
     me.Hi = null; // el récord a batir, cuando llegue del almacenamiento
     loadScores().then((s) => (me.Hi = s.length ? s[0].s : null));
@@ -1026,17 +1025,6 @@ class Game extends PS {
             A: -F.x * v, C: -F.y * v, B: -F.z * v,
           });
         }
-      }
-      // la nave DORADA: rara y veloz, cruza de lado — derríbala: +1000 y
-      // misiles llenos. Se va en 8 s
-      if ((me.Gd -= dt) <= 0) {
-        me.Gd = 45 + RND() * 30;
-        me.W('GOLD RUNNER.');
-        me.D.push({
-          k: 10, r: 50, M: 3, t: 0, E: 0,
-          x: Po.x + R.x * 1800 + F.x * 1300, y: Po.y - 150, z: Po.z + R.z * 1800 + F.z * 1300,
-          A: -R.x * 560, C: 0, B: -R.z * 560,
-        });
       }
       // la GUERRA DE SUPERFICIE: cada 13 s, seis unidades en la estación —
       // torretas o caminantes — casi todas enemigas; tope 12 vivas
@@ -2424,7 +2412,7 @@ class Game extends PS {
       }
 
       // contacto contigo (el wing es tuyo: se atraviesa)
-      if (!e.X && e.k !== 4 && e.k < 10 && !e.L && dist < e.r + 16) {
+      if (!e.X && e.k !== 4 && !e.L && dist < e.r + 16) {
         if (
           (me.H > RAM_SPEED || time < me.du || time < me.su) &&
           e.k < 4
@@ -2602,12 +2590,7 @@ class Game extends PS {
       me.XB(e, 0, { h: true, r: br });
       for (let q of me.D) if (!q.X && q.k !== 7 && q.k !== 4 && !q.L && D3(q, e) < br) me.Qf(q, 99);
     }
-    me.ad(e.k > 9 ? 1000 : e.k === 6 ? 120 : e.k === 5 ? (e.Qm ? 80 : 40) : e.k === 8 ? 15 : e.k === 2 ? 150 : e.k === 1 ? 60 : 25, e);
-    if (e.k > 9) {
-      // la dorada: misiles y OVERDRIVE llenos
-      me.am = MISSILE_MAX;
-      me.Od = 100;
-    }
+    me.ad(e.k === 6 ? 120 : e.k === 5 ? (e.Qm ? 80 : 40) : e.k === 8 ? 15 : e.k === 2 ? 150 : e.k === 1 ? 60 : 25, e);
     if (e.k < 3) {
       me.Kc++;
       me.Hs = 0.05;
@@ -3291,7 +3274,7 @@ class Game extends PS {
     if (e.Y && dist < 2200) {
       let n = e.Y.length;
       for (let i = 1; i < n; i++) {
-        LS(e.k === 3 ? 3 : 2, e.k === 4 || e.L ? BLU : e.k > 9 ? AMB : RUST_HI, (i / n) * 0.5);
+        LS(e.k === 3 ? 3 : 2, e.k === 4 || e.L ? BLU : RUST_HI, (i / n) * 0.5);
         me.J(e.Y[i - 1], i === n - 1 ? [e.x, e.y, e.z] : e.Y[i]);
       }
     }
@@ -3341,12 +3324,12 @@ class Game extends PS {
     let flash = e.g > 0;
     let color = flash
       ? INK_HI
-      : e.k === 4 || e.L ? BLU : e.k === 8 ? GRY : e.k > 9 ? AMB : e.Et ? RUST_HI : RUST;
+      : e.k === 4 || e.L ? BLU : e.k === 8 ? GRY : e.Et ? RUST_HI : RUST;
     if (e.k === 8 && !flash) a *= 0.7;
 
     let model =
       e.k === 5 ? (e.Qm ? TURRET_MODEL : SENTRY_MODEL)
-      : e.k === 1 || e.k === 4 || e.k > 9 ? SHIP_MODEL : e.k === 2 ? GUN_MODEL
+      : e.k === 1 || e.k === 4 ? SHIP_MODEL : e.k === 2 ? GUN_MODEL
       : e.k === 6 ? WALK_MODEL
       : e.Zx;
     let scale = e.k === 8 ? e.r / 16 : e.k === 5 ? 1.6 : e.k === 1 ? 2.2 : e.k === 4 ? 2 : e.k === 2 ? 3 : e.k === 6 ? 1 : 2.4;
