@@ -834,6 +834,7 @@ class Game extends PS {
     // relojes de los eventos, y los avisos de "primera vez", de cero en cada partida
     me.Gw = 60;
     me.Ms = 10;
+    me.Dc = 12;
     me.Gm = me.Pf = me.Kw = me.Sw = me.Mw = me.Of = 0;
     me.Hi = null; // el récord a batir, cuando llegue del almacenamiento
     loadScores().then((s) => (me.Hi = s.length ? s[0].s : null));
@@ -1043,6 +1044,21 @@ class Game extends PS {
             k: 8, Mt: 1, r: 40, M: 2, t: 0, E: 0, Zx: ROCK_POOL[i % 4], Zw: RH() * 2,
             x: Po.x + F.x * d + R.x * RH() * 1600, y: Po.y + F.y * d + RH() * 1000, z: Po.z + F.z * d + R.z * RH() * 1600,
             A: -F.x * v, C: -F.y * v, B: -F.z * v,
+          });
+        }
+      }
+      // cada 25 s, una NUBE DE ESCOMBROS por delante: treinta rocas casi
+      // quietas, casi todas chicas y unas pocas ENORMES (el cubo del azar),
+      // un sitio denso que cruzar o rodear. Vive como meteoro (Mt) pero
+      // empieza en -30, así dura ~45 s y no se juntan más de dos
+      if ((me.Dc -= dt) <= 0) {
+        me.Dc = 25;
+        me.W('DEBRIS FIELD AHEAD.');
+        for (let i = 0; i < 30; i++) {
+          me.D.push({
+            k: 8, Mt: 1, r: 12 + RND() ** 3 * 100, M: 2, t: -30, E: 0, Zx: ROCK_POOL[i % 4], Zw: RH() * 2,
+            x: Po.x + F.x * 2200 + RH() * 1400, y: Po.y + F.y * 2200 + RH() * 700, z: Po.z + F.z * 2200 + RH() * 1400,
+            A: RH() * 20, C: RH() * 10, B: RH() * 20,
           });
         }
       }
