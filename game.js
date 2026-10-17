@@ -584,23 +584,37 @@ let Music = {
       // semitonos, un canto que cae y otro entrecortado con silencios, timbal
       // en cada tiempo y más rápido — algo te está buscando
       let G = me.G;
-      let root = 41.2 * 2 ** ((G ? [0, 1, 0, 6] : [0, 1, -4, 7])[ch] / 12);
       // la melodía es una frase de OCHO compases: A en blancas (lo épico) y
-      // B en negras (la acción), y cada tema tiene la suya
+      // B en negras (la acción), y cada tema tiene la suya. Ocho frases
+      // hacen la CANCIÓN (casi dos minutos) para que el bucle no canse:
+      // 0 A+B · 1 A+C (un canto nuevo, que sube) · 2 RESPIRO (sin canto ni
+      // golpe) y B · 3 A+B con charles · 4 SUBE un tono, A+C a medio tiempo ·
+      // 5 aún arriba, A+D (pregunta y respuesta) con eco · 6 RESPIRO y D ·
+      // 7 de vuelta abajo, A+B con todo: charles y eco
       let B = bar & 4;
-      let n = 'AHNIIHOLHMPMNMIFDIMPOLH MLNMMPSRM PNN MIMPSPNKG '.charCodeAt((G ? 24 : 0) + (B ? 8 + ch * 4 + s / 2 : ch * 2 + s / 4)) - 65;
-      let d = (G ? 0.17 : 0.2) * (me.Sp || 1);
+      let P = FLR(bar / 8) % 8;
+      let R = (P == 2 || P == 6) && !B;
+      let k = P == 4 || P == 5 ? 2 : 0;
+      let root = 41.2 * 2 ** (((G ? [0, 1, 0, 6] : [0, 1, -4, 7])[ch] + k) / 12);
+      let n = 'AHNIIHOLHMPMNMIFDIMPOLH MLNMMPSRM PNN MIMPSPNKG ADFHIFINMPMIHLO M PMR N P MIOLHL'.charCodeAt((G ? 24 : 0) + (B ? (G ? 8 : [8, 48, 8, 8, 48, 64, 64, 8][P]) + ch * 4 + s / 2 : ch * 2 + s / 4)) - 65 + k;
+      let d = (G ? 0.19 : 0.22) * (me.Sp || 1);
       // cuerdas en SEMICORCHEAS: la nota del patrón y el pedal de la raíz
       for (let h of [0, 1]) me.V(root * 2 * 2 ** (h ? 0 : (G ? [12, 13, 12, 7, 12, 13, 15, 13] : [12, 7, 12, 8, 12, 7, 15, 12])[s] / 12), t + (h * d) / 2, 0.13, 0.06);
-      if (s % (G ? 2 : 3) === 0 || ch > 2) Sfx.O(root * 2, 0.8, SIN_W, s ? 0.25 : 0.42, root * 1.4, t);
-      if (s % 4 === 2) Sfx.Qh(0.16, 0.08, t);
+      if (R ? !s : P == 4 ? s % 4 < 1 : s % (G ? 2 : 3) === 0 || ch > 2) Sfx.O(root * 2, 0.8, SIN_W, s ? 0.25 : 0.42, root * 1.4, t);
+      if (s % 4 === 2 && !R) Sfx.Qh(0.16, 0.08, t);
+      if (P % 4 > 2 && s % 2) Sfx.Qh(0.04, 0.04, t);
       // con el destructor, el MIEDO: un rugido grave, una octava bajo el
       // bajo, que no se va en todo el compás
       if (G && !s) me.V(root, t, d * 8, 0.12);
       if (!s || (G && s === 4)) for (let c of [0, 12, G ? 15 : 15 + !!ch, G ? 18 : 19, 24]) me.V(root * 4 * 2 ** (c / 12), t, G ? 0.6 : 2.1, ch > 2 ? 0.045 : 0.03);
       // el canto va AL FRENTE y siempre: es lo que se recuerda del juego
-      if (s % (B ? 2 : 4) === 0 && n >= 0) {
-        for (let f of [659.2, 329.6, 164.8]) me.V(f * 2 ** (n / 12), t, B ? 0.4 : 1.05, G ? 0.07 : 0.06);
+      // dos octavas, no tres: la de arriba chillaba
+      if (s % (B ? 2 : 4) === 0 && n >= 0 && !R) {
+        for (let f of [329.6, 164.8]) {
+          f *= 2 ** (n / 12);
+          me.V(f, t, B ? 0.4 : 1.05, G ? 0.08 : 0.07);
+          if (P > 4 && P & 1) me.V(f, t + d * 3, B ? 0.4 : 1, 0.025);
+        }
       }
       me.Qg += d;
     }
@@ -849,6 +863,7 @@ class Game extends PS {
 
     me.Qp = me.add.rectangle(CX, CY, W, H, 0xffffff).setAlpha(0).setDepth(10);
     Music.on = true;
+    Music.step = 0; // la canción arranca por el principio
   }
 
   // Las rocas se siembran alrededor del centro del sector
@@ -983,7 +998,7 @@ class Game extends PS {
       Sfx.Z1();
     }
     Music.G = !!(me.G || me.I);
-    Music.Sp = 1 - 0.07 * MIN(3, me.Se - 1); // cada sector, la música aprieta
+    Music.Sp = 1 - 0.04 * MIN(3, me.Se - 1); // cada sector, la música aprieta
     me.Gx = (me.Gm -= dt) > 0 ? 1.8 : 1; // multiplicador del alcance del agujero
     Music.Z6();
 
