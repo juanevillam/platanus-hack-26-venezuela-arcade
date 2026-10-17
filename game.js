@@ -82,6 +82,12 @@ let WRP = Phaser.Math.Wrap;
 let AWR = Phaser.Math.Angle.Wrap;
 let RD = Math.round;
 let RH = () => RND() - 0.5; // azar centrado en cero
+// avanza algo por su velocidad (A, C, B) durante t
+let MV = (o, t) => {
+  o.x += o.A * t;
+  o.y += o.C * t;
+  o.z += o.B * t;
+};
 let SQ = Math.sqrt;
 let D3 = (a, b) => HYP(a.x - b.x, a.y - b.y, a.z - b.z);
 // la velocidad de a hacia b, a rapidez sp
@@ -247,7 +253,7 @@ let CABINET_KEYS = {
 let KEY_TO_ARCADE = {};
 for (let [code, keys] of Object.entries(CABINET_KEYS)) {
   for (let key of keys) {
-    KEY_TO_ARCADE[key.length === 1 ? key.toLowerCase() : key] = code;
+    KEY_TO_ARCADE[key.length == 1 ? key.toLowerCase() : key] = code;
   }
 }
 
@@ -255,7 +261,7 @@ let held = Object.create(null);
 let pressed = Object.create(null); // por flanco, se limpia cada frame
 
 window.addEventListener('keydown', (e) => {
-  let code = KEY_TO_ARCADE[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+  let code = KEY_TO_ARCADE[e.key.length == 1 ? e.key.toLowerCase() : e.key];
   if (code && !held[code]) {
     held[code] = true;
     pressed[code] = true;
@@ -263,7 +269,7 @@ window.addEventListener('keydown', (e) => {
   }
 });
 window.addEventListener('keyup', (e) => {
-  let code = KEY_TO_ARCADE[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+  let code = KEY_TO_ARCADE[e.key.length == 1 ? e.key.toLowerCase() : e.key];
   if (code) held[code] = false;
 });
 
@@ -308,7 +314,7 @@ async function loadScores() {
   }
   if (!res || !res.found || !res.value || !Array.isArray(res.value.scores)) return [];
   return res.value.scores
-    .filter((s) => s && typeof s.n === 'string' && typeof s.s === 'number')
+    .filter((s) => s && typeof s.n == 'string' && typeof s.s == 'number')
     .map((s) => ({ n: s.n.slice(0, 3).toUpperCase(), s: FLR(s.s) }))
     .sort((a, b) => b.s - a.s)
     .slice(0, 3);
@@ -327,9 +333,9 @@ let Sfx = {
   out: null,
 
   init() {
-    let [me] = [this];
+    let me = this;
     if (me.K) {
-      if (me.K.state === 'suspended') me.K.resume();
+      if (me.K.state == 'suspended') me.K.resume();
       return;
     }
     let AC = window.AudioContext || window.webkitAudioContext;
@@ -389,15 +395,19 @@ let Sfx = {
   },
   Q3() {
     Sfx.O(660, 0.06, SQR, 0.13);
-    Sfx.O(990, 0.09, SQR, 0.13, 0, Sfx.K && Sfx.K.currentTime + 0.07);
+    Sfx.O(990, 0.09, SQR, 0.13, 0, Sfx.K?.currentTime + 0.07);
   },
   Z4() {
     Sfx.O(440, 0.08, TRI, 0.16);
-    Sfx.O(880, 0.12, TRI, 0.16, 0, Sfx.K && Sfx.K.currentTime + 0.09);
+    Sfx.O(880, 0.12, TRI, 0.16, 0, Sfx.K?.currentTime + 0.09);
+  },
+  // un arpegio: las notas de l, una cada 0.09 s, de d segundos cada una
+  Ar(l, d) {
+    let t = Sfx.K?.currentTime;
+    l.forEach((f, i) => Sfx.O(f, d, TRI, 0.15, 0, t + i * 0.09));
   },
   Qc() {
-    let t = Sfx.K && Sfx.K.currentTime;
-    [440, 554, 659, 880].forEach((f, i) => Sfx.O(f, 0.5, TRI, 0.15, 0, t + i * 0.09));
+    Sfx.Ar([440, 554, 659, 880], 0.5);
   },
   Z0() {
     Sfx.O(140, 0.22, TRI, 0.13, 520);
@@ -409,8 +419,7 @@ let Sfx = {
     Sfx.O(240, 0.28, SIN_W, 0.15, 520);
   },
   Z1() {
-    let t = Sfx.K && Sfx.K.currentTime;
-    [330, 440, 554, 659, 880, 1108].forEach((f, i) => Sfx.O(f, 0.4, TRI, 0.15, 0, t + i * 0.09));
+    Sfx.Ar([330, 440, 554, 659, 880, 1108], 0.4);
   },
   Z5() {
     Sfx.O(160, 1.1, SAW, 0.18, 55);
@@ -601,12 +610,12 @@ let Music = {
       // cuerdas en SEMICORCHEAS: la nota del patrón y el pedal de la raíz
       for (let h of [0, 1]) me.V(root * 2 * 2 ** (h ? 0 : (G ? [12, 13, 12, 7, 12, 13, 15, 13] : [12, 7, 12, 8, 12, 7, 15, 12])[s] / 12), t + (h * d) / 2, 0.13, 0.06);
       if (R ? !s : P == 4 ? s % 4 < 1 : s % (G ? 2 : 3) === 0 || ch > 2) Sfx.O(root * 2, 0.8, SIN_W, s ? 0.25 : 0.42, root * 1.4, t);
-      if (s % 4 === 2 && !R) Sfx.Qh(0.16, 0.08, t);
+      if (s % 4 == 2 && !R) Sfx.Qh(0.16, 0.08, t);
       if (P % 4 > 2 && s % 2) Sfx.Qh(0.04, 0.04, t);
       // con el destructor, el MIEDO: un rugido grave, una octava bajo el
       // bajo, que no se va en todo el compás
       if (G && !s) me.V(root, t, d * 8, 0.12);
-      if (!s || (G && s === 4)) for (let c of [0, 12, G ? 15 : 15 + !!ch, G ? 18 : 19, 24]) me.V(root * 4 * 2 ** (c / 12), t, G ? 0.6 : 2.1, ch > 2 ? 0.045 : 0.03);
+      if (!s || (G && s == 4)) for (let c of [0, 12, G ? 15 : 15 + !!ch, G ? 18 : 19, 24]) me.V(root * 4 * 2 ** (c / 12), t, G ? 0.6 : 2.1, ch > 2 ? 0.045 : 0.03);
       // el canto va AL FRENTE y siempre: es lo que se recuerda del juego
       // dos octavas, no tres: la de arriba chillaba
       if (s % (B ? 2 : 4) === 0 && n >= 0 && !R) {
@@ -627,7 +636,7 @@ let Music = {
 class Title extends PS {
 
   create() {
-    let [me] = [this];
+    let me = this;
     Music.on = false;
     // el NOMBRE es la portada: grande, solo, sin nada detrás
     TX(me, CX, 180, 'SPACE EXPLORER', 56, 0, 0.5).setLetterSpacing(6).setFontStyle('bold').setShadow(0, 0, '#8296b4', 14, 0, 1);
@@ -724,7 +733,7 @@ let drawBandedSphere = (R, bands, night) => {
 let drawSaturn = (r) => {
   let ring = (from) => {
     for (let k = 0; k < 4; k++) {
-      LS(MAX(1.5, r * (k === 1 ? 0.05 : 0.025)), [0xe8d4a8, 0xd6b47e, 0xb89462, 0x8a7050][k], 0.6);
+      LS(MAX(1.5, r * (k == 1 ? 0.05 : 0.025)), [0xe8d4a8, 0xd6b47e, 0xb89462, 0x8a7050][k], 0.6);
       GF.beginPath();
       for (let j = 0; j <= 24; j++) {
         let a = from + (j / 24) * PI;
@@ -778,7 +787,7 @@ let drawEarth = (r) => {
 class Game extends PS {
 
   create() {
-    let [me] = [this];
+    let me = this;
     GF = me.gfx = me.add.graphics();
 
     // la nave, en coordenadas de MUNDO (y positivo = hacia abajo). Su actitud
@@ -951,11 +960,11 @@ class Game extends PS {
 
   // --- flujo ---
   update(time, delta) {
-    let [me] = [this];
+    let me = this;
     // pausa: START congela TODO — la lógica, el reloj de la partida, los
     // temporizadores (escudo, dash, cadencia), las animaciones y la música.
     // El juego corre con su propio reloj: el real menos lo que duró la pausa
-    if (pressed.START1 && me.fz !== 'out') {
+    if (pressed.START1 && me.fz != 'out') {
       me.pa = !me.pa;
       me.time.paused = me.pa;
       me.pa ? me.tweens.pauseAll() : me.tweens.resumeAll();
@@ -983,7 +992,7 @@ class Game extends PS {
     }
     if (me.Hi && me.T > me.Hi) me.W('NEW HIGH SCORE.', (me.Hi = null));
     // con UN casco, la alarma: pitido cada 1.2 s y el marco rojo
-    if (me.Qj === 1 && (me.Lw = (me.Lw || 0) - dt) <= 0) {
+    if (me.Qj == 1 && (me.Lw = (me.Lw || 0) - dt) <= 0) {
       me.Lw = 1.2;
       Sfx.O(880, 0.12, SQR, 0.05);
     }
@@ -1011,7 +1020,7 @@ class Game extends PS {
 
     let cb = (me.G && me.G.f && me.G) || (me.I && me.I.f && me.I);
     let anyB = me.G || me.I;
-    if (me.fz === 'play' && !cb) {
+    if (me.fz == 'play' && !cb) {
       if (anyB) {
         // la pelea es contra ÉL: apenas entra escolta, y nada más
         me.sd(dt, 1, 16);
@@ -1033,34 +1042,32 @@ class Game extends PS {
         me.W('GRAVITY SURGE - KEEP CLEAR.');
         Sfx.O(70, 2, SAW, 0.15, 30);
       }
-      // desde el sector 3, TORMENTAS de meteoritos que vienen de frente
+      // rocas por delante, de un mismo molde: una TORMENTA (s = 0) viene de
+      // frente a toda velocidad; una NUBE DE ESCOMBROS (s = 30) está casi
+      // quieta, con casi todas chicas y unas pocas ENORMES (el cubo del
+      // azar). Viven como meteoro (Mt); la nube empieza en -30 y dura ~45 s
+      let rk = (n, s) => {
+        for (let i = 0; i < n; i++) {
+          let d = 2000 + RND() * 900;
+          let v = s ? 0 : 300 + RND() * 200;
+          me.D.push({
+            k: 8, Mt: 1, r: s ? 12 + RND() ** 3 * 100 : 40, M: 2, t: -s, E: 0, Zx: ROCK_POOL[i % 4], Zw: RH() * 2,
+            x: Po.x + F.x * d + R.x * RH() * 1600, y: Po.y + F.y * d + RH() * 1000, z: Po.z + F.z * d + R.z * RH() * 1600,
+            A: RH() * s - F.x * v, C: -F.y * v, B: RH() * s - F.z * v,
+          });
+        }
+      };
+      // desde el sector 3, TORMENTAS de meteoritos
       if (me.Se > 2 && (me.Ms -= dt) <= 0) {
         me.Ms = 35;
         me.W('METEOR STORM.');
-        for (let i = 0; i < 14; i++) {
-          let d = 2000 + RND() * 900;
-          let v = 300 + RND() * 200;
-          me.D.push({
-            k: 8, Mt: 1, r: 40, M: 2, t: 0, E: 0, Zx: ROCK_POOL[i % 4], Zw: RH() * 2,
-            x: Po.x + F.x * d + R.x * RH() * 1600, y: Po.y + F.y * d + RH() * 1000, z: Po.z + F.z * d + R.z * RH() * 1600,
-            A: -F.x * v, C: -F.y * v, B: -F.z * v,
-          });
-        }
+        rk(14, 0);
       }
-      // cada 25 s, una NUBE DE ESCOMBROS por delante: treinta rocas casi
-      // quietas, casi todas chicas y unas pocas ENORMES (el cubo del azar),
-      // un sitio denso que cruzar o rodear. Vive como meteoro (Mt) pero
-      // empieza en -30, así dura ~45 s y no se juntan más de dos
+      // cada 25 s, una NUBE: un sitio denso que cruzar o rodear
       if ((me.Dc -= dt) <= 0) {
         me.Dc = 25;
         me.W('DEBRIS FIELD AHEAD.');
-        for (let i = 0; i < 30; i++) {
-          me.D.push({
-            k: 8, Mt: 1, r: 12 + RND() ** 3 * 100, M: 2, t: -30, E: 0, Zx: ROCK_POOL[i % 4], Zw: RH() * 2,
-            x: Po.x + F.x * 2200 + RH() * 1400, y: Po.y + F.y * 2200 + RH() * 700, z: Po.z + F.z * 2200 + RH() * 1400,
-            A: RH() * 20, C: RH() * 10, B: RH() * 20,
-          });
-        }
+        rk(30, 30);
       }
       // la GUERRA DE SUPERFICIE: cada 13 s, seis unidades en la estación —
       // torretas o caminantes — casi todas enemigas; tope 12 vivas
@@ -1098,7 +1105,7 @@ class Game extends PS {
               }
               // arco o muro en la celda: reintenta — nada nace DENTRO. Y nada
               // nace ENCIMA de otro: cada techo tiene un solo sitio
-              if (ok && (HYP(gx2, gz2) > BND_R - 300 || me.D.some((q) => !q.X && (q.k === 5 || q.k === 6) && HYP(q.x - gx2, q.z - gz2) < 220))) ok = false;
+              if (ok && (HYP(gx2, gz2) > BND_R - 300 || me.D.some((q) => !q.X && (q.k == 5 || q.k == 6) && HYP(q.x - gx2, q.z - gz2) < 220))) ok = false;
             }
             if (!ok) continue;
             // UNA de cada seis es TUYA, y nunca más de tres vivas: las
@@ -1121,7 +1128,7 @@ class Game extends PS {
         me.Zj = 14;
         let airE = me.D.filter((q) => q.k < 3 && !q.X).length;
         let want = MIN(3, FLR(airE / 4));
-        if (me.D.filter((q) => q.k === 4 && !q.X).length < want) me.Zr(1);
+        if (me.D.filter((q) => q.k == 4 && !q.X).length < want) me.Zr(1);
       }
       // el destructor vuelve siempre — y cada vez con menos ceremonia
       if (!anyB) {
@@ -1152,7 +1159,7 @@ class Game extends PS {
       }
     }
 
-    if (me.fz !== 'out') me.up(time, dt);
+    if (me.fz != 'out') me.up(time, dt);
     me.ue(time, dt);
     me.ux(dt);
     me.um(dt, time);
@@ -1166,7 +1173,7 @@ class Game extends PS {
     let best = null;
     let bd = rng;
     for (let q of this.D) {
-      if (q.X || q.L || (q.k !== 1 && q.k !== 2 && q.k !== 5 && q.k !== 6)) continue;
+      if (q.X || q.L || (q.k != 1 && q.k != 2 && q.k != 5 && q.k != 6)) continue;
       let d = D3(q, e);
       if (d < bd) {
         bd = d;
@@ -1180,7 +1187,7 @@ class Game extends PS {
     let best = null;
     let bd = rng;
     for (let q of this.D) {
-      if (q.X || (!q.L && q.k !== 4)) continue;
+      if (q.X || (!q.L && q.k != 4)) continue;
       let d = D3(q, e);
       if (d < bd) {
         bd = d;
@@ -1194,7 +1201,7 @@ class Game extends PS {
   Zr(n) {
     let Po = this.o;
     for (let i = 0; i < n; i++) {
-      if (this.D.filter((q) => q.k === 4).length >= 3) return;
+      if (this.D.filter((q) => q.k == 4).length >= 3) return;
       let ang = RND() * PI * 2;
       this.D.push({
         k: 4,
@@ -1221,7 +1228,7 @@ class Game extends PS {
       let ang = v ? a0 : (i / n) * PI * 2 + RND() * 0.8;
       let sd = v ? (i % 2 ? -150 : 150) * ((i + 1) >> 1) : 0;
       let d = 1500 + (v ? ((i + 1) >> 1) * 160 : 0);
-      let gun = i === 2 && n >= 4; // las oleadas grandes traen una corbeta
+      let gun = i == 2 && n >= 4; // las oleadas grandes traen una corbeta
       this.D.push({
         k: gun ? 2 : 1,
         x: Po.x + SIN(ang) * d + COS(ang) * sd,
@@ -1245,7 +1252,7 @@ class Game extends PS {
   // la vez, cada vez más seguido). Desde el sector 2, kamikazes y
   // francotiradores; desde el 3, élites. Con un destructor, solo escolta.
   sd(dt, max, every) {
-    let [me] = [this];
+    let me = this;
     let Po = me.o;
     me.Q7 -= dt;
     let alive = me.D.filter((e) => e.k < 3).length;
@@ -1320,10 +1327,10 @@ class Game extends PS {
       Zd: 0,
       Q5: 0,
       Qn: mini ? 1 : 0,
-      j: SD_PARTS.filter(([kind], i) => !mini || (kind === 2 || i < 4))
+      j: SD_PARTS.filter(([kind], i) => !mini || (kind == 2 || i < 4))
         .map(([kind, ox, oy, oz, hp]) => {
           // cada regreso vuelve con medio casco más
-          hp = mini && kind === 2 ? 8 : RD(hp * (1 + me.Zb / 2));
+          hp = mini && kind == 2 ? 8 : RD(hp * (1 + me.Zb / 2));
           return { Z: kind, ox, oy, oz, M: hp, max: hp, P: 1 + RND() * 3, Qi: 0 };
         }),
     };
@@ -1372,8 +1379,8 @@ class Game extends PS {
   // si ya cayeron los dos domos que lo escudan
   bo(b, pt) {
     if (pt.M <= 0) return false;
-    if (pt.Z !== 2) return true;
-    return !b.j.some((q) => q.Z === 1 && q.M > 0);
+    if (pt.Z != 2) return true;
+    return !b.j.some((q) => q.Z == 1 && q.M > 0);
   }
 
   ba(b, f) {
@@ -1409,9 +1416,9 @@ class Game extends PS {
     Sfx.Qk();
     if (pt.Z === 0) {
       me.ad(60);
-    } else if (pt.Z === 1) {
+    } else if (pt.Z == 1) {
       me.ad(150);
-      let domesLeft = b.j.some((q) => q.Z === 1 && q.M > 0);
+      let domesLeft = b.j.some((q) => q.Z == 1 && q.M > 0);
       me.W(domesLeft ? 'DOME DOWN.' : 'HIT THE BRIDGE.');
       b.Zd = 1.4; // perder un domo lo hace saltar
       // sin escudos, no pelea limpio: llama a su escolta — ahora son DOS
@@ -1449,7 +1456,7 @@ class Game extends PS {
       }
       if (!b.d && ct > 1.5 * S && ct < 4.1 * S) {
         b.Q5 -= dt;
-        if (b.Q5 <= 0 && me.D.filter((q) => q.k === 3).length < 11) {
+        if (b.Q5 <= 0 && me.D.filter((q) => q.k == 3).length < 11) {
           b.Q5 = 0.45;
           if (!b.Zf && !b.Qb) {
             b.Zf = 1;
@@ -1462,7 +1469,7 @@ class Game extends PS {
           // rapidísimo, para esquivarlos en el último segundo
           let n = (b.sN = (b.sN || 0) + 1);
           let ang = n * 2.4;
-          let fast = n % 4 === 3;
+          let fast = n % 4 == 3;
           let sp = 160 + RND() * 190;
           for (let side of [-1, 1]) {
             let [wx, wy, wz] = me.V(b, side * 110, -175, -330);
@@ -1507,7 +1514,7 @@ class Game extends PS {
       b.Zd -= dt;
       if (b.Zd <= 0) {
         for (let e2 of me.D) {
-          if (e2.k === 3) {
+          if (e2.k == 3) {
             e2.X = true;
             me.bm(e2);
           }
@@ -1585,7 +1592,7 @@ class Game extends PS {
     b.ha -= dt;
     if (b.ha <= 0) {
       b.ha = 16;
-      if (me.D.filter((e) => e.k === 1).length < 3) {
+      if (me.D.filter((e) => e.k == 1).length < 3) {
         let [wx, wy, wz] = me.V(b, 0, SD_KEEL + 30, -100);
         me.D.push({ k: 1, x: wx, y: wy, z: wz, r: 22 * HUNTER_SCALE, M: 4, t: 0, E: b.E, P: 2, m: 1, A: 0, C: 120, B: 0 });
       }
@@ -1594,7 +1601,7 @@ class Game extends PS {
     // la torre suelta una salva de seis misiles que te persiguen: TRES por
     // banda, espejados — cada uno sale más abierto y más alto que el anterior
     b.ma -= dt;
-    if (b.ma <= 0 && dist < 2600 && me.D.filter((q) => q.k === 3).length < 7) {
+    if (b.ma <= 0 && dist < 2600 && me.D.filter((q) => q.k == 3).length < 7) {
       b.ma = 11;
       for (let side of [-1, 1])
         for (let i = 0; i < 3; i++) {
@@ -1929,7 +1936,7 @@ class Game extends PS {
         me.Gt = null;
         if (gd < 120) {
           me.ad(100 * ++me.Gc, G, 'GATE ');
-          if (me.Gc === 5) me.Od = 100; // cinco seguidos: OVERDRIVE lleno
+          if (me.Gc == 5) me.Od = 100; // cinco seguidos: OVERDRIVE lleno
           me.u = BOOST_MAX;
           me.Gs = 0;
           Sfx.Q3();
@@ -1981,7 +1988,7 @@ class Game extends PS {
       }
       if (aim === f) {
         let tg = me.bt(f);
-        if (tg && tg.k !== 7) {
+        if (tg && tg.k != 7) {
           let dd = D3(tg, Po) || 1;
           let lead = dd / (BOLT_SPEED + me.H);
           let to = vnorm({
@@ -2042,7 +2049,7 @@ class Game extends PS {
           C: f.y * MISSILE_SPEED,
           B: f.z * MISSILE_SPEED,
           Qd: target,
-          Qc: target && target.k === 7 ? me.ba(target, f) : null,
+          Qc: target && target.k == 7 ? me.ba(target, f) : null,
           Y: [],
           N: 7,
         });
@@ -2058,14 +2065,14 @@ class Game extends PS {
     let best = null;
     let bestDot = 0.75; // solo lo que ya tienes bastante de frente
     for (let e of this.D) {
-      if (e.k === 4 || e.L || e.X || (ex && ex.includes(e))) continue;
+      if (e.k == 4 || e.L || e.X || (ex && ex.includes(e))) continue;
       let dx = e.x - Po.x;
       let dy = e.y - Po.y;
       let dz = e.z - Po.z;
       let d = HYP(dx, dy, dz);
-      if (d > (e.k === 7 ? 3600 : 2800)) continue;
+      if (d > (e.k == 7 ? 3600 : 2800)) continue;
       // el destructor es enorme: cuenta como "de frente" aunque su centro no lo esté
-      let dot = (dx * f.x + dy * f.y + dz * f.z) / MAX(d, 1) + (e.k === 7 ? 0.45 : 0);
+      let dot = (dx * f.x + dy * f.y + dz * f.z) / MAX(d, 1) + (e.k == 7 ? 0.45 : 0);
       if (dot > bestDot) {
         bestDot = dot;
         best = e;
@@ -2076,7 +2083,7 @@ class Game extends PS {
 
   // La muerte: una sola, para todo lo que mata de un golpe
   Jc(me = this) {
-    if (me.fz === 'out' || (me.G && me.G.f) || (me.I && me.I.f)) return;
+    if (me.fz == 'out' || (me.G && me.G.f) || (me.I && me.I.f)) return;
     me.fz = 'out';
     me.Sl = 1.3; // la propia muerte, en cámara lenta
     me.XB(me.o, 0, { h: true });
@@ -2086,7 +2093,7 @@ class Game extends PS {
   }
 
   hy(time, me = this) {
-    if (me.fz === 'out' || (me.G && me.G.f) || (me.I && me.I.f)) return;
+    if (me.fz == 'out' || (me.G && me.G.f) || (me.I && me.I.f)) return;
     if (time < me.su) {
       // la burbuja se lleva el golpe: se ve dónde pegó
       me.ht = 0.3;
@@ -2142,17 +2149,17 @@ class Game extends PS {
         }
       }
 
-      if (e.k === 1 || e.k === 2 || e.k === 4) {
+      if (e.k == 1 || e.k == 2 || e.k == 4) {
         // vuelan como TÚ: siempre hacia adelante, virando con alabeo. El
         // ACE hace pasadas y rompe cerca; la CORBETA guarda su anillo y
         // ladra ráfagas — grande, lenta, nunca huye.
-        let gun2 = e.k === 2;
+        let gun2 = e.k == 2;
         let spd2 = gun2 ? 165 : e.Kz ? 470 : 320; // el kamikaze va a fondo
         let gx = P.x;
         let gy = P.y;
         let gz = P.z;
         let wt = null;
-        if (e.k === 4) {
+        if (e.k == 4) {
           // el wing caza al enemigo más cercano; sin blanco, vuela contigo;
           // pegado al blanco, ROMPE en evasiva como un piloto de verdad
           let td = 1e9;
@@ -2191,7 +2198,7 @@ class Game extends PS {
               x: e.x, y: e.y, z: e.z,
               ...VT(e, mtg, MISSILE_SPEED),
               Qd: mtg,
-              Qc: mtg.k === 7 ? me.ba(mtg, me.F) : null,
+              Qc: mtg.k == 7 ? me.ba(mtg, me.F) : null,
               Y: [],
               N: 5,
             });
@@ -2250,14 +2257,12 @@ class Game extends PS {
         e.A = (nx / nm) * spd2;
         e.C = (ny / nm) * spd2;
         e.B = (nz / nm) * spd2;
-        e.x += e.A * dt;
-        e.y += e.C * dt;
-        e.z += e.B * dt;
+        MV(e, dt);
         e.E = AT2(e.A, e.B);
         // el alabeo visual sale del propio viraje
         e.Qo = (e.Qo || 0) + (CLP(AWR(e.E - oy) * 14, -0.9, 0.9) - (e.Qo || 0)) * MIN(1, 6 * dt);
         e.P -= dt;
-        if (e.k === 4) {
+        if (e.k == 4) {
           // dispara TUS balas contra su blanco — sin prisa y con pulso de
           // humano: muchas se van por un lado
           if (wt && e.P <= 0) {
@@ -2303,7 +2308,7 @@ class Game extends PS {
           e.P = gun2 ? 1.6 : e.Et ? 1.1 : 2.2;
           me.sa(e, SHOT_SPEED);
         }
-      } else if (e.k === 6) {
+      } else if (e.k == 6) {
         // el caminante: pisa la superficie y te sigue por la sombra
         let tx2 = dx;
         let tz2 = dz;
@@ -2345,7 +2350,7 @@ class Game extends PS {
           }
         }
         if (dist > 4200) e.X = true;
-      } else if (e.k === 3) {
+      } else if (e.k == 3) {
         // misil del destructor: te sigue, pero gira mal — un giro cerrado,
         // el escudo o el nitro lo dejan atrás; también se puede derribar.
         // Los de la salva espejada primero SUBEN en columna (Qr) y luego bajan.
@@ -2372,17 +2377,15 @@ class Game extends PS {
           e.C += ((ty / dd) * spd - e.C) * k;
           e.B += ((tz / dd) * spd - e.B) * k;
         }
-        e.x += e.A * dt;
-        e.y += e.C * dt;
-        e.z += e.B * dt;
+        MV(e, dt);
         e.N -= dt;
         if (e.N <= 0) {
           e.X = true;
           me.bm(e);
         }
-      } else if (e.k === 7) {
+      } else if (e.k == 7) {
         me.ub(e, dx, dz, dist, dt);
-      } else if (e.k === 5) {
+      } else if (e.k == 5) {
         if (dist > 4200) e.X = true; // quedó atrás: el mundo viaja contigo
         e.E += 0.5 * dt; // gira, vigilando
         e.y += SIN(e.t * 1.1) * 8 * dt;
@@ -2410,7 +2413,7 @@ class Game extends PS {
             me.q.push({ x: e.x, y: e.y - 26, z: e.z, ...VT(e, fr2, SHOT_SPEED), N: 7, ow: e });
           } else if (dist < 1000) me.sa(e, SHOT_SPEED);
         }
-      } else if (e.k === 9) {
+      } else if (e.k == 9) {
         // la mina: cerca de ti revienta — y con los años se apaga sola
         if (dist < 120) {
           e.X = true;
@@ -2419,9 +2422,7 @@ class Game extends PS {
         }
         if (e.t > 40) e.X = true;
       } else if (e.k > 7) {
-        e.x += e.A * dt;
-        e.y += e.C * dt;
-        e.z += e.B * dt;
+        MV(e, dt);
         e.E = AT2(e.A, e.B);
         if (e.Mt) {
           if (e.t > 14) e.X = true;
@@ -2434,24 +2435,24 @@ class Game extends PS {
       }
 
       // lo que se mueve deja estela: se lee hacia dónde va
-      if (e.A !== undefined && e.k !== 8) {
+      if (e.A !== undefined && e.k != 8) {
         e.tt = (e.tt || 0) + dt;
         if (e.tt > 0.05) {
           e.tt = 0;
           (e.Y = e.Y || []).push([e.x, e.y, e.z]);
-          if (e.Y.length > (e.k === 3 ? 26 : 12)) e.Y.shift();
+          if (e.Y.length > (e.k == 3 ? 26 : 12)) e.Y.shift();
         }
       }
 
       // contacto contigo (el wing es tuyo: se atraviesa)
-      if (!e.X && e.k !== 4 && !e.L && dist < e.r + 16) {
+      if (!e.X && e.k != 4 && !e.L && dist < e.r + 16) {
         if (
           (me.H > RAM_SPEED || time < me.du || time < me.su) &&
           e.k < 4
         ) {
           // a toda velocidad — o con dash o escudo — la nave es el arma;
           // a la corbeta solo la abolla
-          me.Qf(e, e.k === 2 ? 3 : 99);
+          me.Qf(e, e.k == 2 ? 3 : 99);
           me.S = 7;
         } else if (e.k < 3) {
           // metal contra metal: el caza (o la corbeta) estalla y tú pierdes
@@ -2474,9 +2475,7 @@ class Game extends PS {
     // disparos enemigos — el escudo activo los deshace contra la burbuja
     let shieldOn = time < me.su;
     for (let s of me.q) {
-      s.x += s.A * dt;
-      s.y += s.C * dt;
-      s.z += s.B * dt;
+      MV(s, dt);
       s.N -= dt;
       // muerto el que disparó, su disparo se apaga en el aire: nada que
       // vuele hacia ti sin dueño
@@ -2506,14 +2505,14 @@ class Game extends PS {
       }
       if (!s.X) {
         for (let q of me.D) {
-          if ((q.k === 4 || q.L) && !q.X && D3(q, s) < (q.k === 6 ? 90 : 50)) {
+          if ((q.k == 4 || q.L) && !q.X && D3(q, s) < (q.k == 6 ? 90 : 50)) {
             s.X = true;
             q.M--;
             if (q.M <= 0) {
               q.X = true;
               me.bm(q);
               me.sy(q.x, q.y, q.z, 5);
-              if (q.k === 4) me.W('WINGMAN DOWN.');
+              if (q.k == 4) me.W('WINGMAN DOWN.');
             } else me.XB(s, 0.32, { L: 1 });
             break;
           }
@@ -2541,7 +2540,7 @@ class Game extends PS {
       }
       if (ate) continue;
       for (let e of me.D) {
-        if (e.X || e.k === 7 || e.k === 4 || e.L) continue;
+        if (e.X || e.k == 7 || e.k == 4 || e.L) continue;
         let d = D3(b, e);
         if (d < e.r + 10) {
           b.X = true;
@@ -2555,9 +2554,7 @@ class Game extends PS {
 
     // los fragmentos vuelan y se apagan
     for (let s of me.sz) {
-      s.x += s.A * dt;
-      s.y += s.C * dt;
-      s.z += s.B * dt;
+      MV(s, dt);
       s.N -= dt;
     }
     me.sz = me.sz.filter((s) => s.N > 0);
@@ -2590,7 +2587,7 @@ class Game extends PS {
   }
 
   Qf(e, n) {
-    let [me] = [this];
+    let me = this;
     e.M -= n;
     e.g = 0.08;
     if (e.M > 0) {
@@ -2616,12 +2613,12 @@ class Game extends PS {
     me.sy(e.x, e.y, e.z, 6);
     // una mina o un kamikaze derribados revientan en cadena: lo que esté
     // cerca cae con ellos — en un enjambre, uno bien puesto limpia el cielo
-    if (e.k === 9 || e.Kz) {
+    if (e.k == 9 || e.Kz) {
       let br = e.Kz ? 200 : 260;
       me.XB(e, 0, { h: true, r: br });
-      for (let q of me.D) if (!q.X && q.k !== 7 && q.k !== 4 && !q.L && D3(q, e) < br) me.Qf(q, 99);
+      for (let q of me.D) if (!q.X && q.k != 7 && q.k != 4 && !q.L && D3(q, e) < br) me.Qf(q, 99);
     }
-    me.ad(e.k === 6 ? 120 : e.k === 5 ? (e.Qm ? 80 : 40) : e.k === 8 ? 15 : e.k === 2 ? 150 : e.k === 1 ? 60 : 25, e);
+    me.ad(e.k == 6 ? 120 : e.k == 5 ? (e.Qm ? 80 : 40) : e.k == 8 ? 15 : e.k == 2 ? 150 : e.k == 1 ? 60 : 25, e);
     if (e.k < 3) {
       me.Kc++;
       me.Hs = 0.05;
@@ -2629,7 +2626,7 @@ class Game extends PS {
         me.Rv = 0;
         me.ad(200, e, 'REVENGE ');
       }
-      if (++me.Cg === 6 + 2 * me.Se) {
+      if (++me.Cg == 6 + 2 * me.Se) {
         me.T += 1000 * me.Se;
         me.W('SECTOR CHALLENGE +' + 1000 * me.Se);
       }
@@ -2642,7 +2639,7 @@ class Game extends PS {
       }
     }
     Sfx.Qk();
-    if (e.k === 8 && e.r > 20) {
+    if (e.k == 8 && e.r > 20) {
       for (let i = 0; i < 2; i++) {
         me.D.push({
           k: 8, x: e.x, y: e.y, z: e.z, r: 18, M: 1, t: 0, E: 0, Zx: ROCK_POOL[FLR(RND() * 4)],
@@ -2671,7 +2668,7 @@ class Game extends PS {
     let m = HYP(dx, dy, dz);
     me.q.push({
       x: e.x,
-      y: e.y - (e.k === 5 ? 26 : 0),
+      y: e.y - (e.k == 5 ? 26 : 0),
       z: e.z,
       A: (dx / m) * sp,
       C: (dy / m) * sp,
@@ -2683,7 +2680,7 @@ class Game extends PS {
   }
 
   bm(e) {
-    this.XB(e, 0, { L: e.k === 4 || e.L });
+    this.XB(e, 0, { L: e.k == 4 || e.L });
   }
 
   // una explosión, un destello o un fogonazo en el punto p
@@ -2693,16 +2690,14 @@ class Game extends PS {
 
   ux(dt) {
     for (let b of this.bl) {
-      b.x += b.A * dt;
-      b.y += b.C * dt;
-      b.z += b.B * dt;
+      MV(b, dt);
       b.N -= dt;
     }
     this.bl = this.bl.filter((b) => !b.X && b.N > 0);
   }
 
   um(dt) {
-    let [me] = [this];
+    let me = this;
     for (let m of me.ms) {
       let t = m.Qd;
       if (t && !t.X) {
@@ -2728,9 +2723,7 @@ class Game extends PS {
       }
       m.Y.push([m.x, m.y, m.z]);
       if (m.Y.length > 14) m.Y.shift();
-      m.x += m.A * dt;
-      m.y += m.C * dt;
-      m.z += m.B * dt;
+      MV(m, dt);
       m.N -= dt;
     }
     me.ms = me.ms.filter((m) => !m.X && m.N > 0);
@@ -2752,7 +2745,7 @@ class Game extends PS {
       }
     }
     for (let e of me.D) {
-      if (e.X || e.k === 7 || e.k === 4 || e.L) continue;
+      if (e.X || e.k == 7 || e.k == 4 || e.L) continue;
       let d = D3(m, e);
       if (e === m.Qd || d < MISSILE_SPLASH + e.r) me.Qf(e, e === m.Qd ? MISSILE_DMG : 2);
     }
@@ -2893,13 +2886,13 @@ class Game extends PS {
     let cineB2 = (me.G && me.G.f && me.G) || (me.I && me.I.f && me.I);
     let cine = cineB2 ? cineB2.Q8 || 0 : 0;
     for (let e of me.D) {
-      if (cine > 0 && (e.k === 7 || e.k === 3)) continue;
+      if (cine > 0 && (e.k == 7 || e.k == 3)) continue;
       me.de(e, time);
     }
     if (cine > 0) {
       fr(0, 0, W, H, 0x000000, 0.85 * cine);
       for (let e of me.D) {
-        if (e.k === 7 || e.k === 3) me.de(e, time);
+        if (e.k == 7 || e.k == 3) me.de(e, time);
       }
     }
 
@@ -2986,7 +2979,7 @@ class Game extends PS {
     }
     if (me.Ou > me.vt) fr(0, 0, W, H, BLU, 0.07 + 0.04 * SIN(time * 0.02));
     if (me.Gx > 1) fr(0, 0, W, H, 0xe89a5c, 0.05 + 0.04 * SIN(time * 0.01));
-    if (me.Qj === 1) {
+    if (me.Qj == 1) {
       LS(14, RUST, 0.25 + 0.2 * SIN(time * 0.01));
       GF.strokeRect(0, 0, W, H);
     }
@@ -3268,7 +3261,7 @@ class Game extends PS {
       let a = m.a;
       if (m.tw) a *= 0.6 + 0.4 * SIN(time * 0.001 * m.tw + m.ph);
       fr(p[0], p[1], m.s, m.s, INK, a);
-      if (m.s === 3) {
+      if (m.s == 3) {
         // las grandes destellan en cruz
         LS(1, INK, a * 0.5);
         PL(p[0] - 4, p[1] + 1, p[0] + 6, p[1] + 1);
@@ -3305,7 +3298,7 @@ class Game extends PS {
     if (e.Y && dist < 2200) {
       let n = e.Y.length;
       for (let i = 1; i < n; i++) {
-        LS(e.k === 3 ? 3 : 2, e.k === 4 || e.L ? BLU : RUST_HI, (i / n) * 0.5);
+        LS(e.k == 3 ? 3 : 2, e.k == 4 || e.L ? BLU : RUST_HI, (i / n) * 0.5);
         me.J(e.Y[i - 1], i === n - 1 ? [e.x, e.y, e.z] : e.Y[i]);
       }
     }
@@ -3320,7 +3313,7 @@ class Game extends PS {
     let a = me.fg(dist);
     // el kamikaze late en óxido claro: se ve venir
     if (e.Kz) skp(p, MAX(8, (60 * FOCAL) / p[2]) * (1 + 0.2 * SIN(e.t * 14)), 2, RUST_HI, 0.8);
-    if (e.k === 9) {
+    if (e.k == 9) {
       // la mina: un rombo cuyo núcleo parpadea más rápido si estás cerca
       let r = MAX(4, (34 * FOCAL) / p[2]);
       LS(2, RUST_HI, MAX(a, 0.4));
@@ -3329,7 +3322,7 @@ class Game extends PS {
       return;
     }
 
-    if (e.k === 3) {
+    if (e.k == 3) {
       let F = vnorm({ x: e.A, y: e.C, z: e.B });
       let U = vnorm(vmix(WORLD_UP, 1, F, -vdot(WORLD_UP, F)));
       me.db(MISSILE_MODEL, e, F, U, 1.6, e.g > 0 ? INK_HI : RUST_HI, 1, e.t * 8);
@@ -3340,13 +3333,13 @@ class Game extends PS {
     // la niebla no lo apaga (es enorme, se ve desde lejos), pero Fa lo funde:
     // se materializa al entrar y se desvanece al cargar un salto. Oculto
     // (e.d: antes del flash, o saltando) no se dibuja.
-    if (e.k === 7) {
+    if (e.k == 7) {
       if (!e.d) me.dr(e, MAX(a, 0.6) * e.Fa, e.g > 0);
       return;
     }
 
     if (a <= 0.03) {
-      if ((e.k === 1 || e.k === 2 || e.k === 5) && !e.L && dist < 3200) {
+      if ((e.k == 1 || e.k == 2 || e.k == 5) && !e.L && dist < 3200) {
         fr(p[0], p[1], 2.5, 2.5, RUST_HI, 0.6);
       }
       return;
@@ -3356,19 +3349,19 @@ class Game extends PS {
     let flash = e.g > 0;
     let color = flash
       ? INK_HI
-      : e.k === 4 || e.L ? BLU : e.k === 8 ? GRY : e.Et ? RUST_HI : RUST;
-    if (e.k === 8 && !flash) a *= 0.7;
+      : e.k == 4 || e.L ? BLU : e.k == 8 ? GRY : e.Et ? RUST_HI : RUST;
+    if (e.k == 8 && !flash) a *= 0.7;
 
     let model =
-      e.k === 5 ? (e.Qm ? TURRET_MODEL : SENTRY_MODEL)
-      : e.k === 1 || e.k === 4 ? SHIP_MODEL : e.k === 2 ? GUN_MODEL
-      : e.k === 6 ? WALK_MODEL
+      e.k == 5 ? (e.Qm ? TURRET_MODEL : SENTRY_MODEL)
+      : e.k == 1 || e.k == 4 ? SHIP_MODEL : e.k == 2 ? GUN_MODEL
+      : e.k == 6 ? WALK_MODEL
       : e.Zx;
-    let scale = e.k === 8 ? e.r / 16 : e.k === 5 ? 1.6 : e.k === 1 ? 2.2 : e.k === 4 ? 2 : e.k === 2 ? 3 : e.k === 6 ? 1 : 2.4;
-    let rot = e.k === 8 ? e.t * e.Zw : e.Qo || 0;
+    let scale = e.k == 8 ? e.r / 16 : e.k == 5 ? 1.6 : e.k == 1 ? 2.2 : e.k == 4 ? 2 : e.k == 2 ? 3 : e.k == 6 ? 1 : 2.4;
+    let rot = e.k == 8 ? e.t * e.Zw : e.Qo || 0;
     me.dm(model, e, scale, color, a, rot);
 
-    if (e.k === 6) {
+    if (e.k == 6) {
       // las patas CAMINAN: dos pares alternando, con rodilla y pie que se
       // levanta — la superficie tiene vida propia
       let cy2 = COS(e.E);
@@ -3377,7 +3370,7 @@ class Game extends PS {
       for (let i = 0; i < 4; i++) {
         let hx = i < 2 ? -26 : 26;
         let hz = i % 2 ? 22 : -22;
-        let ph = e.t * 5 + (i === 0 || i === 3 ? 0 : PI);
+        let ph = e.t * 5 + (i === 0 || i == 3 ? 0 : PI);
         let stz = SIN(ph) * 34;
         let wxh = e.x + (hx * cy2 + hz * sy3) * 1.1;
         let wzh = e.z + (-hx * sy3 + hz * cy2) * 1.1;
@@ -3397,13 +3390,13 @@ class Game extends PS {
     }
     if (e.k < 3) {
       // el ojo de brasa en la nariz: se lee quién te está mirando
-      let nr = e.k === 2 ? 200 : 50;
+      let nr = e.k == 2 ? 200 : 50;
       let nose = me.Q(e.x + SIN(e.E) * nr, e.y - 4, e.z + COS(e.E) * nr);
       if (nose) {
         fcp(nose, MAX(1.5, 600 / nose[2]), RUST_HI, a * (0.6 + 0.4 * SIN(e.t * 6)));
       }
     }
-    if (e.k === 5) {
+    if (e.k == 5) {
       // el ojo late y su anillo de vigilancia respira — en la tinta de SU
       // bando; el anillo de amenaza es solo de las enemigas
       let pulse = 0.5 + 0.5 * SIN(e.t * 3);
@@ -3435,7 +3428,7 @@ class Game extends PS {
       fcp(p, r * 1.6, AMB, 0.25);
       fcp(p, r * 0.7, CRM, 0.85);
     }
-    let shielded = b.j.some((q) => q.Z === 1 && q.M > 0);
+    let shielded = b.j.some((q) => q.Z == 1 && q.M > 0);
     let aimed = me.ba(b, me.F);
     for (let pt of b.j) {
       if (pt.M <= 0) continue;
@@ -3462,7 +3455,7 @@ class Game extends PS {
       if (pt.Z === 0) {
         me.dm(SENTRY_MODEL, { x: wx, y: wy - 12 * SD_SCALE, z: wz, E: b.E }, 1.1 * SD_SCALE, pt.g > 0 ? INK_HI : RUST, a);
         fc(p[0], p[1] - 34 * k, MAX(2, 7 * k), hot, a);
-      } else if (pt.Z === 1) {
+      } else if (pt.Z == 1) {
         // domo de escudo: esfera en azul apagado, lo que protege el puente
         skp(p, 36 * k, 1.5, pt.g > 0 ? INK_HI : BLD, 0.9);
         GF.strokeEllipse(p[0], p[1], 72 * k, 26 * k);
@@ -3512,7 +3505,7 @@ class Game extends PS {
 
   dj(time, me = this) {
     let Po = me.o;
-    if (me.fz === 'out') return;
+    if (me.fz == 'out') return;
     if (time < me.iu && FLR(time / 95) % 2 === 0) return;
     let f = me.fw();
     // dash: la nave deja copias fantasma — mientras se ven, nada te toca
@@ -3613,7 +3606,7 @@ class Game extends PS {
       LS(2, RUST_HI, 0.55);
       PL(ex - COS(ang + 0.5) * 11, ey - SIN(ang + 0.5) * 11, ex, ey, ex - COS(ang - 0.5) * 11, ey - SIN(ang - 0.5) * 11);
     }
-    let threats = me.q.concat(me.D.filter((e) => e.k === 3));
+    let threats = me.q.concat(me.D.filter((e) => e.k == 3));
     for (let s of threats) {
       let d = { x: Po.x - s.x, y: Po.y - s.y, z: Po.z - s.z };
       let dist = HYP(d.x, d.y, d.z);
@@ -3649,7 +3642,7 @@ class Game extends PS {
           if (d < bd) {
             bd = d;
             target = { x, y, z };
-            label = pt.Z === 1 ? 'DOME' : 'BRIDGE';
+            label = pt.Z == 1 ? 'DOME' : 'BRIDGE';
           }
         }
       }
@@ -3740,7 +3733,7 @@ class Over extends PS {
   }
 
   create() {
-    let [me] = [this];
+    let me = this;
     let T = me.T;
     let [k, c, s, se] = me.Sd;
     Music.on = false;
@@ -3766,7 +3759,7 @@ class Over extends PS {
   }
 
   Qg() {
-    let [me] = [this];
+    let me = this;
     if (me.Qs) return;
     me.Qs = true;
     if (me.Q6 && me.T > 0) me.scene.start('I', { T: me.T });
@@ -3786,7 +3779,7 @@ class Initials extends PS {
   }
 
   create() {
-    let [me] = [this];
+    let me = this;
     me.lt = [0, 0, 0];
     me.i = 0;
     me.Qy = false;
@@ -3798,7 +3791,7 @@ class Initials extends PS {
   }
 
   update(time) {
-    let [me] = [this];
+    let me = this;
     if (me.Qy) return;
     let A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     if (pressed.P1_U) me.lt[me.i] = (me.lt[me.i] + 25) % 26;
