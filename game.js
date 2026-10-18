@@ -49,7 +49,7 @@
 // Zk=velText Zl=altText Zm=wvAt Zn=msAt Zo=camU Zp=camF Zq=camR Zr=wingUp
 // Zt=bgSaid Zu=boltVsBoss Zv=shieldUp Zw=spin Zx=model Zy=say
 // Zz=fire Z0=dash Z1=jump Z2=turn Z3=hurt Z4=ammo Z5=over Z6=tick Z7=wave
-// Z8=foe Z9=ally Ja=draw Jb=cam Jc=die Jd=dwb Je=dsk Jf=bnk Jg=tpCd Jh=hRt
+// Z8=nearest Ja=draw Jb=cam Jc=die Jd=dwb Je=dsk Jf=bnk Jg=tpCd Jh=hRt
 // Ji=svT Jj=mz2 Jl=rmb Jr=rollLeft Js=rollSide Jp=loopLeft Jt=lastDashTap Jw=inManeuver
 // Tercera pasada, a UNA letra (los más usados; la de la izquierda gana
 // sobre las listas de arriba): A=vx B=vz C=vy D=en E=yw G=Bo H=sp I=Bt J=wl
@@ -169,7 +169,6 @@ let SHIELD_MS = 2600;
 let SHIELD_COOLDOWN_MS = 4000;
 let SHIELD_R = 52; // radio en mundo dentro del que la burbuja come disparos
 
-let MAGNET_R = 240; // lo recogible viene hacia ti
 let FIRE_MS = 160;
 let BOLT_SPEED = 980;
 let BOLT_LIFE = 3.2; // ~3100 de alcance: se pelea desde lejos
@@ -260,18 +259,15 @@ for (let [code, keys] of Object.entries(CABINET_KEYS)) {
 let held = Object.create(null);
 let pressed = Object.create(null); // por flanco, se limpia cada frame
 
-window.addEventListener('keydown', (e) => {
-  let code = KEY_TO_ARCADE[e.key.length == 1 ? e.key.toLowerCase() : e.key];
-  if (code && !held[code]) {
-    held[code] = true;
-    pressed[code] = true;
-    Sfx.init(); // el audio solo puede arrancar con un gesto
-  }
-});
-window.addEventListener('keyup', (e) => {
-  let code = KEY_TO_ARCADE[e.key.length == 1 ? e.key.toLowerCase() : e.key];
-  if (code) held[code] = false;
-});
+for (let t of ['keydown', 'keyup'])
+  window.addEventListener(t, (e) => {
+    let code = KEY_TO_ARCADE[e.key.length == 1 ? e.key.toLowerCase() : e.key];
+    if (t == 'keyup') held[code] = false;
+    else if (code && !held[code]) {
+      held[code] = pressed[code] = true;
+      Sfx.init(); // el audio solo puede arrancar con un gesto
+    }
+  });
 
 let clearPressed = () => {
   for (let k in pressed) pressed[k] = false;
@@ -288,7 +284,7 @@ let getStorage = () => {
       async get(key) {
         try {
           let raw = localStorage.getItem(key);
-          return raw === null ? { found: false } : { found: true, value: JSON.parse(raw) };
+          return raw == null ? { found: false } : { found: true, value: JSON.parse(raw) };
         } catch {
           return { found: false };
         }
@@ -468,7 +464,10 @@ let makeRockModel = () => {
   ];
 };
 
-let ROCK_POOL = [makeRockModel(), makeRockModel(), makeRockModel(), makeRockModel()];
+// un aliado: tu ala o una unidad que ya es tuya
+let ALLY = (q) => q.L || q.k == 4;
+
+let ROCK_POOL = [0, 0, 0, 0].map(makeRockModel);
 
 // El CAMINANTE: cuerpo de caja con hocico — las patas se dibujan aparte,
 // animadas de verdad
@@ -609,7 +608,7 @@ let Music = {
       let d = (G ? 0.19 : 0.22) * (me.Sp || 1);
       // cuerdas en SEMICORCHEAS: la nota del patrón y el pedal de la raíz
       for (let h of [0, 1]) me.V(root * 2 * 2 ** (h ? 0 : (G ? [12, 13, 12, 7, 12, 13, 15, 13] : [12, 7, 12, 8, 12, 7, 15, 12])[s] / 12), t + (h * d) / 2, 0.13, 0.06);
-      if (R ? !s : P == 4 ? s % 4 < 1 : s % (G ? 2 : 3) === 0 || ch > 2) Sfx.O(root * 2, 0.8, SIN_W, s ? 0.25 : 0.42, root * 1.4, t);
+      if (R ? !s : P == 4 ? s % 4 < 1 : s % (G ? 2 : 3) == 0 || ch > 2) Sfx.O(root * 2, 0.8, SIN_W, s ? 0.25 : 0.42, root * 1.4, t);
       if (s % 4 == 2 && !R) Sfx.Qh(0.16, 0.08, t);
       if (P % 4 > 2 && s % 2) Sfx.Qh(0.04, 0.04, t);
       // con el destructor, el MIEDO: un rugido grave, una octava bajo el
@@ -618,7 +617,7 @@ let Music = {
       if (!s || (G && s == 4)) for (let c of [0, 12, G ? 15 : 15 + !!ch, G ? 18 : 19, 24]) me.V(root * 4 * 2 ** (c / 12), t, G ? 0.6 : 2.1, ch > 2 ? 0.045 : 0.03);
       // el canto va AL FRENTE y siempre: es lo que se recuerda del juego
       // dos octavas, no tres: la de arriba chillaba
-      if (s % (B ? 2 : 4) === 0 && n >= 0 && !R) {
+      if (s % (B ? 2 : 4) == 0 && n >= 0 && !R) {
         for (let f of [329.6, 164.8]) {
           f *= 2 ** (n / 12);
           me.V(f, t, B ? 0.4 : 1.05, G ? 0.08 : 0.07);
@@ -702,7 +701,7 @@ let clipHalf = (poly, f) => {
     let fa = f(a);
     let fb = f(b);
     if (fa >= 0) out.push(a);
-    if (fa >= 0 !== fb >= 0) {
+    if (fa >= 0 != fb >= 0) {
       let t = fa / (fa - fb);
       out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
     }
@@ -739,7 +738,7 @@ let drawSaturn = (r) => {
         let a = from + (j / 24) * PI;
         let x = r * (1.55 + k * 0.18) * COS(a);
         let y = r * (0.32 + k * 0.035) * SIN(a) - x * 0.28;
-        if (j === 0) GF.moveTo(x, y);
+        if (j == 0) GF.moveTo(x, y);
         else GF.lineTo(x, y);
       }
       GF.strokePath();
@@ -1052,7 +1051,9 @@ class Game extends PS {
           let v = s ? 0 : 300 + RND() * 200;
           me.D.push({
             k: 8, Mt: 1, r: s ? 12 + RND() ** 3 * 100 : 40, M: 2, t: -s, E: 0, Zx: ROCK_POOL[i % 4], Zw: RH() * 2,
-            x: Po.x + F.x * d + R.x * RH() * 1600, y: Po.y + F.y * d + RH() * 1000, z: Po.z + F.z * d + R.z * RH() * 1600,
+            // en picada la nube no nace bajo la estación: su centro se queda
+            // a 700 del suelo y del techo, y la nube conserva su grosor
+            x: Po.x + F.x * d + R.x * RH() * 1600, y: CLP(Po.y + F.y * d, -4500, surfY(Po.x, Po.z) - 700) + RH() * 1000, z: Po.z + F.z * d + R.z * RH() * 1600,
             A: RH() * s - F.x * v, C: -F.y * v, B: RH() * s - F.z * v,
           });
         }
@@ -1074,17 +1075,14 @@ class Game extends PS {
       me.Za -= dt;
       if (me.Za <= 0) {
         me.Za = 13;
-        if (me.D.filter((e) => e.Qm).length < 12) {
+        if (me.Nc((e) => e.Qm) < 12) {
           if (!me.Zt) {
             me.Zt = 1;
             me.W('SURFACE GUNS BELOW.');
           }
           for (let i = 0; i < 6; i++) {
             let wk = RND() < 0.4;
-            let gx2 = 0;
-            let gz2 = 0;
-            let gy2 = 0;
-            let ok = false;
+            let gx2, gz2, gy2, ok;
             for (let tr2 = 0; tr2 < 6 && !ok; tr2++) {
               let ang = RND() * PI * 2;
               gx2 = me.o.x + SIN(ang) * (700 + RND() * 600);
@@ -1105,13 +1103,13 @@ class Game extends PS {
               }
               // arco o muro en la celda: reintenta — nada nace DENTRO. Y nada
               // nace ENCIMA de otro: cada techo tiene un solo sitio
-              if (ok && (HYP(gx2, gz2) > BND_R - 300 || me.D.some((q) => !q.X && (q.k == 5 || q.k == 6) && HYP(q.x - gx2, q.z - gz2) < 220))) ok = false;
+              if (ok && (HYP(gx2, gz2) > BND_R - 300 || me.D.some((q) => !q.X && q.Qm && HYP(q.x - gx2, q.z - gz2) < 220))) ok = false;
             }
             if (!ok) continue;
             // UNA de cada seis es TUYA, y nunca más de tres vivas: las
             // enemigas caen y las tuyas se quedan, así que sin tope el frente
             // de abajo terminaba azul. Menos, más frágiles — la pelea es tuya
-            let fr = i > 4 && me.D.filter((q) => q.Qm && q.L).length < 3 ? 1 : 0;
+            let fr = i > 4 && me.Nc((q) => q.Qm && q.L) < 3 ? 1 : 0;
             me.D.push({
               k: wk ? 6 : 5, Qm: 1, L: fr,
               x: gx2, y: gy2, z: gz2,
@@ -1126,15 +1124,13 @@ class Game extends PS {
       me.Zj = (me.Zj ?? 22) - dt;
       if (me.Zj <= 0) {
         me.Zj = 14;
-        let airE = me.D.filter((q) => q.k < 3 && !q.X).length;
+        let airE = me.Nc((q) => q.k < 3 && !q.X);
         let want = MIN(3, FLR(airE / 4));
-        if (me.D.filter((q) => q.k == 4 && !q.X).length < want) me.Zr(1);
+        if (me.Nc((q) => q.k == 4 && !q.X) < want) me.Zr(1);
       }
       // el destructor vuelve siempre — y cada vez con menos ceremonia
       if (!anyB) {
-      let was = me.bq;
-      me.bq -= dt;
-      if (was > 2.5 && me.bq <= 2.5) me.W('MASSIVE SIGNAL.');
+      if ((me.bq -= dt) <= 2.5 && me.bq + dt > 2.5) me.W('MASSIVE SIGNAL.');
       if (me.bq <= 0) {
         me.W('HYPERSPACE RUPTURE.');
         me.Ze();
@@ -1168,29 +1164,18 @@ class Game extends PS {
     me.uh();
   }
 
-  // ¿Quién es el enemigo/aliado más cercano a esta unidad?
-  Z8(e, rng) {
-    let best = null;
-    let bd = rng;
-    for (let q of this.D) {
-      if (q.X || q.L || (q.k != 1 && q.k != 2 && q.k != 5 && q.k != 6)) continue;
-      let d = D3(q, e);
-      if (d < bd) {
-        bd = d;
-        best = q;
-      }
-    }
-    return best;
+  // ¿Cuántos en el sector cumplen f?
+  Nc(f) {
+    return this.D.filter(f).length;
   }
 
-  Z9(e, rng) {
-    let best = null;
-    let bd = rng;
+  // ¿Quién es el más cercano a esta unidad? Por defecto, un enemigo; con ok,
+  // lo que ok acepte (ALLY: un aliado)
+  Z8(e, rng, ok = (q) => !q.L && [1, 2, 5, 6].includes(q.k), best = null) {
     for (let q of this.D) {
-      if (q.X || (!q.L && q.k != 4)) continue;
       let d = D3(q, e);
-      if (d < bd) {
-        bd = d;
+      if (!q.X && ok(q) && d < rng) {
+        rng = d;
         best = q;
       }
     }
@@ -1201,7 +1186,7 @@ class Game extends PS {
   Zr(n) {
     let Po = this.o;
     for (let i = 0; i < n; i++) {
-      if (this.D.filter((q) => q.k == 4).length >= 3) return;
+      if (this.Nc((q) => q.k == 4) >= 3) return;
       let ang = RND() * PI * 2;
       this.D.push({
         k: 4,
@@ -1255,7 +1240,7 @@ class Game extends PS {
     let me = this;
     let Po = me.o;
     me.Q7 -= dt;
-    let alive = me.D.filter((e) => e.k < 3).length;
+    let alive = me.Nc((e) => e.k < 3);
     if (me.Q7 > 0 || alive >= max) return;
     me.Q7 = every;
     let ang = RND() * PI * 2;
@@ -1414,7 +1399,7 @@ class Game extends PS {
     me.w.push({ wx, wy, wz, t: 0, h: true });
     me.sy(wx, wy, wz, 8);
     Sfx.Qk();
-    if (pt.Z === 0) {
+    if (pt.Z == 0) {
       me.ad(60);
     } else if (pt.Z == 1) {
       me.ad(150);
@@ -1456,7 +1441,7 @@ class Game extends PS {
       }
       if (!b.d && ct > 1.5 * S && ct < 4.1 * S) {
         b.Q5 -= dt;
-        if (b.Q5 <= 0 && me.D.filter((q) => q.k == 3).length < 11) {
+        if (b.Q5 <= 0 && me.Nc((q) => q.k == 3) < 11) {
           b.Q5 = 0.45;
           if (!b.Zf && !b.Qb) {
             b.Zf = 1;
@@ -1522,7 +1507,7 @@ class Game extends PS {
         // tus misiles en vuelo hacia él vuelven al tubo: el salto no roba
         let back = 0;
         for (let m2 of me.ms) {
-          if (m2.Qd === b && !m2.X) {
+          if (m2.Qd == b && !m2.X) {
             m2.X = true;
             back++;
           }
@@ -1560,7 +1545,7 @@ class Game extends PS {
 
     // torretas: ráfagas de dos, lentas y esquivables — pero son seis
     for (let pt of b.j) {
-      if (pt.Z !== 0 || pt.M <= 0 || dist > 2600) continue;
+      if (pt.Z != 0 || pt.M <= 0 || dist > 2600) continue;
       pt.P -= dt;
       if (pt.Qi > 0 && pt.P <= 0) {
         pt.Qi--;
@@ -1585,14 +1570,14 @@ class Game extends PS {
           me.w.push({ wx, wy, wz, t: 0.28, Q1: true });
           me.q.push({ x: wx, y: wy, z: wz, A: (pdx / pm) * SHOT_SPEED, C: (pdy / pm) * SHOT_SPEED, B: (pdz / pm) * SHOT_SPEED, N: 8, sd: 1 });
         } else me.sa({ x: wx, y: wy, z: wz }, SHOT_SPEED);
-      } else if (pt.Qi === 0 && pt.P <= 0) pt.Qi = 2;
+      } else if (pt.Qi == 0 && pt.P <= 0) pt.Qi = 2;
     }
 
     // el hangar suelta interceptores
     b.ha -= dt;
     if (b.ha <= 0) {
       b.ha = 16;
-      if (me.D.filter((e) => e.k == 1).length < 3) {
+      if (me.Nc((e) => e.k == 1) < 3) {
         let [wx, wy, wz] = me.V(b, 0, SD_KEEL + 30, -100);
         me.D.push({ k: 1, x: wx, y: wy, z: wz, r: 22 * HUNTER_SCALE, M: 4, t: 0, E: b.E, P: 2, m: 1, A: 0, C: 120, B: 0 });
       }
@@ -1601,7 +1586,7 @@ class Game extends PS {
     // la torre suelta una salva de seis misiles que te persiguen: TRES por
     // banda, espejados — cada uno sale más abierto y más alto que el anterior
     b.ma -= dt;
-    if (b.ma <= 0 && dist < 2600 && me.D.filter((q) => q.k == 3).length < 7) {
+    if (b.ma <= 0 && dist < 2600 && me.Nc((q) => q.k == 3) < 7) {
       b.ma = 11;
       for (let side of [-1, 1])
         for (let i = 0; i < 3; i++) {
@@ -1632,8 +1617,8 @@ class Game extends PS {
 
   kb(b, me = this) {
     b.X = true;
-    if (me.G === b) me.G = null;
-    if (me.I === b) me.I = null;
+    if (me.G == b) me.G = null;
+    if (me.I == b) me.I = null;
     for (let i = 0; i < 9; i++) {
       let [wx, wy, wz] = me.V(b, RH() * 400, (RND() - 0.7) * 150, SD_REAR + RND() * 900);
       me.w.push({ wx, wy, wz, t: -i * 0.12, h: true });
@@ -1986,7 +1971,7 @@ class Game extends PS {
           }
         }
       }
-      if (aim === f) {
+      if (aim == f) {
         let tg = me.bt(f);
         if (tg && tg.k != 7) {
           let dd = D3(tg, Po) || 1;
@@ -2134,6 +2119,9 @@ class Game extends PS {
       let dist = HYP(dx, dy, dz);
       // el agujero negro los traga también: atráelos y caen — y pagan
       if (e.k < 5 || e.k > 7) {
+        // ni bajo la estación ni sobre el techo: la estación también es
+        // borde, y lo que vuela (naves, rocas, minas) queda entre los dos
+        e.y = CLP(e.y, BND_TOP + e.r, surfY(e.x, e.z) - e.r - 60);
         let bd = D3(e, BHO);
         if (bd < BH_PULL * me.Gx) {
           let f = ((1 - bd / BH_PULL / me.Gx) ** 2 * 900 * dt) / bd;
@@ -2149,7 +2137,7 @@ class Game extends PS {
         }
       }
 
-      if (e.k == 1 || e.k == 2 || e.k == 4) {
+      if ([1, 2, 4].includes(e.k)) {
         // vuelan como TÚ: siempre hacia adelante, virando con alabeo. El
         // ACE hace pasadas y rompe cerca; la CORBETA guarda su anillo y
         // ladra ráfagas — grande, lenta, nunca huye.
@@ -2343,7 +2331,7 @@ class Game extends PS {
             }
           } else if (dist < 1500) {
             e.P = 2.6;
-            let fr2 = RND() < 0.4 ? me.Z9(e, 1400) : null;
+            let fr2 = RND() < 0.4 ? me.Z8(e, 1400, ALLY) : null;
             if (fr2) {
               me.q.push({ x: e.x, y: e.y - 20, z: e.z, ...VT(e, fr2, SHOT_SPEED), N: 7, ow: e });
             } else me.sa(e, SHOT_SPEED);
@@ -2407,7 +2395,7 @@ class Game extends PS {
         } else if (e.P <= 0 && dist < 1600) {
           e.P = e.Qm ? 2.1 : 3.2;
           // la enemiga reparte: a veces a ti, a veces a los tuyos
-          let fr2 = RND() < 0.5 ? me.Z9(e, 1400) : null;
+          let fr2 = RND() < 0.5 ? me.Z8(e, 1400, ALLY) : null;
           if (fr2) {
             me.w.push({ wx: e.x, wy: e.y - 26, wz: e.z, t: 0.28, Q1: true });
             me.q.push({ x: e.x, y: e.y - 26, z: e.z, ...VT(e, fr2, SHOT_SPEED), N: 7, ow: e });
@@ -2435,7 +2423,7 @@ class Game extends PS {
       }
 
       // lo que se mueve deja estela: se lee hacia dónde va
-      if (e.A !== undefined && e.k != 8) {
+      if (e.A != null && e.k != 8) {
         e.tt = (e.tt || 0) + dt;
         if (e.tt > 0.05) {
           e.tt = 0;
@@ -2622,7 +2610,7 @@ class Game extends PS {
     if (e.k < 3) {
       me.Kc++;
       me.Hs = 0.05;
-      if (e === me.Rv) {
+      if (e == me.Rv) {
         me.Rv = 0;
         me.ad(200, e, 'REVENGE ');
       }
@@ -2739,15 +2727,15 @@ class Game extends PS {
       if (!boss) continue;
       for (let pt of boss.j) {
         let [wx, wy, wz] = me.V(boss, pt.ox, pt.oy, pt.oz);
-        if (pt === m.Qc || HYP(m.x - wx, m.y - wy, m.z - wz) < MISSILE_SPLASH) {
-          me.bp(boss, pt, pt === m.Qc ? MISSILE_DMG - 1 : 1);
+        if (pt == m.Qc || HYP(m.x - wx, m.y - wy, m.z - wz) < MISSILE_SPLASH) {
+          me.bp(boss, pt, pt == m.Qc ? MISSILE_DMG - 1 : 1);
         }
       }
     }
     for (let e of me.D) {
       if (e.X || e.k == 7 || e.k == 4 || e.L) continue;
       let d = D3(m, e);
-      if (e === m.Qd || d < MISSILE_SPLASH + e.r) me.Qf(e, e === m.Qd ? MISSILE_DMG : 2);
+      if (e == m.Qd || d < MISSILE_SPLASH + e.r) me.Qf(e, e == m.Qd ? MISSILE_DMG : 2);
     }
   }
 
@@ -2794,7 +2782,7 @@ class Game extends PS {
 
   // proyecta un punto dado como {x, y, z} o como [x, y, z]
   p(v) {
-    return v.x === undefined ? this.Q(v[0], v[1], v[2]) : this.Q(v.x, v.y, v.z);
+    return v.x == null ? this.Q(v[0], v[1], v[2]) : this.Q(v.x, v.y, v.z);
   }
 
   // Una dirección del cielo (infinitamente lejos): solo gira con la cámara
@@ -2832,6 +2820,12 @@ class Game extends PS {
   // Modelo 3D anclado al mundo, con yaw propio y roll/pitch opcionales
   dm(model, e, scale, color, baseAlpha, extraRoll, pitch) {
     let [verts, edges] = model;
+    // lo que no se ve no se traza: fuera de pantalla, nada; a unos pocos
+    // píxeles, un punto — una roca lejana no gasta sesenta trazos en un grano
+    let c = this.p(e);
+    let rs = c ? ((model.R ||= MAX(...verts.map((v) => HYP(...v)))) * scale * FOCAL) / c[2] : 99;
+    if (c && (ABS(c[0] - CX) > CX + rs || ABS(c[1] - CY) > CY + rs)) return;
+    if (rs < 3.5) return fcp(c, 1 + rs / 3, color, baseAlpha);
     let cyw = COS(e.E || 0);
     let syw = SIN(e.E || 0);
     let cr = COS(extraRoll || 0);
@@ -2851,15 +2845,22 @@ class Game extends PS {
       let wz = e.z + (-mx * syw + mz * cyw) * scale;
       pts.push([wx, wy, wz]);
     }
-    this.sg(pts, edges, color, baseAlpha);
+    this.sg(pts, edges, color, baseAlpha, rs < 10);
   }
 
   // dos pasadas: un halo ancho y tenue bajo la línea viva — luz, no alambre
-  sg(pts, edges, color, alpha) {
-    LS(4.5, color, alpha * 0.18);
-    for (let [a, b] of edges) this.J(pts[a], pts[b]);
-    LS(1.5, color, alpha);
-    for (let [a, b] of edges) this.J(pts[a], pts[b]);
+  // Cada vértice se proyecta UNA vez y las aristas visibles van en un solo
+  // trazo; solo las que cruzan el plano cercano pasan por J, que las corta.
+  // Lo chico (nh) va sin halo: en unos pocos píxeles no se distingue
+  sg(pts, edges, color, alpha, nh, me = this) {
+    let pp = pts.map((v) => me.p(v));
+    for (let w of nh ? [1.5] : [4.5, 1.5]) {
+      LS(w, color, w > 2 ? alpha * 0.18 : alpha);
+      GF.beginPath();
+      for (let [a, b] of edges) if (pp[a] && pp[b]) GF.moveTo(...pp[a]), GF.lineTo(...pp[b]);
+      GF.strokePath();
+      for (let [a, b] of edges) if (!pp[a] != !pp[b]) me.J(pts[a], pts[b]);
+    }
   }
 
   Ja(time, me = this) {
@@ -3000,7 +3001,7 @@ class Game extends PS {
       for (let bb of [me.G, me.I]) {
         if (!bb || bb.d) continue;
         for (let pt of bb.j) {
-          if (pt.Z === 0) continue;
+          if (pt.Z == 0) continue;
           hp += MAX(0, pt.M);
           max += pt.max;
         }
@@ -3023,7 +3024,7 @@ class Game extends PS {
     let s = (p) => ((p[0] - CX) * R.y - (p[1] - CY) * U.y + FOCAL * F.y) / n;
     let band = (lo, hi, color, alpha) => {
       let poly = clipHalf([[0, 0], [W, 0], [W, H], [0, H]], (p) => s(p) - lo);
-      if (hi !== undefined) poly = clipHalf(poly, (p) => hi - s(p));
+      if (hi != null) poly = clipHalf(poly, (p) => hi - s(p));
       if (poly.length < 3) return;
       GF.fillStyle(color, alpha);
       GF.fillPoints(poly.map(([x, y]) => ({ x, y })), true);
@@ -3299,7 +3300,7 @@ class Game extends PS {
       let n = e.Y.length;
       for (let i = 1; i < n; i++) {
         LS(e.k == 3 ? 3 : 2, e.k == 4 || e.L ? BLU : RUST_HI, (i / n) * 0.5);
-        me.J(e.Y[i - 1], i === n - 1 ? [e.x, e.y, e.z] : e.Y[i]);
+        me.J(e.Y[i - 1], i == n - 1 ? [e.x, e.y, e.z] : e.Y[i]);
       }
     }
     // el rayo del francotirador: aviso que engorda, y el destello del tiro
@@ -3339,7 +3340,7 @@ class Game extends PS {
     }
 
     if (a <= 0.03) {
-      if ((e.k == 1 || e.k == 2 || e.k == 5) && !e.L && dist < 3200) {
+      if ([1, 2, 5].includes(e.k) && !e.L && dist < 3200) {
         fr(p[0], p[1], 2.5, 2.5, RUST_HI, 0.6);
       }
       return;
@@ -3370,7 +3371,7 @@ class Game extends PS {
       for (let i = 0; i < 4; i++) {
         let hx = i < 2 ? -26 : 26;
         let hz = i % 2 ? 22 : -22;
-        let ph = e.t * 5 + (i === 0 || i == 3 ? 0 : PI);
+        let ph = e.t * 5 + (i == 0 || i == 3 ? 0 : PI);
         let stz = SIN(ph) * 34;
         let wxh = e.x + (hx * cy2 + hz * sy3) * 1.1;
         let wzh = e.z + (-hx * sy3 + hz * cy2) * 1.1;
@@ -3412,7 +3413,7 @@ class Game extends PS {
     // luces de posición parpadeando por el casco: un objeto VIVO, no un plano
     [[0, -6, SD_NOSE], [-SD_HALF_W, -4, SD_REAR], [SD_HALF_W, -4, SD_REAR], [-130, -168, -340], [130, -168, -340], [0, -48, 80]].forEach(
       ([lx, ly, lz], i) => {
-        if (FLR(b.t * 1.6 + i * 0.7) % 3 === 0) return;
+        if (FLR(b.t * 1.6 + i * 0.7) % 3 == 0) return;
         let [wx, wy, wz] = me.V(b, lx, ly, lz);
         let lp = me.Q(wx, wy, wz);
         if (!lp) return;
@@ -3439,7 +3440,7 @@ class Game extends PS {
       let hot = pt.g > 0 ? INK_HI : RUST_HI;
       // los puntos débiles abiertos llevan mira: ahí es donde se le pega
       if (me.bo(b, pt)) {
-        let main = pt.Z !== 0;
+        let main = pt.Z != 0;
         let r = MAX(main ? 20 : 16, SD_PART_R[pt.Z] * (FOCAL / p[2]) * 0.8);
         let c = r * 0.4;
         LS(main ? 2 : 2, main ? INK_HI : RUST_HI, main ? 0.6 + 0.4 * SIN(b.t * 6) : 0.7);
@@ -3447,12 +3448,12 @@ class Game extends PS {
           PL(p[0] + sx * r, p[1] + sy * (r - c), p[0] + sx * r, p[1] + sy * r, p[0] + sx * (r - c), p[1] + sy * r);
         }
         // la que tienes en la mira muestra cuánto le queda
-        if (pt === aimed) {
+        if (pt == aimed) {
           GF.fillStyle(INK_HI, 0.9);
           for (let i = 0; i < pt.M; i++) GF.fillRect(p[0] - pt.max * 3 + i * 6, p[1] - r - 10, 4, 4);
         }
       }
-      if (pt.Z === 0) {
+      if (pt.Z == 0) {
         me.dm(SENTRY_MODEL, { x: wx, y: wy - 12 * SD_SCALE, z: wz, E: b.E }, 1.1 * SD_SCALE, pt.g > 0 ? INK_HI : RUST, a);
         fc(p[0], p[1] - 34 * k, MAX(2, 7 * k), hot, a);
       } else if (pt.Z == 1) {
@@ -3506,7 +3507,7 @@ class Game extends PS {
   dj(time, me = this) {
     let Po = me.o;
     if (me.fz == 'out') return;
-    if (time < me.iu && FLR(time / 95) % 2 === 0) return;
+    if (time < me.iu && FLR(time / 95) % 2 == 0) return;
     let f = me.fw();
     // dash: la nave deja copias fantasma — mientras se ven, nada te toca
     if (time < me.du) {
@@ -3531,7 +3532,7 @@ class Game extends PS {
     // relleno tenue, meridianos girando y arcos vivos; parpadea al morir
     if (time < me.su && sp0) {
       let left = (me.su - time) / SHIELD_MS;
-      let dying = left < 0.22 && FLR(time / 90) % 2 === 0;
+      let dying = left < 0.22 && FLR(time / 90) % 2 == 0;
       let r = SHIELD_R * 0.85 * (FOCAL / sp0[2]);
       if (!dying) {
         fcp(sp0, r, BLD, 0.1);
@@ -3636,7 +3637,7 @@ class Game extends PS {
       for (let b of [me.G, me.I]) {
         if (!b || b.d) continue;
         for (let pt of b.j) {
-          if (pt.Z === 0 || !me.bo(b, pt)) continue;
+          if (pt.Z == 0 || !me.bo(b, pt)) continue;
           let [x, y, z] = me.V(b, pt.ox, pt.oy, pt.oz);
           let d = HYP(x - Po.x, y - Po.y, z - Po.z);
           if (d < bd) {
@@ -3815,7 +3816,7 @@ class Initials extends PS {
 
     me.Qv.forEach((t, i) => {
       t.setText(A[me.lt[i]]);
-      t.setAlpha(i === me.i ? (FLR(time / 300) % 2 ? 1 : 0.35) : 0.8);
+      t.setAlpha(i == me.i ? (FLR(time / 300) % 2 ? 1 : 0.35) : 0.8);
     });
   }
 }
